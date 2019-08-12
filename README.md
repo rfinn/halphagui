@@ -12,8 +12,10 @@ I'm guessing I set up a main window in designer, and then add the subframes that
  * this one should have a slider to allow the user to adjust the size of the cutout image.
 * same as above for continuum subtracted image
  * this one should have a slider that allows the user to adjust the filter ratio to use with the image subtaction.
+* a subframe to show the mask and edit it if necessary
+* a subframe to show the ellipse that will be used for surface photometry
 
-# some issues I ran into setting up ginga
+## some issues I ran into setting up ginga
 
 when installing ginga using pip (anaconda 3.7), the util module is out of date.
 
@@ -22,7 +24,7 @@ when installing ginga using pip (anaconda 3.7), the util module is out of date.
   * cp -r ~/github/ginga/ginga/util ~/anaconda3/lib/python3.7/site-packages/ginga/.
 * it's probably better to copy the entire package, but this is what I did for starters.
 
-# some issue with getting qt to run
+## some issue with getting qt to run
 
 at first, I wasn't able to run any of the ginga examples, and this was because I hadn't defined an environment variable correctly.  Sorry - I can't remember the details now, but the instructions set to set the environment variable to qt, but it actually needed to be qt5.  
 
