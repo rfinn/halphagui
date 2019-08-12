@@ -7,13 +7,31 @@ My thought is to use qt designer to make the layout, and then to use ginga to ha
 
 I'm guessing I set up a main window in designer, and then add the subframes that will contain:
 * the R-band mosaic image, with the positions of NSA galaxies marked
-* a drop-down menu to select an NSA galaxy to work on (from the list of galaxies in the FOV)
-* another image panel that shows the cutout of the galaxy in R and Halpha
+ * a drop-down menu to select an NSA galaxy to work on (from the list of galaxies in the FOV)
+* another image panel that shows the cutout of the galaxy in R and Halpha (tabs)
  * this one should have a slider to allow the user to adjust the size of the cutout image.
+ * also shows ellipse used for photometry, with ability to hide
 * same as above for continuum subtracted image
  * this one should have a slider that allows the user to adjust the filter ratio to use with the image subtaction.
+ * also shows ellipse used for photometry, with ability to hide
 * a subframe to show the mask and edit it if necessary
-* a subframe to show the ellipse that will be used for surface photometry
+* a subframe of the R radial profiles
+* a subframe of the CS radial profiles
+* a subframe of the normalized R and CS profiles
+
+So this is 6 subframes!
+
+1 - coadded image, with dropdown menu to select galaxy
+2 - Ha, R images with sliders to select size and filter ratio
+3 - CS cutout image, with ellipse for measuring photometry (and ability to hide this)
+4 - image frame showing mask, with ability to edit mask
+5 - R radial profile
+6 - CS radial profile
+7 - normalized R and CS profile overplotted
+
+Can make a grid with 2 rows and 5 columns, with the coadded image given a 2x2 slot.
+
+so maybe a big frame on the left to hold coadd, then a 2x2 grid on the right
 
 ## some issues I ran into setting up ginga
 
