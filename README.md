@@ -33,6 +33,12 @@ Can make a grid with 2 rows and 5 columns, with the coadded image given a 2x2 sl
 
 so maybe a big frame on the left to hold coadd, then a 2x2 grid on the right
 
+# Workflow #
+
+```
+pyuic5 -x halpha.v1.ui -o halphav1.py
+python halphamain.py
+```
 ## some issues I ran into setting up ginga
 
 when installing ginga using pip (anaconda 3.7), the util module is out of date.
