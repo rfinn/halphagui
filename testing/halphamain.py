@@ -1,7 +1,9 @@
 import sys, os
 sys.path.append(os.getcwd())
+sys.path.append('/Users/rfinn/github/HalphaImaging/')
 
 from PyQt5 import  QtWidgets
+#from PyQt5.Qtcore import  Qt
 from ginga.qtw.QtHelp import QtGui, QtCore
 from halphav2 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
@@ -19,6 +21,9 @@ import astropy.units as u
 from astropy import nddata
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
+
+# code from HalphaImaging repository
+import uat_sextractor_2image as runse
 # filter information
 lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
 lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
@@ -38,15 +43,17 @@ class image_panel(QtGui.QMainWindow):
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.set_callback('drag-drop', self.drop_file)
+        fi.set_callback('none-move',self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
         #fi.set_figure(self.figure)
         self.fitsimage = fi
 
         # enable some user interaction
+        #fi.get_bindings.enable_all(True)
         bd = fi.get_bindings()
         bd.enable_all(True)
-
+        
         w = fi.get_widget()
         #w.resize(512, 512)
 
@@ -54,7 +61,7 @@ class image_panel(QtGui.QMainWindow):
         si = ScrolledView(fi)
 
 
-        panel_name.addWidget(w,2,0,6,1)
+        panel_name.addWidget(w,2,0,7,1)
         #panel_name.setMinimumSize(QtCore.QSize(512, 512))     
         # canvas that we will draw on
         canvas = self.dc.DrawingCanvas()
@@ -72,6 +79,7 @@ class image_panel(QtGui.QMainWindow):
         canvas.add_callback('draw-event', self.draw_cb)
         canvas.set_draw_mode('draw')
         canvas.ui_set_active(True)
+        self.canvas = canvas
 
         self.drawtypes = canvas.get_drawtypes()
         self.drawtypes.sort()
@@ -80,6 +88,9 @@ class image_panel(QtGui.QMainWindow):
         #fi.show_color_bar(True)
         fi.show_focus_indicator(True)
 
+        self.readout = QtWidgets.QLabel('this is a test')
+        panel_name.addWidget(self.readout)
+        self.readout.setText('this is another test')
         
         wdrawcolor = QtGui.QComboBox()
         for name in self.drawcolors:
@@ -97,7 +108,7 @@ class image_panel(QtGui.QMainWindow):
         wdrawtype.activated.connect(self.set_drawparams)
         self.wdrawtype = wdrawtype
         ui.wclear.clicked.connect(self.clear_canvas)
-        ui.wopen.clicked.connect(self.open_file)
+        #ui.wopen.clicked.connect(self.open_file)
 
         '''
         # add little mode indicator that shows keyboard modal states
@@ -122,7 +133,7 @@ class image_panel(QtGui.QMainWindow):
 
         #self.add_cutouts()
 
-
+ 
         
     def set_drawparams(self, kind):
         index = self.wdrawtype.currentIndex()
@@ -179,7 +190,7 @@ class image_panel(QtGui.QMainWindow):
             value = None
 
         fits_x, fits_y = data_x + 1, data_y + 1
-
+        '''
         # Calculate WCS RA
         try:
             # NOTE: image function operates on DATA space coords
@@ -187,16 +198,17 @@ class image_panel(QtGui.QMainWindow):
             if image is None:
                 # No image loaded
                 return
-            ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,
-                                               format='str', coords='fits')
+            ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,format='str', coords='fits')
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
 
-        text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (
-            ra_txt, dec_txt, fits_x, fits_y, value)
+        text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (ra_txt, dec_txt, fits_x, fits_y, value)
+        '''
+        # WCS stuff is not working so deleting for now...
+        text = "X: %.2f  Y: %.2f  Value: %s" % (fits_x, fits_y, value)
         self.readout.setText(text)
 
     def set_mode_cb(self, mode, tf):
@@ -270,8 +282,8 @@ class hafunctions(Ui_MainWindow):
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
-        self.add_coadd_image(self.ui.leftLayout)
-        self.add_cutouts()
+        self.add_coadd_frame(self.ui.leftLayout)
+        self.add_cutout_frames()
         self.connect_setup_menu()
         self.connect_ha_menu()
         #self.connect_buttons()
@@ -279,25 +291,37 @@ class hafunctions(Ui_MainWindow):
         #self.add_image(self.ui.gridLayout_2)
         self.ui.wmark.clicked.connect(self.mark_galaxies)
         self.ui.maskButton.clicked.connect(self.edit_mask)
+        self.ui.wfratio.clicked.connect(self.get_filter_ratio)
+        self.ui.resetButton.clicked.connect(self.reset_cutout_values)
+
         self.setup_testing()
     def setup_testing(self):
         self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_ha16.coadd.fits'
+        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         self.rcoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
+        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         self.nsa_fname = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname)
         self.coadd.load_file(self.rcoadd_fname)
-    def add_coadd_image(self,panel_name):
+        self.filter_ratio = 0.0422
+        self.reset_ratio = self.filter_ratio
+        self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
+        self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
+        self.subtract_images()
+        self.setup_ratio_slider()
+        self.cutout_size = 100
+        self.setup_cutout_slider()
+
+    def add_coadd_frame(self,panel_name):
         logger = log.get_logger("example1", log_stderr=True, level=40)
         self.coadd = image_panel(panel_name, self.ui,logger)
         #self.coadd.add_cutouts()
-    
 
-    def add_cutouts(self):
+    def add_cutout_frames(self):
         # r-band cutout
         self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 0)
         self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1)
         self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 2)
-
 
     def connect_setup_menu(self):
         self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
@@ -339,8 +363,8 @@ class hafunctions(Ui_MainWindow):
             
         print('working on this...')
         # get list of NSA galaxies on image viewer
-        self.r, header_r = fits.getdata(self.rcoadd_fname,header=True)
-        self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
+        #self.r, header_r = fits.getdata(self.rcoadd_fname,header=True)
+        #self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
         n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
         n4,n3 = self.ha.data.shape 
     
@@ -376,7 +400,61 @@ class hafunctions(Ui_MainWindow):
         # 
         # cannabalizing HalphaImaging/uat_find_filter_ratio.py
         #
+        current_dir = os.getcwd()
+        image_dir = os.path.dirname(self.rcoadd_fname)
+        os.chdir(image_dir)
+        runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
+        ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, image_dir = current_dir)
+        print(ave,std)
+        os.chdir(current_dir)
+        self.filter_ratio = ave
+        self.reset_ratio = ave
+        self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
+        self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
+
+        self.subtract_images()
+        self.setup_ratio_slider()
         
+    def subtract_images(self):
+        self.halpha_cs = self.ha - self.filter_ratio*self.r
+        # display continuum subtracted Halpha image in the large frame        
+        self.coadd.fitsimage.set_data(self.halpha_cs)
+    def setup_ratio_slider(self):
+        self.ui.ratioSlider.setRange(0,100)
+        self.ui.ratioSlider.setValue(50)
+        self.ui.ratioSlider.setSingleStep(1)
+        #self.ui.ratioSlider.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        #self.ui.ratioSlider.setFocusPolicy(QtCore.StrongFocus)
+        self.ui.ratioSlider.valueChanged.connect(self.ratio_slider_changed)
+    def ratio_slider_changed(self, value):
+        #print(self.minfilter_ratio, self.maxfilter_ratio, self.filter_ratio)
+        delta = self.maxfilter_ratio - self.minfilter_ratio
+        self.filter_ratio = self.minfilter_ratio + (delta)/100.*self.ui.ratioSlider.value()
+        #print(value,' ratio slider changed to', round(self.filter_ratio,4))
+        try:
+            self.subtract_images()
+            self.display_cutouts()
+        except:
+            print('Trouble plotting cutouts')
+            print('make sure galaxy is selected')
+    def setup_cutout_slider(self):
+        self.ui.cutoutSlider.setRange(0,100)
+        self.ui.cutoutSlider.setValue(50)
+        self.ui.cutoutSlider.setSingleStep(1)
+        #self.ui.ratioSlider.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        #self.ui.ratioSlider.setFocusPolicy(QtCore.StrongFocus)
+        self.ui.cutoutSlider.valueChanged.connect(self.cutout_slider_changed)
+    def cutout_slider_changed(self, value):
+        #print(self.minfilter_ratio, self.maxfilter_ratio, self.filter_ratio)
+        delta = self.maxcutout_size - self.mincutout_size
+        self.cutout_size = self.mincutout_size + (delta)/100.*value
+        #print(value,' ratio slider changed to', round(self.filter_ratio,4))
+        try:
+            self.display_cutouts()
+        except:
+            print('Trouble plotting cutouts')
+            print('make sure galaxy is selected')
+            
     def select_galaxy(self,id):
         print('selecting a galaxy')
         self.igal = self.ui.wgalid.currentIndex()
@@ -384,8 +462,13 @@ class hafunctions(Ui_MainWindow):
         # when galaxy is selected from list, trigger
         # cutout imaages
 
-        size = 8*self.gradius[self.igal]
-        self.size = u.Quantity((size, size), u.arcsec)
+        size = 16*self.gradius[self.igal]
+        print('new cutout size = ',size, self.igal, self.gradius[self.igal])
+        self.reset_size = size
+        self.cutout_size = u.Quantity((size, size), u.arcsec)
+        self.mincutout_size = 0.2*self.cutout_size
+        self.maxcutout_size = 3.*self.cutout_size
+        self.reset_cutout_values()
         self.display_cutouts()
         # first pass of mask
         # radial profiles
@@ -395,19 +478,27 @@ class hafunctions(Ui_MainWindow):
         position = SkyCoord(ra=self.gra[self.igal],dec=self.gdec[self.igal],unit='deg')
         
         try:
-            cutoutR = Cutout2D(self.r.data, position, self.size, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
+            cutoutR = Cutout2D(self.r.data, position, self.cutout_size, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
             #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
             ((ymin,ymax),(xmin,xmax)) = cutoutR.bbox_original
-            print(ymin,ymax,xmin,xmax)
+            #print(ymin,ymax,xmin,xmax)
             self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
-            self.hacutout.load_image(self.ha[ymin:ymax,xmin:xmax])
+            self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
+            #cutoutR.plot_on_original(color='white')
         except nddata.utils.PartialOverlapError:# PartialOverlapError:
             print('galaxy is only partially covered by mosaic - skipping ',IDNUMBER[i])
             return
         except nddata.utils.NoOverlapError:# PartialOverlapError:
             print('galaxy is not covered by mosaic - skipping ',IDNUMBER[i])
             return
-        
+
+    def reset_cutout_values(self):
+        self.cutout_size = self.reset_size
+        self.filter_ratio = self.reset_ratio
+        self.subtract_images()
+        self.display_cutouts()
+        self.ui.cutoutSlider.setValue(50)
+        self.ui.ratioSlider.setValue(50)
 
     def edit_mask(self):
         print('edit mask')
