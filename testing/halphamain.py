@@ -24,6 +24,7 @@ import matplotlib.patches as patches
 
 # code from HalphaImaging repository
 import uat_sextractor_2image as runse
+from uat_mask import mask_image
 # filter information
 lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
 lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
@@ -156,6 +157,7 @@ class image_panel(QtGui.QMainWindow):
         
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)
+        self.image_wcs = WCS(filepath)
         self.fitsimage.set_image(image)
         #self.setWindowTitle(filepath)
         self.coadd_filename = filepath
@@ -190,25 +192,24 @@ class image_panel(QtGui.QMainWindow):
             value = None
 
         fits_x, fits_y = data_x + 1, data_y + 1
-        '''
+        
         # Calculate WCS RA
+        #print(fits_x, fits_y)
+        #ra_txt, dec_txt = self.image_wcs.wcs_pix2world(fits_x, fits_y,1)
         try:
-            # NOTE: image function operates on DATA space coords
-            image = viewer.get_image()
-            if image is None:
-                # No image loaded
-                return
-            ra_txt, dec_txt = image.pixtoradec(fits_x, fits_y,format='str', coords='fits')
+            # NOTE: image function operates on DATA space coords            
+            ra_txt, dec_txt = self.image_wcs.wcs_pix2world(fits_x, fits_y,1)
         except Exception as e:
             self.logger.warning("Bad coordinate conversion: %s" % (
                 str(e)))
             ra_txt = 'BAD WCS'
             dec_txt = 'BAD WCS'
-
-        text = "RA: %s  DEC: %s  X: %.2f  Y: %.2f  Value: %s" % (ra_txt, dec_txt, fits_x, fits_y, value)
-        '''
+        try:
+            text = "RA: %.6f  DEC: %.4f  X: %.2f  Y: %.2f  Value: %.3f" % ((1.*ra_txt), (1.*dec_txt), fits_x, fits_y, float(value))
+        except:
+            print('invalid value')
         # WCS stuff is not working so deleting for now...
-        text = "X: %.2f  Y: %.2f  Value: %s" % (fits_x, fits_y, value)
+        #text = "X: %.2f  Y: %.2f  Value: %s" % (fits_x, fits_y, value)
         self.readout.setText(text)
 
     def set_mode_cb(self, mode, tf):
@@ -248,7 +249,7 @@ class image_panel(QtGui.QMainWindow):
                       fill=False)
         ax.add_patch(r)
 class cutout_image():
-    def __init__(self,panel_name,ui, logger, index):
+    def __init__(self,panel_name,ui, logger, row, col, drow, dcol):
         #super(image_panel, self).__init__()
         self.logger = logger
         self.ui = ui
@@ -263,7 +264,7 @@ class cutout_image():
         bd = fi.get_bindings()
         bd.enable_all(True)
         self.cutout = fi.get_widget()
-        self.ui.cutoutsLayout.addWidget(self.cutout, 0, index, 1, 1)
+        self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
         self.fitsimage = fi
     def load_image(self, imagearray):
         #self.fitsimage.set_image(imagearray)
@@ -290,7 +291,9 @@ class hafunctions(Ui_MainWindow):
         #self.add_image(self.ui.gridLayout_2)
         #self.add_image(self.ui.gridLayout_2)
         self.ui.wmark.clicked.connect(self.mark_galaxies)
-        self.ui.maskButton.clicked.connect(self.edit_mask)
+        self.ui.editMaskButton.clicked.connect(self.edit_mask)
+        self.ui.makeMaskButton.clicked.connect(self.make_mask)
+        self.ui.profileButton.clicked.connect(self.plot_profiles)
         self.ui.wfratio.clicked.connect(self.get_filter_ratio)
         self.ui.resetButton.clicked.connect(self.reset_cutout_values)
 
@@ -319,9 +322,17 @@ class hafunctions(Ui_MainWindow):
 
     def add_cutout_frames(self):
         # r-band cutout
-        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 0)
-        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1)
-        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 2)
+        a = QtWidgets.QLabel('r-band')
+        self.ui.cutoutsLayout.addWidget(a, 0, 0, 1, 1)
+        a = QtWidgets.QLabel('CS Halpha')
+        self.ui.cutoutsLayout.addWidget(a, 0, 1, 1, 1)
+        a = QtWidgets.QLabel('Mask')
+        self.ui.cutoutsLayout.addWidget(a, 0, 2, 1, 1)
+
+        #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
+        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1)
+        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
+        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 4, 1)
 
     def connect_setup_menu(self):
         self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
@@ -344,7 +355,7 @@ class hafunctions(Ui_MainWindow):
         #self.le.setPixmap(QPixmap(fname))
 		
     def connect_ha_menu(self):
-        print('working on this')
+        #print('working on this')
         #extractAction.triggered.connect(self.close_application)
 
         self.ui.actionhalpha4.triggered.connect(lambda: self.set_hafilter('4'))
@@ -360,11 +371,13 @@ class hafunctions(Ui_MainWindow):
         self.zmin=(((lmin[self.hafilter])/6563.)-1)
 
     def mark_galaxies(self):
-            
-        print('working on this...')
+        #
         # get list of NSA galaxies on image viewer
-        #self.r, header_r = fits.getdata(self.rcoadd_fname,header=True)
-        #self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
+        #
+        # for reference:
+        # self.r, header_r = fits.getdata(self.rcoadd_fname,header=True)
+        # self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
+        #
         n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
         n4,n3 = self.ha.data.shape 
     
@@ -384,7 +397,7 @@ class hafunctions(Ui_MainWindow):
         self.galid=self.nsa.cat.NSAID[keepflag]
 
         self.gredshift = self.nsa.cat.Z[keepflag]
-        gzdist = self.nsa.cat.ZDIST[keepflag]
+        self.gzdist = self.nsa.cat.ZDIST[keepflag]
 
         # populate a button that contains list
         print('nsa galaxies on fov:')
@@ -478,18 +491,18 @@ class hafunctions(Ui_MainWindow):
         position = SkyCoord(ra=self.gra[self.igal],dec=self.gdec[self.igal],unit='deg')
         
         try:
-            cutoutR = Cutout2D(self.r.data, position, self.cutout_size, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
+            self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
             #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
-            ((ymin,ymax),(xmin,xmax)) = cutoutR.bbox_original
+            ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
             #print(ymin,ymax,xmin,xmax)
             self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
             self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
             #cutoutR.plot_on_original(color='white')
         except nddata.utils.PartialOverlapError:# PartialOverlapError:
-            print('galaxy is only partially covered by mosaic - skipping ',IDNUMBER[i])
+            print('galaxy is only partially covered by mosaic - skipping ',self.galid[igal])
             return
         except nddata.utils.NoOverlapError:# PartialOverlapError:
-            print('galaxy is not covered by mosaic - skipping ',IDNUMBER[i])
+            print('galaxy is not covered by mosaic - skipping ',self.galid[igal])
             return
 
     def reset_cutout_values(self):
@@ -499,8 +512,47 @@ class hafunctions(Ui_MainWindow):
         self.display_cutouts()
         self.ui.cutoutSlider.setValue(50)
         self.ui.ratioSlider.setValue(50)
+    def write_cutouts(self):
+        try:
+            obj = self.r_header['OBJECT']
+            self.cutout_name_r = obj+'-'+str(self.galid[igal])+'-R.fits'
+            self.cutout_name_ha = obj+'-'+str(self.galid[igal])+'-CS.fits'
+        except:
+            self.cutout_name_r = str(self.galid[igal])+'-R.fits'
+            self.cutout_name_ha =str(self.galid[igal])+'-CS.fits'
+        #print(ymin,ymax,xmin,xmax)
+        w = WCS(self.rcoadd_fname)
 
+        ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        newfile = fits.PrimaryHDU()
+        newfile.data = self.r[ymin:ymax,xmin:xmax] 
+        newfile.header = self.r_header
+        newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[igal])))
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[igal])))
+        newfile.header.set('NSAID',float('{:d}'.format(self.galid[igal])))
+        newfile.header.set('SERSIC_TH50',float('{:d}'.format(self.gradius[igal])))
+        fits.writeto(outimage, newfile.data, header = newfile.header, overwrite=True)
+
+        # saving Ha Cutout as fits image
+        newfile1 = fits.PrimaryHDU()
+        newfile1.data = self.halpha_cs[ymin1:ymax1,xmin1:xmax1]
+        newfile1.header = self.ha_header
+        newfile1.header.update(w[ymin1:ymax1,xmin1:xmax1].to_header())
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[igal])))
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[igal])))
+        newfile.header.set('NSAID',float('{:d}'.format(self.galid[igal])))
+        newfile.header.set('SERSIC_TH50',float('{:d}'.format(self.gradius[igal])))
+        fits.writeto(outimage1, newfile1.data, header = newfile1.header, overwrite=True)
+        
+    def make_mask(self):
+        print('make mask')
+        m = mask_image(self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/', nods9=False)
+        m.edit_mask()
+        m.clean_links()
     def edit_mask(self):
+        print('edit mask')
+    def plot_profiles(self):
         print('edit mask')
 
 class galaxy_catalog():
