@@ -1,6 +1,7 @@
 import sys, os
 sys.path.append(os.getcwd())
-sys.path.append('/Users/rfinn/github/HalphaImaging/')
+#sys.path.append('/Users/rfinn/github/HalphaImaging/')
+sys.path.append('/Users/rfinn/github/HalphaImaging/python3/')
 
 from PyQt5 import  QtWidgets
 #from PyQt5.Qtcore import  Qt
@@ -269,6 +270,10 @@ class cutout_image():
     def load_image(self, imagearray):
         #self.fitsimage.set_image(imagearray)
         self.fitsimage.set_data(imagearray)
+
+    def load_filename(self, image):
+        self.fitsimage.set_image(image)
+        #self.fitsimage.set_data(imagearray)
 
 
 class hafunctions(Ui_MainWindow):
@@ -546,11 +551,18 @@ class hafunctions(Ui_MainWindow):
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
         
     def make_mask(self):
+        current_dir = os.getcwd()
+        image_dir = os.path.dirname(self.rcoadd_fname)
+        os.chdir(image_dir)
         self.write_cutouts()
         print('make mask')
         m = mask_image(self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/', nods9=False)
         m.edit_mask()
         m.clean_links()
+        os.chdir(current_dir)
+        t = self.cutout_name_r.split('.fit')
+        self.mask_image=t[0]+'-mask.fits'
+        self.maskcutout.load_filename(self.mask_image)
     def edit_mask(self):
         print('edit mask')
     def plot_profiles(self):
