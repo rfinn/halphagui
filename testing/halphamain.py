@@ -499,10 +499,10 @@ class hafunctions(Ui_MainWindow):
             self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
             #cutoutR.plot_on_original(color='white')
         except nddata.utils.PartialOverlapError:# PartialOverlapError:
-            print('galaxy is only partially covered by mosaic - skipping ',self.galid[igal])
+            print('galaxy is only partially covered by mosaic - skipping ',self.galid[self.igal])
             return
         except nddata.utils.NoOverlapError:# PartialOverlapError:
-            print('galaxy is not covered by mosaic - skipping ',self.galid[igal])
+            print('galaxy is not covered by mosaic - skipping ',self.galid[self.igal])
             return
 
     def reset_cutout_values(self):
@@ -515,11 +515,11 @@ class hafunctions(Ui_MainWindow):
     def write_cutouts(self):
         try:
             obj = self.r_header['OBJECT']
-            self.cutout_name_r = obj+'-'+str(self.galid[igal])+'-R.fits'
-            self.cutout_name_ha = obj+'-'+str(self.galid[igal])+'-CS.fits'
+            self.cutout_name_r = obj+'-'+str(self.galid[self.igal])+'-R.fits'
+            self.cutout_name_ha = obj+'-'+str(self.galid[self.igal])+'-CS.fits'
         except:
-            self.cutout_name_r = str(self.galid[igal])+'-R.fits'
-            self.cutout_name_ha =str(self.galid[igal])+'-CS.fits'
+            self.cutout_name_r = str(self.galid[self.igal])+'-R.fits'
+            self.cutout_name_ha =str(self.galid[self.igal])+'-CS.fits'
         #print(ymin,ymax,xmin,xmax)
         w = WCS(self.rcoadd_fname)
 
@@ -528,24 +528,25 @@ class hafunctions(Ui_MainWindow):
         newfile.data = self.r[ymin:ymax,xmin:xmax] 
         newfile.header = self.r_header
         newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[igal])))
-        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[igal])))
-        newfile.header.set('NSAID',float('{:d}'.format(self.galid[igal])))
-        newfile.header.set('SERSIC_TH50',float('{:d}'.format(self.gradius[igal])))
-        fits.writeto(outimage, newfile.data, header = newfile.header, overwrite=True)
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile.header.set('NSAID',float('{:d}'.format(self.galid[self.igal])))
+        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
 
         # saving Ha Cutout as fits image
         newfile1 = fits.PrimaryHDU()
-        newfile1.data = self.halpha_cs[ymin1:ymax1,xmin1:xmax1]
+        newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
         newfile1.header = self.ha_header
-        newfile1.header.update(w[ymin1:ymax1,xmin1:xmax1].to_header())
-        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[igal])))
-        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[igal])))
-        newfile.header.set('NSAID',float('{:d}'.format(self.galid[igal])))
-        newfile.header.set('SERSIC_TH50',float('{:d}'.format(self.gradius[igal])))
-        fits.writeto(outimage1, newfile1.data, header = newfile1.header, overwrite=True)
+        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile.header.set('NSAID',float('{:d}'.format(self.galid[self.igal])))
+        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
         
     def make_mask(self):
+        self.write_cutouts()
         print('make mask')
         m = mask_image(self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/', nods9=False)
         m.edit_mask()
