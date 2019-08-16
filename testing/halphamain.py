@@ -4,9 +4,10 @@ sys.path.append(os.getcwd())
 sys.path.append('/Users/rfinn/github/HalphaImaging/python3/')
 
 from PyQt5 import  QtWidgets
+from PyQt5 import QtCore
 #from PyQt5.Qtcore import  Qt
-from ginga.qtw.QtHelp import QtGui, QtCore
-from halphav2 import Ui_MainWindow
+from ginga.qtw.QtHelp import QtGui #, QtCore
+from halphav3 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga import colors
@@ -23,9 +24,11 @@ from astropy import nddata
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 
+from maskwrapper import maskwindow
+from halphaCommon import cutout_image
 # code from HalphaImaging repository
 import uat_sextractor_2image as runse
-from uat_mask import mask_image
+#from uat_mask import mask_image
 # filter information
 lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
 lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
@@ -249,38 +252,13 @@ class image_panel(QtGui.QMainWindow):
         r = patches.Rectangle((wd * 0.10, ht * 0.10), wd * 0.6, ht * 0.5, ec='b',
                       fill=False)
         ax.add_patch(r)
-class cutout_image():
-    def __init__(self,panel_name,ui, logger, row, col, drow, dcol):
-        #super(image_panel, self).__init__()
-        self.logger = logger
-        self.ui = ui
-        fi = CanvasView(self.logger, render='widget')
-        fi.enable_autocuts('on')
-        #fi.set_autocut_params('zscale')
-        fi.enable_autozoom('on')
-        #fi.set_callback('drag-drop', self.drop_file)
-        fi.set_bg(0.2, 0.2, 0.2)
-        #fi.ui_set_active(True)
-        self.fitsimage = fi
-        bd = fi.get_bindings()
-        bd.enable_all(True)
-        self.cutout = fi.get_widget()
-        self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
-        self.fitsimage = fi
-    def load_image(self, imagearray):
-        #self.fitsimage.set_image(imagearray)
-        self.fitsimage.set_data(imagearray)
-
-    def load_filename(self, image):
-        self.fitsimage.set_image(image)
-        #self.fitsimage.set_data(imagearray)
 
 
 class hafunctions(Ui_MainWindow):
 
     def __init__(self,MainWindow, logger):
         super(hafunctions, self).__init__()
-        print(MainWindow)
+        #print(MainWindow)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(MainWindow)
 
@@ -296,11 +274,12 @@ class hafunctions(Ui_MainWindow):
         #self.add_image(self.ui.gridLayout_2)
         #self.add_image(self.ui.gridLayout_2)
         self.ui.wmark.clicked.connect(self.mark_galaxies)
-        self.ui.editMaskButton.clicked.connect(self.edit_mask)
+        #self.ui.editMaskButton.clicked.connect(self.edit_mask)
         self.ui.makeMaskButton.clicked.connect(self.make_mask)
         self.ui.profileButton.clicked.connect(self.plot_profiles)
         self.ui.wfratio.clicked.connect(self.get_filter_ratio)
-        self.ui.resetButton.clicked.connect(self.reset_cutout_values)
+        self.ui.resetRatioButton.clicked.connect(self.reset_cutout_ratio)
+        self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
 
         self.setup_testing()
     def setup_testing(self):
@@ -486,7 +465,9 @@ class hafunctions(Ui_MainWindow):
         self.cutout_size = u.Quantity((size, size), u.arcsec)
         self.mincutout_size = 0.2*self.cutout_size
         self.maxcutout_size = 3.*self.cutout_size
-        self.reset_cutout_values()
+        
+        self.reset_cutout_size()
+        self.reset_cutout_ratio()
         self.display_cutouts()
         # first pass of mask
         # radial profiles
@@ -510,13 +491,19 @@ class hafunctions(Ui_MainWindow):
             print('galaxy is not covered by mosaic - skipping ',self.galid[self.igal])
             return
 
-    def reset_cutout_values(self):
+    def reset_cutout_size(self):
         self.cutout_size = self.reset_size
+        self.update_images()
+        self.ui.cutoutSlider.setValue(50)
+    def reset_cutout_ratio(self):
         self.filter_ratio = self.reset_ratio
+        self.update_images()
+        self.ui.ratioSlider.setValue(50)
+    def update_images(self):
         self.subtract_images()
         self.display_cutouts()
-        self.ui.cutoutSlider.setValue(50)
-        self.ui.ratioSlider.setValue(50)
+
+        
     def write_cutouts(self):
         try:
             obj = self.r_header['OBJECT']
@@ -554,17 +541,32 @@ class hafunctions(Ui_MainWindow):
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
         os.chdir(image_dir)
-        self.write_cutouts()
-        print('make mask')
-        m = mask_image(self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/', nods9=False)
-        m.edit_mask()
-        m.clean_links()
+        try:
+            self.write_cutouts()
+        except AttributeError:
+            print('are you rushing to make a mask w/out selecting galaxies?')
+            print('try selecting filter, then selecting galaxies')
+            return
+
+        self.mwindow = QtWidgets.QMainWindow()
+        self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/')
+        self.mui.mask_saved.connect(self.display_mask)
+        self.mui.setupUi(self.mwindow)
+        self.mwindow.show()
+        
+        #print('make mask')
+        #m.edit_mask()
+        #m.clean_links()
+        #self.display_mask()
         os.chdir(current_dir)
-        t = self.cutout_name_r.split('.fit')
-        self.mask_image=t[0]+'-mask.fits'
-        self.maskcutout.load_filename(self.mask_image)
-    def edit_mask(self):
-        print('edit mask')
+        
+
+    def display_mask(self, mask_image_name):
+        #t = self.cutout_name_r.split('.fit')
+        #self.mask_image_name=t[0]+'-mask.fits'
+        #self.mask_image = mask_image_name
+        self.maskcutout.load_file(self.mask_image_name)
+        
     def plot_profiles(self):
         print('edit mask')
 

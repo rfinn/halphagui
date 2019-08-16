@@ -12,22 +12,35 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1266, 550)
+        # this is the main window
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
         self.horizontalLayout.setObjectName("horizontalLayout")
+
+        ###############################################
+        # left panel that contains the mosaic image
+        # QFrame with verticalLayout
+        ###############################################
         self.mainframe = QtWidgets.QFrame(self.centralwidget)
         self.mainframe.setMinimumSize(QtCore.QSize(512, 0))
         self.mainframe.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.mainframe.setFrameShadow(QtWidgets.QFrame.Raised)
         self.mainframe.setObjectName("mainframe")
+
+        # left panel, vertical layout
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.mainframe)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
+
+        # place holder for ginga CanvasView
         #self.widget = QtWidgets.QWidget(self.mainframe)
         #self.widget.setMinimumSize(QtCore.QSize(480, 400))
         #self.widget.setMaximumSize(QtCore.QSize(16777215, 542))
         #self.widget.setObjectName("widget")
         #self.verticalLayout_2.addWidget(self.widget, 0, QtCore.Qt.AlignLeft)
+
+        # button bar on left frame
+        # widget with Horizontal Box layout
         self.button_bar = QtWidgets.QWidget(self.mainframe)
         self.button_bar.setObjectName("button_bar")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.button_bar)
@@ -46,6 +59,11 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.addWidget(self.wclear)
         self.verticalLayout_2.addWidget(self.button_bar, 0, QtCore.Qt.AlignBottom)
         self.horizontalLayout.addWidget(self.mainframe)
+
+        ###############################################
+        # middle panel
+        # groupbox with GridLayout
+        ###############################################
         self.groupBox = QtWidgets.QGroupBox(self.centralwidget)
         self.groupBox.setObjectName("groupBox")
         self.gridLayout = QtWidgets.QGridLayout(self.groupBox)
@@ -83,6 +101,12 @@ class Ui_MainWindow(object):
         self.rcutout.setObjectName("rcutout")
         self.gridLayout.addWidget(self.rcutout, 2, 0, 1, 1)
         self.horizontalLayout.addWidget(self.groupBox)
+
+        ###############################################
+        # right panel
+        # groupbox with verticalLayout
+        ###############################################
+        # proceeding widgets are added to the verticalLayout
         self.groupBox_2 = QtWidgets.QGroupBox(self.centralwidget)
         self.groupBox_2.setObjectName("groupBox_2")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.groupBox_2)
@@ -90,27 +114,51 @@ class Ui_MainWindow(object):
         self.label_3 = QtWidgets.QLabel(self.groupBox_2)
         self.label_3.setObjectName("label_3")
         self.verticalLayout.addWidget(self.label_3)
+
+        # place holder for mask image
         self.maskimage = QtWidgets.QGraphicsView(self.groupBox_2)
         self.maskimage.setObjectName("maskimage")
         self.verticalLayout.addWidget(self.maskimage)
+
+        # button for editing the mask
         self.emask = QtWidgets.QPushButton(self.groupBox_2)
         self.emask.setObjectName("emask")
         self.verticalLayout.addWidget(self.emask)
+
+        # GraphicsView - placeholder for
+        # normalized profiles
         self.profiles_norm = QtWidgets.QGraphicsView(self.groupBox_2)
         self.profiles_norm.setObjectName("profiles_norm")
         self.verticalLayout.addWidget(self.profiles_norm)
+
+        # why is this added to horizontalLayout
         self.horizontalLayout.addWidget(self.groupBox_2)
+
+        # add centralwidget to the main window
         MainWindow.setCentralWidget(self.centralwidget)
+
+        ###############################################
+        # set up menu bars
+        # QMenuBar
+        ###############################################
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1266, 22))
         self.menubar.setObjectName("menubar")
+
+        # File menu
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
+
+        # session menu - to make sure everthing is saved
         self.menuSession = QtWidgets.QMenu(self.menubar)
         self.menuSession.setObjectName("menuSession")
+
+        # NSA menu - to provide path to NSA catalog
         self.menuNSA_Catalog = QtWidgets.QMenu(self.menubar)
         self.menuNSA_Catalog.setObjectName("menuNSA_Catalog")
         MainWindow.setMenuBar(self.menubar)
+
+        
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
@@ -122,12 +170,18 @@ class Ui_MainWindow(object):
         self.actionQuit.setObjectName("actionQuit")
         self.actionsave = QtWidgets.QAction(MainWindow)
         self.actionsave.setObjectName("actionsave")
+
+        # add options to File menu
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
+
+        # add options to session menu
         self.menuSession.addAction(self.actionsave)
         self.menuSession.addSeparator()
+
+        # add to menubar
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuNSA_Catalog.menuAction())
         self.menubar.addAction(self.menuSession.menuAction())
