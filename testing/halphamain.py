@@ -36,7 +36,7 @@ lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
 
 
 class image_panel(QtGui.QMainWindow):
-    def __init__(self,panel_name,ui, logger):
+    def __init__(self,panel_name,ui,logger):
         super(image_panel, self).__init__()
         self.ui = ui
         self.logger = logger
@@ -270,17 +270,20 @@ class hafunctions(Ui_MainWindow):
         self.add_cutout_frames()
         self.connect_setup_menu()
         self.connect_ha_menu()
+        self.connect_halpha_type_menu()
         #self.connect_buttons()
         #self.add_image(self.ui.gridLayout_2)
         #self.add_image(self.ui.gridLayout_2)
-        self.ui.wmark.clicked.connect(self.mark_galaxies)
+        self.connect_buttons()
+    def connect_buttons(self):
+        self.ui.wmark.clicked.connect(self.find_galaxies)
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
         self.ui.makeMaskButton.clicked.connect(self.make_mask)
         self.ui.profileButton.clicked.connect(self.plot_profiles)
         self.ui.wfratio.clicked.connect(self.get_filter_ratio)
         self.ui.resetRatioButton.clicked.connect(self.reset_cutout_ratio)
         self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
-
+        self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
         self.setup_testing()
     def setup_testing(self):
         self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_ha16.coadd.fits'
@@ -353,8 +356,19 @@ class hafunctions(Ui_MainWindow):
     def get_zcut(self):
         self.zmax=(((lmax[self.hafilter])/6563.)-1)
         self.zmin=(((lmin[self.hafilter])/6563.)-1)
+    def connect_halpha_type_menu(self):
+        ha_types = ['Ha Emission','No Ha','Cont Sub Problem']
+        for name in ha_types:
+            self.ui.haTypeComboBox.addItem(str(name))
+        self.ui.haTypeComboBox.activated.connect(self.select_galaxy)
+    def set_halpha_type(self,hatype):
+        self.halpha_type = hatype
 
-    def mark_galaxies(self):
+    def set_prefix(self,prefix):
+        self.prefix = prefix
+        #print('prefix for output files = ',self.prefix)
+        
+    def find_galaxies(self):
         #
         # get list of NSA galaxies on image viewer
         #
@@ -379,18 +393,41 @@ class hafunctions(Ui_MainWindow):
         self.gdec=self.nsa.cat.DEC[keepflag]
         self.gradius=self.nsa.cat.SERSIC_TH50[keepflag]
         self.galid=self.nsa.cat.NSAID[keepflag]
+        self.gximage = px[keepflag]
+        self.gyimage = py[keepflag]
 
         self.gredshift = self.nsa.cat.Z[keepflag]
         self.gzdist = self.nsa.cat.ZDIST[keepflag]
 
         # populate a button that contains list
-        print('nsa galaxies on fov:')
-        print(self.galid)
+        #print('nsa galaxies on fov:')
+        #print(self.galid)
         for name in self.galid:
             self.ui.wgalid.addItem(str(name))
         print(len(self.galid),' galaxies in FOV')
         self.ui.wgalid.activated.connect(self.select_galaxy)
 
+        # plot location of galaxies in the coadd image
+        self.mark_galaxies()
+        
+    def mark_galaxies(self):
+        #
+        # using code in TVMark.py as a guide for adding shapes to canvas
+        #
+        #
+        print('testing')
+        objlist = []
+        markcolor='cyan'
+        markwidth=1
+        for i,x in enumerate(self.gximage):
+            obj = self.coadd.dc.Box(
+                x=x, y=self.gyimage[i], xradius=8*self.gradius[i], yradius=8*self.gradius[i], color=markcolor,
+                linewidth=markwidth)
+            glabel = self.coadd.dc.Text(x-4*self.gradius[i],self.gyimage[i]+8.5*self.gradius[i],str(self.galid[i]), color=markcolor)
+            objlist.append(obj)
+            objlist.append(glabel)
+        self.markhltag = self.coadd.canvas.add(self.coadd.dc.CompoundObject(*objlist))
+        self.coadd.fitsimage.redraw()
     def get_filter_ratio(self):
         #
         # get ratio of Halpha to Rband filters
@@ -548,7 +585,7 @@ class hafunctions(Ui_MainWindow):
             print('try selecting filter, then selecting galaxies')
             return
 
-        self.mwindow = QtWidgets.QMainWindow()
+        self.mwindow = QtWidgets.QWidget()
         self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/')
         self.mui.mask_saved.connect(self.display_mask)
         self.mui.setupUi(self.mwindow)
@@ -562,8 +599,8 @@ class hafunctions(Ui_MainWindow):
         
 
     def display_mask(self, mask_image_name):
-        #t = self.cutout_name_r.split('.fit')
-        #self.mask_image_name=t[0]+'-mask.fits'
+        t = self.cutout_name_r.split('.fit')
+        self.mask_image_name=t[0]+'-mask.fits'
         #self.mask_image = mask_image_name
         self.maskcutout.load_file(self.mask_image_name)
         

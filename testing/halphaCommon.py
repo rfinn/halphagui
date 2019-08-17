@@ -26,6 +26,7 @@ class cutout_image():
         #fi.set_callback('none-move',self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
+        fi.show_focus_indicator(True)
         self.fitsimage = fi
         
         bd = fi.get_bindings()

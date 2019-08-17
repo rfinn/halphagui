@@ -72,13 +72,108 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="2" column="1">
+       <item row="1" column="0">
+        <widget class="QWidget" name="widget_7" native="true"/>
+       </item>
+       <item row="6" column="0">
+        <widget class="QWidget" name="widget_10" native="true"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QWidget" name="widget_8" native="true"/>
+       </item>
+       <item row="5" column="1" rowspan="2">
+        <widget class="QWidget" name="profiles" native="true">
+         <layout class="QGridLayout" name="profilesLayout">
+          <item row="0" column="0">
+           <widget class="QWidget" name="widget_3" native="true">
+            <property name="toolTip">
+             <string>HalphaType</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QWidget" name="widget_9" native="true"/>
+       </item>
+       <item row="0" column="0">
+        <widget class="QWidget" name="widget_6" native="true"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QWidget" name="widget" native="true"/>
+       </item>
+       <item row="0" column="1" rowspan="3">
+        <widget class="QWidget" name="cutouts" native="true">
+         <layout class="QGridLayout" name="cutoutsLayout">
+          <item row="0" column="0">
+           <widget class="QWidget" name="tempWidget" native="true"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="3" column="1">
         <widget class="QWidget" name="rightButtons" native="true">
          <layout class="QGridLayout" name="gridLayout_4">
-          <item row="5" column="2">
-           <widget class="QPushButton" name="editMaskButton">
+          <item row="6" column="2">
+           <widget class="QPushButton" name="profileButton">
             <property name="text">
-             <string>Save Galaxy</string>
+             <string>Plot Profiles</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="text">
+             <string>Output Prefix</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QFrame" name="frame">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+             <item alignment="Qt::AlignHCenter">
+              <widget class="QLabel" name="ratioSliderLabel">
+               <property name="text">
+                <string>filter ratio</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="ratioSlider">
+               <property name="mouseTracking">
+                <bool>true</bool>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::NoFocus</enum>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="tickPosition">
+                <enum>QSlider::TicksBelow</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QPushButton" name="fluxButton">
+            <property name="text">
+             <string>Measure Flux</string>
             </property>
            </widget>
           </item>
@@ -89,20 +184,6 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="0" alignment="Qt::AlignHCenter">
-           <widget class="QLabel" name="cutoutSliderLabel">
-            <property name="text">
-             <string>adjust cutout size</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QPushButton" name="profileButton">
-            <property name="text">
-             <string>Plot Profiles</string>
-            </property>
-           </widget>
-          </item>
           <item row="4" column="1">
            <widget class="QPushButton" name="resetRatioButton">
             <property name="text">
@@ -110,85 +191,71 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1" alignment="Qt::AlignHCenter">
-           <widget class="QLabel" name="ratioSliderLabel">
+          <item row="6" column="0">
+           <widget class="QPushButton" name="fitEllipseButton">
             <property name="text">
-             <string>adjust filter ratio</string>
+             <string>Fit Ellipse</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QSlider" name="cutoutSlider">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="tickPosition">
-             <enum>QSlider::TicksBelow</enum>
+          <item row="7" column="1">
+           <widget class="QLineEdit" name="prefixLineEdit"/>
+          </item>
+          <item row="7" column="2">
+           <widget class="QPushButton" name="editMaskButton">
+            <property name="text">
+             <string>Save Galaxy</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="0" column="0">
+           <widget class="QFrame" name="frame_2">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout">
+             <item alignment="Qt::AlignHCenter">
+              <widget class="QLabel" name="cutoutSliderLabel">
+               <property name="text">
+                <string>cutout size</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="cutoutSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="tickPosition">
+                <enum>QSlider::TicksBelow</enum>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="0" column="2">
            <widget class="QPushButton" name="makeMaskButton">
             <property name="text">
-             <string>Create and Edit Mask</string>
+             <string>Make and Edit Mask</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QSlider" name="ratioSlider">
-            <property name="mouseTracking">
-             <bool>true</bool>
+          <item row="4" column="2">
+           <widget class="QComboBox" name="haTypeComboBox">
+            <property name="toolTip">
+             <string>HalphaType</string>
             </property>
-            <property name="focusPolicy">
-             <enum>Qt::NoFocus</enum>
+            <property name="autoFillBackground">
+             <bool>false</bool>
             </property>
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="tickPosition">
-             <enum>QSlider::TicksBelow</enum>
+            <property name="currentText">
+             <string extracomment="Halpha Type"/>
             </property>
            </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QPushButton" name="fluxButton">
-            <property name="text">
-             <string>Measure Flux Only</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QWidget" name="widget_6" native="true"/>
-       </item>
-       <item row="1" column="0">
-        <widget class="QWidget" name="widget_7" native="true"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QWidget" name="widget_8" native="true"/>
-       </item>
-       <item row="3" column="0">
-        <widget class="QWidget" name="widget_9" native="true"/>
-       </item>
-       <item row="4" column="0">
-        <widget class="QWidget" name="widget_10" native="true"/>
-       </item>
-       <item row="0" column="1" rowspan="2">
-        <widget class="QWidget" name="cutouts" native="true">
-         <layout class="QGridLayout" name="cutoutsLayout">
-          <item row="0" column="0">
-           <widget class="QWidget" name="tempWidget" native="true"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="3" column="1" rowspan="2">
-        <widget class="QWidget" name="profiles" native="true">
-         <layout class="QGridLayout" name="profilesLayout">
-          <item row="0" column="0">
-           <widget class="QWidget" name="widget_3" native="true"/>
           </item>
          </layout>
         </widget>
