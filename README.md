@@ -46,12 +46,21 @@ python halphamain.py
 * ginga
 * astropy
 * pyqt5
+* photutils
 
 ## Other software ##
 * Source Extractor
 
 # Notes #
 
+* For getting parameters that drawing objects take:
+ * /Users/rfinn/anaconda3/lib/python3.7/site-packages/ginga/canvas/types/basic.py
+ 
+
+* ellipse fitting - I used these examples to develop fit_ellipse routine 
+ * https://photutils.readthedocs.io/en/stable/isophote.html
+ * https://github.com/astropy/photutils-datasets/blob/master/notebooks/isophote/isophote_example4.ipynb
+ 
 ## some issues I ran into setting up ginga
 
 when installing ginga using pip (anaconda 3.7), the util module is out of date.
