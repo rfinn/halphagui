@@ -46,6 +46,7 @@ python halphamain.py
 * ginga
 * astropy
 * pyqt5
+* photutils
 
 ## Other software ##
 * Source Extractor
