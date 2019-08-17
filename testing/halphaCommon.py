@@ -18,6 +18,7 @@ class cutout_image():
 
         self.logger = logger
         self.ui = ui
+        self.dc = get_canvas_types()
         fi = CanvasView(self.logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
@@ -31,11 +32,29 @@ class cutout_image():
         
         bd = fi.get_bindings()
         bd.enable_all(True)
-
-        
         self.cutout = fi.get_widget()
         self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
         self.fitsimage = fi
+
+        canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.enable_edit(True)
+        canvas.set_drawtype('rectangle', color='lightblue')
+        canvas.set_surface(fi)
+        #canvas.rectangle(.5,.5,10,0)
+        self.canvas = canvas
+        # add canvas to view
+        #fi.add(canvas)
+        private_canvas = fi.get_canvas()
+        private_canvas.add(canvas)
+        canvas.register_for_cursor_drawing(fi)
+        #canvas.add_callback('draw-event', self.draw_cb)
+        canvas.set_draw_mode('draw')
+        canvas.ui_set_active(True)
+        self.canvas = canvas
+
+        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes.sort()
     def load_image(self, imagearray):
         #self.fitsimage.set_image(imagearray)
         self.fitsimage.set_data(imagearray)

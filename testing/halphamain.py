@@ -3,6 +3,8 @@ sys.path.append(os.getcwd())
 #sys.path.append('/Users/rfinn/github/HalphaImaging/')
 sys.path.append('/Users/rfinn/github/HalphaImaging/python3/')
 
+import numpy as np
+
 from PyQt5 import  QtWidgets
 from PyQt5 import QtCore
 #from PyQt5.Qtcore import  Qt
@@ -14,6 +16,7 @@ from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
 from ginga.util.loader import load_data
+
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.nddata.utils import Cutout2D
@@ -21,6 +24,13 @@ from astropy.coordinates import SkyCoord
 from astropy.coordinates import ICRS, FK5
 import astropy.units as u
 from astropy import nddata
+
+# packages for ellipse fitting routine
+# https://photutils.readthedocs.io/en/stable/isophote.html
+from photutils.isophote import EllipseGeometry
+from photutils.isophote import Ellipse
+from photutils import EllipticalAperture
+
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 
@@ -261,7 +271,7 @@ class hafunctions(Ui_MainWindow):
         #print(MainWindow)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(MainWindow)
-
+        self.prefix=''
 
         self.logger = logger
         self.drawcolors = colors.get_colors()
@@ -279,11 +289,13 @@ class hafunctions(Ui_MainWindow):
         self.ui.wmark.clicked.connect(self.find_galaxies)
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
         self.ui.makeMaskButton.clicked.connect(self.make_mask)
+        self.ui.saveCutoutsButton.clicked.connect(self.write_cutouts)
         self.ui.profileButton.clicked.connect(self.plot_profiles)
         self.ui.wfratio.clicked.connect(self.get_filter_ratio)
         self.ui.resetRatioButton.clicked.connect(self.reset_cutout_ratio)
         self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
         self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
+        self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse)
         self.setup_testing()
     def setup_testing(self):
         self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_ha16.coadd.fits'
@@ -509,7 +521,13 @@ class hafunctions(Ui_MainWindow):
         # first pass of mask
         # radial profiles
         # save latest of mask
-
+        try:
+            self.cutout_name_r = self.prefix+'-'+str(self.galid[self.igal])+'-R.fits'
+            self.cutout_name_ha = self.prefix+'-'+str(self.galid[self.igal])+'-CS.fits'
+        except:
+            self.cutout_name_r = str(self.galid[self.igal])+'-R.fits'
+            self.cutout_name_ha =str(self.galid[self.igal])+'-CS.fits'
+        self.rcutout.canvas.delete_all_objects()
     def display_cutouts(self):
         position = SkyCoord(ra=self.gra[self.igal],dec=self.gdec[self.igal],unit='deg')
         
@@ -542,17 +560,13 @@ class hafunctions(Ui_MainWindow):
 
         
     def write_cutouts(self):
-        try:
-            obj = self.r_header['OBJECT']
-            self.cutout_name_r = obj+'-'+str(self.galid[self.igal])+'-R.fits'
-            self.cutout_name_ha = obj+'-'+str(self.galid[self.igal])+'-CS.fits'
-        except:
-            self.cutout_name_r = str(self.galid[self.igal])+'-R.fits'
-            self.cutout_name_ha =str(self.galid[self.igal])+'-CS.fits'
         #print(ymin,ymax,xmin,xmax)
         w = WCS(self.rcoadd_fname)
-
-        ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        try:
+            ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        except AttributeError:
+            print('make sure you have selected a galaxy and saved the cutout')
+            return
         newfile = fits.PrimaryHDU()
         newfile.data = self.r[ymin:ymax,xmin:xmax] 
         newfile.header = self.r_header
@@ -603,6 +617,76 @@ class hafunctions(Ui_MainWindow):
         self.mask_image_name=t[0]+'-mask.fits'
         #self.mask_image = mask_image_name
         self.maskcutout.load_file(self.mask_image_name)
+
+    def fit_ellipse(self):
+        # https://github.com/astropy/photutils-datasets/blob/master/notebooks/isophote/isophote_example4.ipynb
+        print(self.cutout_name_r)
+        try:
+            rdata, rheader = fits.getdata(self.cutout_name_r, header=True)
+        except AttributeError:
+            print('make sure you have selected a galaxy')
+            return
+        ### CLEAR R-BAND CUTOUT CANVAS
+
+        self.rcutout.canvas.delete_all_objects()
+
+        ### CREATE MASKED ARRAY IF MASK IS AVAILABLE
+        #
+        # following https://docs.scipy.org/doc/numpy/reference/maskedarray.generic.html
+        # read in mask, convert to boolean
+        # 
+        # boolmask = np.array(mask,'bool')
+        #
+        # create new array:
+        # newarray = np.ma.array(rdata, mask = np.array(self.mask_data, 'bool'))
+        #
+        # mask should have bad values = True
+        #
+        # NOTE! According to photutils documentation, using masked arrays
+        # slows down the process considerably
+        # https://github.com/astropy/photutils-datasets/blob/master/notebooks/isophote/isophote_example4.ipynb
+        #
+        # for details on ellipse fitting, including
+        # holding EPS and PA fixed
+        # step size in sma
+        # https://photutils.readthedocs.io/en/stable/_modules/photutils/isophote/ellipse.html
+        
+        ### GENERATE GUESS ELLIPSE  ###
+        # use center of cutout as first get for xcenter
+        xcenter = int(rdata.shape[0]/2.)
+        ycenter = int(rdata.shape[1]/2.)
+        sma = 4.*self.gradius[self.igal]
+        eps = 0.5
+        pa = np.pi/2.
+        guess = EllipseGeometry(x0=xcenter,y0=ycenter,sma=sma,eps = eps, pa = pa)
+        aper = EllipticalAperture((guess.x0, guess.y0),guess.sma, guess.sma*(1 - guess.eps), guess.pa)
+
+        ### DRAW ELLIPSE ON R-BAND CUTOUT
+        #
+        markcolor='cyan'
+        markwidth=1
+
+        ### FIT ELLIPSE
+        #
+        ellipse = Ellipse(rdata, guess)
+        isolist = ellipse.fit_image(sma0 = 5, step=2, fix_pa = True, fix_eps = True)
+
+        ### DRAW RESULTING FIT ON R-BAND CUTOUT
+        iso = isolist.get_closest(5*self.gradius[self.igal])
+        
+        obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
+        self.markhltag = self.rcutout.canvas.add(obj)
+        self.rcutout.fitsimage.redraw()
+
+        
+        smas = np.linspace(10, np.max(isolist.sma), 5)
+        objlist = []
+        for sma in smas:
+            iso = isolist.get_closest(sma)
+            obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
+            objlist.append(obj)
+        self.markhltag = self.rcutout.canvas.add(self.coadd.dc.CompoundObject(*objlist))
+        self.rcutout.fitsimage.redraw()
         
     def plot_profiles(self):
         print('edit mask')
