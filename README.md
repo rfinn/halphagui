@@ -40,13 +40,17 @@ pyuic5 -x halpha.v1.ui -o halphav1.py
 python halphamain.py
 ```
 
-## Required Modules ##
+# Requirements ##
 
+## Python Modules (need to add versions) ##
 * ginga
-* pyds9
 * astropy
 * pyqt5
 
+## Other software ##
+* Source Extractor
+
+# Notes #
 
 ## some issues I ran into setting up ginga
 
