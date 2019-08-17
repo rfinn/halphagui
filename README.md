@@ -53,6 +53,8 @@ python halphamain.py
 
 # Notes #
 
+* For getting parameters that drawing objects take:
+ * /Users/rfinn/anaconda3/lib/python3.7/site-packages/ginga/canvas/types/basic.py
 ## some issues I ran into setting up ginga
 
 when installing ginga using pip (anaconda 3.7), the util module is out of date.
