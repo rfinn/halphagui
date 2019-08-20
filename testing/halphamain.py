@@ -271,7 +271,7 @@ class hafunctions(Ui_MainWindow):
         #print(MainWindow)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(MainWindow)
-        self.prefix=''
+        self.prefix='none'
 
         self.logger = logger
         self.drawcolors = colors.get_colors()
@@ -401,15 +401,17 @@ class hafunctions(Ui_MainWindow):
             print('make sure you selected the halpha filter')
             return
         keepflag=zFlag & onimageflag
-        self.gra=self.nsa.cat.RA[keepflag]
-        self.gdec=self.nsa.cat.DEC[keepflag]
-        self.gradius=self.nsa.cat.SERSIC_TH50[keepflag]
-        self.galid=self.nsa.cat.NSAID[keepflag]
         self.gximage = px[keepflag]
         self.gyimage = py[keepflag]
 
-        self.gredshift = self.nsa.cat.Z[keepflag]
-        self.gzdist = self.nsa.cat.ZDIST[keepflag]
+        self.nsa.cull_catalog(keepflag)
+        self.gra=self.nsa.cat.RA#[keepflag]
+        self.gdec=self.nsa.cat.DEC#[keepflag]
+        self.gradius=self.nsa.cat.SERSIC_TH50#[keepflag]
+        self.galid=self.nsa.cat.NSAID#[keepflag]
+
+        self.gredshift = self.nsa.cat.Z#[keepflag]
+        self.gzdist = self.nsa.cat.ZDIST#[keepflag]
 
         # populate a button that contains list
         #print('nsa galaxies on fov:')
@@ -418,7 +420,7 @@ class hafunctions(Ui_MainWindow):
             self.ui.wgalid.addItem(str(name))
         print(len(self.galid),' galaxies in FOV')
         self.ui.wgalid.activated.connect(self.select_galaxy)
-
+        print(len(self.nsa.cat.RA))
         # plot location of galaxies in the coadd image
         self.mark_galaxies()
         
@@ -528,6 +530,14 @@ class hafunctions(Ui_MainWindow):
             self.cutout_name_r = str(self.galid[self.igal])+'-R.fits'
             self.cutout_name_ha =str(self.galid[self.igal])+'-CS.fits'
         self.rcutout.canvas.delete_all_objects()
+
+        t = self.cutout_name_r.split('.fit')
+        self.mask_image_name=t[0]+'-mask.fits'
+        if os.path.exists(self.mask_image_name):
+            self.display_mask(self.mask_image_name)
+        else:
+            # clear mask frame
+            self.maskcutout.fitsimage.clear()
     def display_cutouts(self):
         position = SkyCoord(ra=self.gra[self.igal],dec=self.gdec[self.igal],unit='deg')
         
@@ -617,7 +627,7 @@ class hafunctions(Ui_MainWindow):
         self.mask_image_name=t[0]+'-mask.fits'
         #self.mask_image = mask_image_name
         self.maskcutout.load_file(self.mask_image_name)
-
+        self.mask_image_exists = True
     def fit_ellipse(self):
         # https://github.com/astropy/photutils-datasets/blob/master/notebooks/isophote/isophote_example4.ipynb
         print(self.cutout_name_r)
@@ -656,46 +666,54 @@ class hafunctions(Ui_MainWindow):
         xcenter = int(rdata.shape[0]/2.)
         ycenter = int(rdata.shape[1]/2.)
         sma = 4.*self.gradius[self.igal]
-        eps = 0.5
-        pa = np.pi/2.
-        guess = EllipseGeometry(x0=xcenter,y0=ycenter,sma=sma,eps = eps, pa = pa)
-        aper = EllipticalAperture((guess.x0, guess.y0),guess.sma, guess.sma*(1 - guess.eps), guess.pa)
+        eps = (1.-self.nsa.cat.SERSIC_BA[self.igal])
+        pa = self.nsa.cat.SERSIC_PHI[self.igal]
+        print('initial PA = ',pa, self.nsa.cat.SERSIC_PHI[self.igal])
+        guess = EllipseGeometry(x0=xcenter,y0=ycenter,sma=sma,eps = eps, pa = np.radians(pa))
+        aper = EllipticalAperture((guess.x0, guess.y0),guess.sma, guess.sma*(1 - guess.eps), (guess.pa))
 
-        ### DRAW ELLIPSE ON R-BAND CUTOUT
+        ### DRAW INITIAL ELLIPSE ON R-BAND CUTOUT
         #
-        markcolor='cyan'
+        markcolor='magenta'
         markwidth=1
-
+        obj = self.coadd.dc.Ellipse(xcenter,ycenter,sma, sma*(1-eps), rotdeg = (pa), color=markcolor,linewidth=markwidth)
+        self.markhltag = self.rcutout.canvas.add(obj)
+        self.rcutout.fitsimage.redraw()
+        
         ### FIT ELLIPSE
         #
         ellipse = Ellipse(rdata, guess)
-        isolist = ellipse.fit_image(sma0 = 5, step=2, fix_pa = True, fix_eps = True)
+        isolist = ellipse.fit_image()#sma0=10)#, fix_pa = True, fix_eps = True)
 
         ### DRAW RESULTING FIT ON R-BAND CUTOUT
-        iso = isolist.get_closest(5*self.gradius[self.igal])
+        #iso = isolist.get_closest(5*self.gradius[self.igal])
         
-        obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
-        self.markhltag = self.rcutout.canvas.add(obj)
-        self.rcutout.fitsimage.redraw()
-
-        
-        smas = np.linspace(10, np.max(isolist.sma), 5)
-        objlist = []
-        for sma in smas:
-            iso = isolist.get_closest(sma)
-            obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
-            objlist.append(obj)
-        self.markhltag = self.rcutout.canvas.add(self.coadd.dc.CompoundObject(*objlist))
-        self.rcutout.fitsimage.redraw()
-        
+        #obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
+        #self.markhltag = self.rcutout.canvas.add(obj)
+        #self.rcutout.fitsimage.redraw()
+        markcolor='cyan'
+        if len(isolist) > 5:
+            smas = np.linspace(np.min(isolist.sma), np.max(isolist.sma), 8)
+            objlist = []
+            for sma in smas:
+                iso = isolist.get_closest(sma)
+                obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
+                objlist.append(obj)
+            self.markhltag = self.rcutout.canvas.add(self.coadd.dc.CompoundObject(*objlist))
+            self.rcutout.fitsimage.redraw()
+        else:
+            print('problem fitting ellipse')
     def plot_profiles(self):
         print('edit mask')
 
 class galaxy_catalog():
-
     def __init__(self,catalog):
         self.cat = fits.getdata(catalog)
 
+    def cull_catalog(self, keepflag):
+        self.cat = self.cat[keepflag]
+
+        
 if __name__ == "__main__":
     catalog = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
     #gcat = galaxy_catalog(catalog)

@@ -40,6 +40,7 @@ import os
 import sys
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.convolution import Tophat2DKernel
 import numpy as np
 #import argparse
 #import pyds9
@@ -100,7 +101,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         self.fitsimage.set_callback('none-move',self.cursor_cb)
         #self.fitsimage.set_callback('cursor-down',self.cursor_down)
         self.readout = QtWidgets.QLabel('')
-        ui.readoutGridLayout.addWidget(self.readout, 1, 0, 1, 5)
+        ui.readoutGridLayout.addWidget(self.readout, 1, col, 1, 1)
         #self.ui.readoutLabel.setText('this is another test')
         self.fitsimage.set_callback('key-press',self.key_press_cb)
     def load_image(self, imagearray):
@@ -132,7 +133,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         fits_x, fits_y = data_x + 1, data_y + 1
         
         try:
-            text = "X: %.2f  Y: %.2f  Value: %.3f" % (fits_x, fits_y, float(value))
+            text = "X: %.1f  Y: %.1f  Value: %.2f" % (fits_x, fits_y, float(value))
             #self.readout.setText('this is another test')
             self.readout.setText(text)
         except:
@@ -169,16 +170,19 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         if haimage == None:
             haimage='MKW8-18216-CS.fits'
         if sepath == None:
-            sepath=os.getenv('HOME')+'github/HalphaImaging/astromatic/'
+            sepath=os.getenv('HOME')+'/github/HalphaImaging/astromatic/'
         if param == None:
             param='default.sex.HDI.mask'
         self.image_name = image
         self.haimage_name = haimage
-        
+        print(self.image_name)
+        print(self.haimage_name)
+        print(sepath)
         self.sepath = sepath
         self.param = param
         self.threshold = threshold
         self.snr = snr
+        self.snr_analysis = snr
         self.cmap = cmap
         self.xcursor_old = -99
         self.xcursor = -99
@@ -201,8 +205,9 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         self.mask_size = 20. # side of square to mask out when user clicks on a pixel
 
         # set up array to store the user-created object masks
-        self.usr_mask = np.zeros_like(self.image)
 
+        self.usr_mask = np.zeros_like(self.image)
+        print(self.image.shape, self.usr_mask.shape)
         # set off center flag as false by default
         self.off_center_flag = False
 
@@ -219,11 +224,13 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         #self.ui.msaveButton.clicked.connect(self.write_mask)
         self.ui.mquitButton.clicked.connect(self.quit_program)
         self.ui.mhelpButton.clicked.connect(self.print_help_menu)
+        self.ui.mrunSEButton.clicked.connect(self.runse)
         #self.ui.msaveButton.clicked.connect(self.save_mask)
         #self.ui.mremoveButton.clicked.connect(self.remove_object)
         self.ui.boxSizeLineEdit.textChanged.connect(self.set_box_size)
         self.ui.seThresholdLineEdit.textChanged.connect(self.set_threshold)
         self.ui.seSNRLineEdit.textChanged.connect(self.set_sesnr)
+        self.ui.seSNRAnalysisLineEdit.textChanged.connect(self.set_sesnr_analysis)
     def close_window(self):
         print('click red x to close window')
         #sys.exit()
@@ -237,8 +244,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         self.ui.cutoutsLayout.addWidget(a, 0, 2, 1, 1)
 
         #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
-        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1)
-        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
+        self.rcutout = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1)
+        self.hacutout = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
         self.maskcutout = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 4, 1)
         #self.maskcutout.mouse_clicked.connect(self.add_object)
         self.maskcutout.key_pressed.connect(self.key_press_func)
@@ -273,6 +280,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
     def runse(self,galaxy_id = None):
         print('using a deblending threshold = ',self.threshold)
+        print('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.param,float(self.threshold),float(self.snr),float(self.snr_analysis)))
         os.system('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.param,float(self.threshold),float(self.snr),float(self.snr)))
         self.maskdat = fits.getdata('segmentation.fits')
         # grow masked areas
@@ -298,6 +306,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         invmask = np.array(~invmask,'i')
         fits.writeto(self.mask_inv_image,invmask,header = self.imheader,overwrite=True)
         self.mask_saved.emit(self.mask_image)
+        self.display_mask()
     def show_mask(self):
         if self.nods9:
             plt.close('all')
@@ -408,13 +417,28 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         print('Adjust threshold for SE deblending')
         print('0=lots, 1=no deblend')
         #t = raw_input('enter new threshold')
-        self.threshold = float(t)
-        self.runse()
+        try:
+            self.threshold = float(t)
+            self.runse()
+
+        except ValueError:
+            pass
         
     def set_sesnr(self,t):
         #t = raw_input('enter new SNR')
-        self.snr = float(t)
-        self.runse()
+        try:
+            self.snr = float(t)
+        except ValueError:
+            pass
+        #self.runse()
+                
+    def set_sesnr_analysis(self,t):
+        #t = raw_input('enter new SNR')
+        try:
+            self.snr_analysis = float(t)
+        except ValueError:
+            pass
+
                 
     def set_box_size(self,t):
         # change box size used for adding pixels to mask
@@ -459,7 +483,14 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             self.print_menu()
             fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
             self.mask_saved.emit(self.mask_image)
-
+    def grow_mask(self, size=5):
+        # convolve mask with top hat kernel
+        kernel = Tophat2DKernel(5)
+        t = convolve(self.maskdat, kernel)
+        plt.figure()
+        plt.imshow(t)
+        plt.show()
+        # save convolved mask as new mask
 # run sextractor on input image
 # return segmentation image with central object removed
 
