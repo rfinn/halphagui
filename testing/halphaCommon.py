@@ -1,6 +1,8 @@
-from PyQt5 import  QtWidgets
+#from PyQt5 import  QtWidgets
+from PyQt5 import QtCore,QtWidgets, QtGui
 #from PyQt5.Qtcore import  Qt
-from ginga.qtw.QtHelp import QtGui, QtCore
+#from ginga.qtw.QtHelp import QtGui, QtCore
+
 from halphav3 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
@@ -11,6 +13,7 @@ from ginga.util.loader import load_data
 from astropy.wcs import WCS
 
 class cutout_image():
+    #key_pressed = QtCore.pyqtSignal(str)
     def __init__(self,panel_name,ui, logger, row, col, drow, dcol):
         #super(image_panel, self).__init__()
         # enable some user interaction
@@ -66,7 +69,7 @@ class cutout_image():
         #self.setWindowTitle(filepath)
 
 
-class mplWindow(QtGui.QDialog):
+class mplWindow(QtWidgets.QDialog):
     
     def __init__(self, parent=None):
         super(mplWindow, self).__init__(parent)

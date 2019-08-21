@@ -5,10 +5,11 @@ sys.path.append('/Users/rfinn/github/HalphaImaging/python3/')
 
 import numpy as np
 
-from PyQt5 import  QtWidgets
-from PyQt5 import QtCore
+#from PyQt5 import  QtWidgets
+#from PyQt5 import QtCore
 #from PyQt5.Qtcore import  Qt
-from ginga.qtw.QtHelp import QtGui #, QtCore
+from PyQt5 import QtCore,QtWidgets, QtGui
+#from ginga.qtw.QtHelp import QtGui #, QtCore
 from halphav3 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
@@ -45,9 +46,11 @@ lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
 
 
 
-class image_panel(QtGui.QMainWindow):
+class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
+    key_pressed = QtCore.pyqtSignal(str)
     def __init__(self,panel_name,ui,logger):
         super(image_panel, self).__init__()
+        QtCore.QObject.__init__(self)
         self.ui = ui
         self.logger = logger
         self.drawcolors = colors.get_colors()
@@ -59,11 +62,16 @@ class image_panel(QtGui.QMainWindow):
         fi.enable_autozoom('on')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move',self.cursor_cb)
+        # not sure how to add tab for multiple images.
+        # going to try using keystroke instead
+        #fi.add_callback('add-channel',self.add_channel)
+        #fi.add_callback('channel-change', self.focus_cb)
+
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
         #fi.set_figure(self.figure)
         self.fitsimage = fi
-
+        self.fitsimage.set_callback('key-press',self.key_press_cb)
         # enable some user interaction
         #fi.get_bindings.enable_all(True)
         bd = fi.get_bindings()
@@ -107,7 +115,8 @@ class image_panel(QtGui.QMainWindow):
         panel_name.addWidget(self.readout)
         self.readout.setText('this is another test')
         
-        wdrawcolor = QtGui.QComboBox()
+        #wdrawcolor = QtGui.QComboBox()
+        wdrawcolor = QtWidgets.QComboBox()
         for name in self.drawcolors:
             wdrawcolor.addItem(name)
         index = self.drawcolors.index('lightblue')
@@ -115,7 +124,7 @@ class image_panel(QtGui.QMainWindow):
         wdrawcolor.activated.connect(self.set_drawparams)
         self.wdrawcolor = wdrawcolor
         
-        wdrawtype = QtGui.QComboBox()
+        wdrawtype = QtWidgets.QComboBox()
         for name in self.drawtypes:
             wdrawtype.addItem(name)
         index = self.drawtypes.index('rectangle')
@@ -149,6 +158,12 @@ class image_panel(QtGui.QMainWindow):
         #self.add_cutouts()
 
  
+    def add_channel(self):
+        print('adding a channel')
+    def key_press_cb(self, canvas, keyname):
+        print('key pressed! ',keyname)
+        self.key_pressed.emit(keyname)
+        #return self.imexam_cmd(self.canvas, keyname, data_x, data_y, func)
         
     def set_drawparams(self, kind):
         index = self.wdrawtype.currentIndex()
@@ -317,6 +332,7 @@ class hafunctions(Ui_MainWindow):
     def add_coadd_frame(self,panel_name):
         logger = log.get_logger("example1", log_stderr=True, level=40)
         self.coadd = image_panel(panel_name, self.ui,logger)
+        self.coadd.key_pressed.connect(self.key_press_func)
         #self.coadd.add_cutouts()
 
     def add_cutout_frames(self):
@@ -467,6 +483,21 @@ class hafunctions(Ui_MainWindow):
         self.halpha_cs = self.ha - self.filter_ratio*self.r
         # display continuum subtracted Halpha image in the large frame        
         self.coadd.fitsimage.set_data(self.halpha_cs)
+    def key_press_func(self,key):
+        if key == 'r':
+            z = self.coadd.fitsimage.settings.get_setting('zoomlevel')
+            print('zoom = ',z)
+            p = self.coadd.fitsimage.settings.get_setting('pan')
+            print('pan = ',p)
+
+            self.coadd.fitsimage.set_data(self.r)
+            self.coadd.fitsimage.zoom_to(z.value)
+            self.coadd.fitsimage.panset_xy(p.value[0],p.value[1])
+            self.coadd.canvas.redraw()
+        elif key == 'h':
+            self.coadd.fitsimage.set_data(self.halpha_cs)
+        else:
+            pass
     def setup_ratio_slider(self):
         self.ui.ratioSlider.setRange(0,100)
         self.ui.ratioSlider.setValue(50)
