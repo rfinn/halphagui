@@ -4,6 +4,7 @@ sys.path.append(os.getcwd())
 sys.path.append('/Users/rfinn/github/HalphaImaging/python3/')
 
 import numpy as np
+import platform
 
 #from PyQt5 import  QtWidgets
 #from PyQt5 import QtCore
@@ -32,11 +33,18 @@ from photutils.isophote import EllipseGeometry
 from photutils.isophote import Ellipse
 from photutils import EllipticalAperture
 
+import matplotlib
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
+# routines for measuring elliptical photometry
+from photwrapper import ellipse
 
 from maskwrapper import maskwindow
 from halphaCommon import cutout_image
+from fit_profile import profile, dualprofile
 # code from HalphaImaging repository
 import uat_sextractor_2image as runse
 #from uat_mask import mask_image
@@ -44,6 +52,14 @@ import uat_sextractor_2image as runse
 lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
 lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
 
+# Force a specific toolkit on mac
+macos_ver = platform.mac_ver()[0]
+if len(macos_ver) > 0:
+    # change this to "pass" if you want to force a different backend
+    # On Mac OS X I found the default choice for matplotlib is not stable
+    # with ginga
+    matplotlib.use('Qt4Agg')
+import matplotlib.pyplot as plt
 
 
 class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
@@ -305,7 +321,7 @@ class hafunctions(Ui_MainWindow):
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
         self.ui.makeMaskButton.clicked.connect(self.make_mask)
         self.ui.saveCutoutsButton.clicked.connect(self.write_cutouts)
-        self.ui.profileButton.clicked.connect(self.plot_profiles)
+        self.ui.profileButton.clicked.connect(self.fit_profiles)
         self.ui.wfratio.clicked.connect(self.get_filter_ratio)
         self.ui.resetRatioButton.clicked.connect(self.reset_cutout_ratio)
         self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
@@ -345,9 +361,9 @@ class hafunctions(Ui_MainWindow):
         self.ui.cutoutsLayout.addWidget(a, 0, 2, 1, 1)
 
         #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
-        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1)
-        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
-        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 4, 1)
+        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 8, 1)
+        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1)
+        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1)
 
     def connect_setup_menu(self):
         self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
@@ -660,83 +676,72 @@ class hafunctions(Ui_MainWindow):
         self.maskcutout.load_file(self.mask_image_name)
         self.mask_image_exists = True
     def fit_ellipse(self):
-        # https://github.com/astropy/photutils-datasets/blob/master/notebooks/isophote/isophote_example4.ipynb
-        print(self.cutout_name_r)
-        try:
-            rdata, rheader = fits.getdata(self.cutout_name_r, header=True)
-        except AttributeError:
-            print('make sure you have selected a galaxy')
-            return
-        ### CLEAR R-BAND CUTOUT CANVAS
+        current_dir = os.getcwd()
+        image_dir = os.path.dirname(self.rcoadd_fname)
+        os.chdir(image_dir)
 
+        ### CLEAR R-BAND CUTOUT CANVAS
         self.rcutout.canvas.delete_all_objects()
 
-        ### CREATE MASKED ARRAY IF MASK IS AVAILABLE
-        #
-        # following https://docs.scipy.org/doc/numpy/reference/maskedarray.generic.html
-        # read in mask, convert to boolean
-        # 
-        # boolmask = np.array(mask,'bool')
-        #
-        # create new array:
-        # newarray = np.ma.array(rdata, mask = np.array(self.mask_data, 'bool'))
-        #
-        # mask should have bad values = True
-        #
-        # NOTE! According to photutils documentation, using masked arrays
-        # slows down the process considerably
-        # https://github.com/astropy/photutils-datasets/blob/master/notebooks/isophote/isophote_example4.ipynb
-        #
-        # for details on ellipse fitting, including
-        # holding EPS and PA fixed
-        # step size in sma
-        # https://photutils.readthedocs.io/en/stable/_modules/photutils/isophote/ellipse.html
-        
-        ### GENERATE GUESS ELLIPSE  ###
+        ### GENERATE GUESS ELLIPSE USING NSA VALUES ###
         # use center of cutout as first get for xcenter
-        xcenter = int(rdata.shape[0]/2.)
-        ycenter = int(rdata.shape[1]/2.)
-        sma = 4.*self.gradius[self.igal]
-        eps = (1.-self.nsa.cat.SERSIC_BA[self.igal])
-        pa = self.nsa.cat.SERSIC_PHI[self.igal]
-        print('initial PA = ',pa, self.nsa.cat.SERSIC_PHI[self.igal])
-        guess = EllipseGeometry(x0=xcenter,y0=ycenter,sma=sma,eps = eps, pa = np.radians(pa))
-        aper = EllipticalAperture((guess.x0, guess.y0),guess.sma, guess.sma*(1 - guess.eps), (guess.pa))
-
-        ### DRAW INITIAL ELLIPSE ON R-BAND CUTOUT
-        #
-        markcolor='magenta'
-        markwidth=1
-        obj = self.coadd.dc.Ellipse(xcenter,ycenter,sma, sma*(1-eps), rotdeg = (pa), color=markcolor,linewidth=markwidth)
-        self.markhltag = self.rcutout.canvas.add(obj)
-        self.rcutout.fitsimage.redraw()
-        
+        ## xcenter = int(rdata.shape[0]/2.)
+        ## ycenter = int(rdata.shape[1]/2.)
+        ## sma = 4.*self.gradius[self.igal]
+        ## eps = (1.-self.nsa.cat.SERSIC_BA[self.igal])
+        ## pa = self.nsa.cat.SERSIC_PHI[self.igal]
+        ## print('initial PA = ',pa, self.nsa.cat.SERSIC_PHI[self.igal])
+        ## guess = EllipseGeometry(x0=xcenter,y0=ycenter,sma=sma,eps = eps, pa = np.radians(pa))
+        ## aper = EllipticalAperture((guess.x0, guess.y0),guess.sma, guess.sma*(1 - guess.eps), (guess.pa))
+                
         ### FIT ELLIPSE
         #
-        ellipse = Ellipse(rdata, guess)
-        isolist = ellipse.fit_image()#sma0=10)#, fix_pa = True, fix_eps = True)
+        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout)
+        self.e.run_for_gui()
+        self.e.plot_profiles()
+        os.chdir(current_dir)
 
-        ### DRAW RESULTING FIT ON R-BAND CUTOUT
-        #iso = isolist.get_closest(5*self.gradius[self.igal])
+    def fit_profiles(self):
+        current_dir = os.getcwd()
+        image_dir = os.path.dirname(self.rcoadd_fname)
+        os.chdir(image_dir)
+
+        rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.dat'
+
+        haphot_table = self.cutout_name_ha.split('.fits')[0]+'_phot.dat'
         
-        #obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
-        #self.markhltag = self.rcutout.canvas.add(obj)
-        #self.rcutout.fitsimage.redraw()
-        markcolor='cyan'
-        if len(isolist) > 5:
-            smas = np.linspace(np.min(isolist.sma), np.max(isolist.sma), 8)
-            objlist = []
-            for sma in smas:
-                iso = isolist.get_closest(sma)
-                obj = self.coadd.dc.Ellipse(iso.x0,iso.y0,iso.sma, iso.sma*(1-iso.eps), rotdeg = np.degrees(iso.pa), color=markcolor,linewidth=markwidth)
-                objlist.append(obj)
-            self.markhltag = self.rcutout.canvas.add(self.coadd.dc.CompoundObject(*objlist))
-            self.rcutout.fitsimage.redraw()
-        else:
-            print('problem fitting ellipse')
-    def plot_profiles(self):
-        print('edit mask')
+        r = profile(self.cutout_name_r, rphot_table, label='R')
+        ha = profile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
+        both = dualprofile(r,ha)
+        both.make_3panel_plot()
+        '''
 
+        I can get the plot to print to the frame,
+        but then the image cutouts disappear.  This is when profilesLayout
+        is a vertical layout.
+
+        going to try again for a gridlayout.
+        
+        
+        print('edit mask')
+        self.fig = Figure(figsize=(4,3))
+        self.mplcanvas = FigureCanvas(self.fig)
+        self.mplcanvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Expanding)
+        #self.mplcanvas.updateGeometry(self)
+        #self.ui.profilesLayout.addWidget(self.mplcanvas)
+
+        self.ui.profilesLayout.addWidget(self.mplcanvas)
+
+        self.fig.clf()
+
+        ax = self.fig.add_subplot(111)
+        ax.autoscale(True, tight=True)
+        ax.plot(np.arange(10))
+
+        # force an update of the figure
+        self.fig.canvas.draw()
+        '''
+        os.chdir(current_dir)
 class galaxy_catalog():
     def __init__(self,catalog):
         self.cat = fits.getdata(catalog)

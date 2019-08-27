@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1120</width>
+    <width>1145</width>
     <height>607</height>
    </rect>
   </property>
@@ -43,17 +43,17 @@
           <item row="0" column="2">
            <widget class="QComboBox" name="wgalid"/>
           </item>
-          <item row="0" column="3">
-           <widget class="QPushButton" name="wclear">
-            <property name="text">
-             <string>Clear Canvas</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QPushButton" name="wmark">
             <property name="text">
              <string>Find Galaxies</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="wclear">
+            <property name="text">
+             <string>Clear Canvas</string>
             </property>
            </widget>
           </item>
@@ -83,15 +83,7 @@
        </item>
        <item row="5" column="1" rowspan="2">
         <widget class="QWidget" name="profiles" native="true">
-         <layout class="QGridLayout" name="profilesLayout">
-          <item row="0" column="0">
-           <widget class="QWidget" name="widget_3" native="true">
-            <property name="toolTip">
-             <string>HalphaType</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <layout class="QGridLayout" name="profilesLayout"/>
         </widget>
        </item>
        <item row="5" column="0">
@@ -105,6 +97,12 @@
        </item>
        <item row="0" column="1" rowspan="3">
         <widget class="QWidget" name="cutouts" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>172</height>
+          </size>
+         </property>
          <layout class="QGridLayout" name="cutoutsLayout">
           <item row="0" column="0">
            <widget class="QWidget" name="tempWidget" native="true"/>
@@ -115,26 +113,6 @@
        <item row="3" column="1">
         <widget class="QWidget" name="rightButtons" native="true">
          <layout class="QGridLayout" name="gridLayout_4">
-          <item row="5" column="2">
-           <widget class="QPushButton" name="profileButton">
-            <property name="text">
-             <string>Plot Profiles</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="label">
-            <property name="layoutDirection">
-             <enum>Qt::LeftToRight</enum>
-            </property>
-            <property name="text">
-             <string>Output Prefix</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QFrame" name="frame_2">
             <property name="frameShape">
@@ -158,6 +136,13 @@
                </property>
                <property name="tickPosition">
                 <enum>QSlider::TicksBelow</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="resetSizeButton">
+               <property name="text">
+                <string>Reset Cutout Size</string>
                </property>
               </widget>
              </item>
@@ -196,35 +181,14 @@
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="QPushButton" name="resetRatioButton">
+               <property name="text">
+                <string>Reset Filter Ratio</string>
+               </property>
+              </widget>
+             </item>
             </layout>
-           </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QPushButton" name="fluxButton">
-            <property name="text">
-             <string>Measure Flux</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QPushButton" name="resetSizeButton">
-            <property name="text">
-             <string>Reset Cutout Size</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QPushButton" name="resetRatioButton">
-            <property name="text">
-             <string>Reset Filter Ratio</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QPushButton" name="fitEllipseButton">
-            <property name="text">
-             <string>Fit Ellipse</string>
-            </property>
            </widget>
           </item>
           <item row="6" column="1">
@@ -270,6 +234,33 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QPushButton" name="fitEllipseButton">
+            <property name="text">
+             <string>Fit Ellipse</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="profileButton">
+            <property name="text">
+             <string>Fit Profiles</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="text">
+             <string>Output Prefix</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -284,7 +275,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1120</width>
+     <width>1145</width>
      <height>22</height>
     </rect>
    </property>
