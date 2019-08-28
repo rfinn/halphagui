@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1145</width>
-    <height>607</height>
+    <width>1193</width>
+    <height>671</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -75,9 +75,6 @@
        <item row="1" column="0">
         <widget class="QWidget" name="widget_7" native="true"/>
        </item>
-       <item row="6" column="0">
-        <widget class="QWidget" name="widget_10" native="true"/>
-       </item>
        <item row="3" column="0">
         <widget class="QWidget" name="widget_8" native="true"/>
        </item>
@@ -85,9 +82,6 @@
         <widget class="QWidget" name="profiles" native="true">
          <layout class="QGridLayout" name="profilesLayout"/>
         </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QWidget" name="widget_9" native="true"/>
        </item>
        <item row="0" column="0">
         <widget class="QWidget" name="widget_6" native="true"/>
@@ -113,40 +107,20 @@
        <item row="3" column="1">
         <widget class="QWidget" name="rightButtons" native="true">
          <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="0">
-           <widget class="QFrame" name="frame_2">
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
+          <item row="5" column="1">
+           <widget class="QLineEdit" name="prefixLineEdit"/>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
             </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
+            <property name="text">
+             <string>Output Prefix</string>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout">
-             <item alignment="Qt::AlignHCenter">
-              <widget class="QLabel" name="cutoutSliderLabel">
-               <property name="text">
-                <string>cutout size</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSlider" name="cutoutSlider">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="resetSizeButton">
-               <property name="text">
-                <string>Reset Cutout Size</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
            </widget>
           </item>
           <item row="0" column="1">
@@ -191,10 +165,120 @@
             </layout>
            </widget>
           </item>
-          <item row="6" column="1">
-           <widget class="QLineEdit" name="prefixLineEdit"/>
+          <item row="0" column="0">
+           <widget class="QFrame" name="frame_2">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout">
+             <item alignment="Qt::AlignHCenter">
+              <widget class="QLabel" name="cutoutSliderLabel">
+               <property name="text">
+                <string>cutout size</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="cutoutSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="tickPosition">
+                <enum>QSlider::TicksBelow</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="resetSizeButton">
+               <property name="text">
+                <string>Reset Cutout Size</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
           </item>
-          <item row="6" column="2">
+          <item row="1" column="1">
+           <widget class="QFrame" name="frame_3">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_4">
+             <item>
+              <widget class="QPushButton" name="fitEllipseButton">
+               <property name="text">
+                <string>Fit Ellipse</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="profileButton">
+               <property name="text">
+                <string>Fit Profiles</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QFrame" name="frame_4">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_5">
+             <item>
+              <widget class="QPushButton" name="galfitButton">
+               <property name="text">
+                <string>galfit</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QFrame" name="frame_5">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_6">
+             <item alignment="Qt::AlignHCenter">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Classify Halpha</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="haTypeComboBox">
+               <property name="toolTip">
+                <string>HalphaType</string>
+               </property>
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="currentText">
+                <string extracomment="Halpha Type"/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="5" column="2">
            <widget class="QPushButton" name="editMaskButton">
             <property name="text">
              <string>Save Galaxy</string>
@@ -221,46 +305,6 @@
             </layout>
            </widget>
           </item>
-          <item row="3" column="2">
-           <widget class="QComboBox" name="haTypeComboBox">
-            <property name="toolTip">
-             <string>HalphaType</string>
-            </property>
-            <property name="autoFillBackground">
-             <bool>false</bool>
-            </property>
-            <property name="currentText">
-             <string extracomment="Halpha Type"/>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QPushButton" name="fitEllipseButton">
-            <property name="text">
-             <string>Fit Ellipse</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QPushButton" name="profileButton">
-            <property name="text">
-             <string>Fit Profiles</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="label">
-            <property name="layoutDirection">
-             <enum>Qt::LeftToRight</enum>
-            </property>
-            <property name="text">
-             <string>Output Prefix</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
@@ -275,7 +319,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1145</width>
+     <width>1193</width>
      <height>22</height>
     </rect>
    </property>
