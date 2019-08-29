@@ -29,14 +29,19 @@ https://photutils.readthedocs.io/en/stable/epsf.html#build-epsf
 import os
 from photutils import EPSFBuilder
 from photutils.psf import extract_stars
+from photutils import centroid_com, centroid_1dg, centroid_2dg
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.io import fits
 from matplotlib import pyplot as plt
 from astropy.visualization import simple_norm
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+from astropy.stats import sigma_clipped_stats
+
 
 class parent_image():
-    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=25):
+    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=30, pixelscale=0.43):
         self.image_name = image
         self.data, self.header = fits.getdata(self.image_name, header=True)
         self.sat_level = max_good
@@ -48,6 +53,7 @@ class parent_image():
         else:
             self.sepath = sepath
         self.nstars = nstars
+        self.pixelscale = pixelscale
     def link_files(self):
         # these are the sextractor files that we need
         # set up symbolic links from sextractor directory to the current working directory        
@@ -83,8 +89,13 @@ class parent_image():
                 (y > hsize) & (y < (self.data.shape[0] -1 - hsize)))
 
         # remove stars with close neighbors
-        c = SkyCoord(self.secat['
-        star_flag = flag1 & flag2
+        c = SkyCoord(self.secat['ALPHA_J2000']*u.deg,self.secat['DELTA_J2000']*u.deg, frame='icrs')
+        # returns index of closest match (not itself), separation in deg,
+        # and 3d sep (not sure what this means if I don't provide redshift
+        idx, sep2d, dist3d = c.match_to_catalog_sky(c,nthneighbor=2)
+        # make sure stars don't have a neighbor within 15" (picked that fairly randomly...)
+        flag3 = sep2d > 15./3600.*u.deg
+        star_flag = flag1 & flag2 & flag3
         # select 25 objects with FLUX_MAX closest to median value
         # in other words, select 25 most central objects
         fm = self.secat['FLUX_MAX'][star_flag]
@@ -106,9 +117,12 @@ class parent_image():
         self.stars_tbl['y'] = self.ystar
 
     def extract_stars(self):
+        # just in case sky was not properly subtracted
+        mean_val, median_val, std_val = sigma_clipped_stats(self.data, sigma=2.)  
+        self.data -= median_val
         nddata = NDData(data=self.data)  
         self.stars = extract_stars(nddata, self.stars_tbl, size=25)  
-        pass
+
     def show_stars(self):
         nrows = 5
         ncols = 5
@@ -119,7 +133,7 @@ class parent_image():
             ax[i].imshow(self.stars[i], norm=norm, origin='lower', cmap='viridis')
         plt.show()
     def build_psf(self):
-        epsf_builder = EPSFBuilder(oversampling=4, maxiters=3, progress_bar=False)  
+        epsf_builder = EPSFBuilder(oversampling=2, maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)  
         self.epsf, self.fitted_stars = epsf_builder(self.stars)
     def show_psf(self):
         norm = simple_norm(self.epsf.data, 'log', percent=99.)
