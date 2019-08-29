@@ -40,7 +40,8 @@ import os
 import sys
 from astropy.io import fits
 from astropy.wcs import WCS
-from astropy.convolution import Tophat2DKernel
+from astropy.convolution import Tophat2DKernel, convolve
+from astropy.convolution.kernels import CustomKernel
 import numpy as np
 #import argparse
 #import pyds9
@@ -152,7 +153,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, param=None, threshold=0.05,snr=2,cmap='gist_heat_r'):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, config=None, threshold=0.05,snr=2,cmap='gist_heat_r'):
         super(maskwindow, self).__init__()
         
         self.ui = Ui_maskWindow()
@@ -165,21 +166,24 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         #self.readout.setText('this is another test')
 
         self.logger = logger
+
+        ###  The lines below are for testing purposes
+        ###  and should be removed before release.
         if image == None:
             image='MKW8-18216-R.fits'
         if haimage == None:
             haimage='MKW8-18216-CS.fits'
         if sepath == None:
-            sepath=os.getenv('HOME')+'/github/HalphaImaging/astromatic/'
-        if param == None:
-            param='default.sex.HDI.mask'
+            sepath=os.getenv('HOME')+'/github/halphagui/astromatic/'
+        if config == None:
+            config='default.sex.HDI.mask'
         self.image_name = image
         self.haimage_name = haimage
         print(self.image_name)
         print(self.haimage_name)
         print(sepath)
         self.sepath = sepath
-        self.param = param
+        self.config = config
         self.threshold = threshold
         self.snr = snr
         self.snr_analysis = snr
@@ -248,7 +252,12 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         self.hacutout = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
         self.maskcutout = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 4, 1)
         #self.maskcutout.mouse_clicked.connect(self.add_object)
+
+        # this allows the user to press editing keys in any of the 3 image panels
+        # not just in the mask panel
         self.maskcutout.key_pressed.connect(self.key_press_func)
+        self.rcutout.key_pressed.connect(self.key_press_func)
+        self.hacutout.key_pressed.connect(self.key_press_func)
 
     def display_cutouts(self):
         self.rcutout.load_file(self.image_name)
@@ -257,12 +266,14 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
     def display_mask(self):
         self.maskcutout.load_file(self.mask_image)
     def link_files(self):
+        # these are the sextractor files that we need
+        # set up symbolic links from sextractor directory to the current working directory
         sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
         for file in sextractor_files:
             os.system('ln -s '+self.sepath+'/'+file+' .')
     def clean_links(self):
-        # clean up
-        #sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
+        # clean up symbolic links to sextractor files
+        # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
         sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
         for file in sextractor_files:
             os.system('unlink '+file)
@@ -280,8 +291,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
     def runse(self,galaxy_id = None):
         print('using a deblending threshold = ',self.threshold)
-        print('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.param,float(self.threshold),float(self.snr),float(self.snr_analysis)))
-        os.system('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.param,float(self.threshold),float(self.snr),float(self.snr)))
+        print('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr_analysis)))
+        os.system('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr)))
         self.maskdat = fits.getdata('segmentation.fits')
         # grow masked areas
         bool_array = np.array(self.maskdat.shape,'bool')
@@ -307,6 +318,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         fits.writeto(self.mask_inv_image,invmask,header = self.imheader,overwrite=True)
         self.mask_saved.emit(self.mask_image)
         self.display_mask()
+
+
     def show_mask(self):
         if self.nods9:
             plt.close('all')
@@ -328,8 +341,11 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         key, x, y = text.split(',')
         self.xcursor = float(x)
         self.ycursor = float(y)
-        self.cursor_value = self.maskdat[int(self.ycursor),int(self.xcursor)]
-        print('cursor value = ',self.cursor_value, key)
+        try:
+            self.cursor_value = self.maskdat[int(self.ycursor),int(self.xcursor)]
+        except IndexError:
+            print('out of bounds, try again')
+        #print('cursor value = ',self.cursor_value, key)
         if key == 'a':
             self.add_object()
         elif key == 'r': 
@@ -337,8 +353,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             self.remove_object(int(self.cursor_value))
         elif key == 'o': 
             self.off_center()
-        #elif key == 's': 
-        #    self.set_box_size()
+        elif key == 'g': 
+            self.grow_mask()
         #elif key == 't': 
         #    self.set_threshold()
         #elif key == 'n': 
@@ -353,7 +369,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             print('did not understand that.  \n Try again!')
         
     def print_help_menu(self):
-        print('Click on mask image, then enter:\n \t r to remove object in mask at the cursor position;'
+        print('Click on mask or r/ha image, then enter:\n \t r to remove object in mask at the cursor position;'
               '\n \t a to mask additional pixels at cursor position;'
               '\n \t o if target is off center (and program is removing the wrong object);'
               #'\n \t s to change the size of the mask box;'
@@ -384,24 +400,30 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             return
         
         # make sure mask dimensions are not outside of the image
-        if xmin < 0:
-            xmin = 0
-        if ymin < 0:
-            ymin = 0
-        if xmax > self.xmax:
-            xmax = self.xmax
-        if ymax > self.ymax:
-            ymax = self.ymax
-        print('xcursor, ycursor = ',self.xcursor, self.ycursor)
+        xmin = max(0,xmin)
+        xmax = min(self.xmax,xmax)
+        ymin = max(0,ymin)
+        ymax = min(self.ymax,ymax)
+
+        #print('xcursor, ycursor = ',self.xcursor, self.ycursor)
         mask_value = np.max(self.maskdat) + 1
-        print(xmin,xmax,ymin,ymax,self.mask_size)
-        self.usr_mask[ymin:ymin+int(self.mask_size),xmin:xmin+int(self.mask_size)] = mask_value*np.ones([int(self.mask_size),int(self.mask_size)])
+        #print(xmin,xmax,ymin,ymax,self.mask_size)
+        self.usr_mask[ymin:ymax,xmin:xmax] = mask_value*np.ones([ymax-ymin,xmax-xmin])
         self.maskdat = self.maskdat + self.usr_mask
         self.save_mask()
         print('added mask object '+str(mask_value))
         
     def remove_object(self, objID):
+        '''
+        this will remove masked pixels near the cursor
+
+        '''
         #objID = int(input('enter pixel value to remove object in mask'))
+        xmin = int(self.xcursor) - int(0.5*self.mask_size)
+        ymin = int(self.ycursor) - int(0.5*self.mask_size)
+        xmax = int(self.xcursor) + int(0.5*self.mask_size)
+        ymax = int(self.ycursor) + int(0.5*self.mask_size)
+
         if objID == 0:
             return
         else:
@@ -483,14 +505,57 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             self.print_menu()
             fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
             self.mask_saved.emit(self.mask_image)
-    def grow_mask(self, size=5):
+    def grow_mask(self, size=7):
         # convolve mask with top hat kernel
-        kernel = Tophat2DKernel(5)
-        t = convolve(self.maskdat, kernel)
-        plt.figure()
-        plt.imshow(t)
-        plt.show()
+        #kernel = Tophat2DKernel(5)
+        '''
+        Convolution: one way to grow the mask is to convolve the image with a kernel
+
+        however, this does not preserve the pixels values of the original
+        object, which come from the sextractor segmentation image.
+
+        if the user wants to remove an object, it's much easier to do this
+        by segmentation number rather than by pixels (as in the reverse of how we add objects
+        to mask).
+
+        Alternative: is to loop over just the masked pixels, and replace all pixels
+        within a square region with the masked value at the central pixel.
+        This will preserve the numbering from the segmentation image.
+
+        Disadvantage: everything assumes a square shape after repeated calls.
+
+        Alternative is currently implemented.
+        
+        '''
+        #mykernel = np.ones([5,5])
+        #kernel = CustomKernel(mykernel)
+        #self.maskdat = convolve(self.maskdat, kernel)
+        #self.maskdat = np.ceil(self.maskdat)
+        nx,ny = self.maskdat.shape
+        masked_pixels = np.where(self.maskdat > 0.)
+        for i,j in zip(masked_pixels[0], masked_pixels[1]):
+            rowmin = max(0,i-int(size/2))
+            rowmax = min(nx,i+int(size/2))
+            colmin = max(0,j-int(size/2))
+            colmax = min(ny,j+int(size/2))
+            if rowmax <= rowmin:
+                # something is wrong, return without editing mask
+                continue
+            if colmax <= colmin:
+                # something is wrong, return without editing mask
+                continue
+            #print(i,j,rowmin, rowmax, colmin, colmax)
+            self.maskdat[rowmin:rowmax,colmin:colmax] = self.maskdat[i,j]*np.ones([rowmax-rowmin,colmax-colmin])
+        self.display_mask()
         # save convolved mask as new mask
+        self.save_mask()
+
+        # plot mpl figure
+        # this was for debugging purposes
+        #plt.figure()
+        #plt.imshow(self.maskdat)
+        #plt.show()
+        
 # run sextractor on input image
 # return segmentation image with central object removed
 
