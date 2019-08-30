@@ -22,38 +22,49 @@ OUTPUT:
 - psf image
 
 REFERENCES:
+- following instructions found here:
 https://photutils.readthedocs.io/en/stable/epsf.html#build-epsf
 
 
 '''
 import os
+import numpy as np
+
 from photutils import EPSFBuilder
 from photutils.psf import extract_stars
 from photutils import centroid_com, centroid_1dg, centroid_2dg
+
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.io import fits
-from matplotlib import pyplot as plt
 from astropy.visualization import simple_norm
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.stats import sigma_clipped_stats
+from astropy.modeling import models, fitting
+from astropy.stats import gaussian_sigma_to_fwhm
 
+from matplotlib import pyplot as plt
 
 class parent_image():
-    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=30, pixelscale=0.43):
+    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=25, pixelscale=0.43,oversampling=None):
         self.image_name = image
         self.data, self.header = fits.getdata(self.image_name, header=True)
         self.sat_level = max_good
         self.size = size
         self.config = se_config
         self.sextractor_files =['default.sex.HDI','default.param','default.conv','default.nnw']
+        # path to source extractor files
+        # default is probably fine if you have github in ~/github
         if sepath == None:
             self.sepath=os.getenv('HOME')+'/github/halphagui/astromatic/'
         else:
             self.sepath = sepath
+        # number of stars to use to determine the psf
         self.nstars = nstars
+        # default pixelscale is set for HDI camera
         self.pixelscale = pixelscale
+        self.oversampling = oversampling
     def link_files(self):
         # these are the sextractor files that we need
         # set up symbolic links from sextractor directory to the current working directory        
@@ -68,9 +79,9 @@ class parent_image():
     def runse(self):
         self.link_files()
         s = 'sex %s -c %s  -SATUR_LEVEL 40000.0'%(self.image_name,self.config)
-        print(s)
+        #print(s)
         os.system(s)
-
+        self.clean_links()
     def read_se_table(self):
         self.secat = fits.getdata('test_cat.fits',2)
         pass
@@ -84,9 +95,10 @@ class parent_image():
         flag1 = (self.secat['CLASS_STAR'] > 0.95) & (self.secat['FLAGS'] == 0)
 
         # remove stars that are near the edge
-        hsize = (self.size - 1) / 2
-        flag2 = ((x > hsize) & (x < (self.data.shape[1] -1 - hsize)) &
-                (y > hsize) & (y < (self.data.shape[0] -1 - hsize)))
+        # being conservative by using the full image size as the buffer rather than half image size
+        # in part to compensate from zeros that sometimes are seen around perimeter after swarp
+        flag2 = ((x > self.size) & (x < (self.data.shape[1] -1 - self.size)) &
+                (y > self.size) & (y < (self.data.shape[0] -1 - self.size)))
 
         # remove stars with close neighbors
         c = SkyCoord(self.secat['ALPHA_J2000']*u.deg,self.secat['DELTA_J2000']*u.deg, frame='icrs')
@@ -106,11 +118,12 @@ class parent_image():
         # select stars within +/- nstar/2 from a threshold
         # where threshold is the percentile ranking according to peak flux
         threshold = .65
-        lower = int(threshold*len(sorted_indices)) - int((self.nstars-1)/2)
-        upper = int(threshold*len(sorted_indices)) + int((self.nstars-1)/2)
-        print('number of psf stars = ',upper-lower)
-        self.xstar = x[lower:upper+1]
-        self.ystar = y[lower:upper+1]
+        lower = int(threshold*len(sorted_indices)) - int((self.nstars)/2)
+        upper = int(threshold*len(sorted_indices)) + int((self.nstars)/2)
+        print('number of psf stars = ',upper-lower+1)
+        self.xstar = x[lower:upper]
+        self.ystar = y[lower:upper]
+        print(self.xstar.shape)
 
         self.stars_tbl = Table()
         self.stars_tbl['x'] = self.xstar
@@ -121,19 +134,23 @@ class parent_image():
         mean_val, median_val, std_val = sigma_clipped_stats(self.data, sigma=2.)  
         self.data -= median_val
         nddata = NDData(data=self.data)  
-        self.stars = extract_stars(nddata, self.stars_tbl, size=25)  
+        self.stars = extract_stars(nddata, self.stars_tbl, size=self.size)  
 
     def show_stars(self):
-        nrows = 5
-        ncols = 5
+        # round up to integer
+        nrows = int(np.ceil(np.sqrt(len(self.stars))))
+        ncols = int(np.ceil(np.sqrt(len(self.stars))))
         fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10), squeeze=True)
         ax = ax.ravel()
-        for i in range(nrows*ncols):
+        for i in range(self.nstars):
             norm = simple_norm(self.stars[i], 'log', percent=99.)
             ax[i].imshow(self.stars[i], norm=norm, origin='lower', cmap='viridis')
         plt.show()
     def build_psf(self):
-        epsf_builder = EPSFBuilder(oversampling=2, maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)  
+        if self.oversampling == None:
+            epsf_builder = EPSFBuilder(maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)
+        else:
+            epsf_builder = EPSFBuilder(oversampling=self.oversampling, maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)  
         self.epsf, self.fitted_stars = epsf_builder(self.stars)
     def show_psf(self):
         norm = simple_norm(self.epsf.data, 'log', percent=99.)
@@ -141,12 +158,32 @@ class parent_image():
         plt.imshow(self.epsf.data, norm=norm, origin='lower', cmap='viridis')
         plt.colorbar()
         plt.show()
+    def measure_fwhm(self):
+        nx,ny = self.epsf.data.shape
+        x,y = np.mgrid[:nx,:ny]
+        # gaussian model with initial guess for center and std
+        # assume the PSF is in the center of the image
+        # assume a std of 4
+        p_init = models.Gaussian2D(x_mean=nx/2.,y_mean=ny/2., x_stddev=4.,y_stddev=4.)
+        fit_p = fitting.LevMarLSQFitter()
+        t = fit_p(p_init,x,y,self.epsf.data)
+        self.x_stddev = t.x_stddev.value
+        self.y_stddev = t.y_stddev.value
+        # compute total radial std
+        # correct for oversampling of PSF
+        self.std = np.sqrt(self.x_stddev**2 + self.y_stddev**2)/self.oversampling
+        # convert gaussian std to fwhm
+        self.fwhm = self.std*gaussian_sigma_to_fwhm
+        print('image fwhm = %.2f pix (%.2f arcsec)'%(self.fwhm, self.fwhm*self.pixelscale))
     def save_psf_image(self):
+        outname = self.image_name.split('.fits')[0]+'-psf.fits'
+        fits.writeto(outname,self.epsf.data, overwrite=True)
+        
         pass
 
 if __name__ == '__main__':
     image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
-    p = parent_image(image=image)
+    p = parent_image(image=image, size=21, nstars=100, oversampling=2)
     p.runse()
     p.read_se_table()
     p.find_stars()
@@ -154,4 +191,14 @@ if __name__ == '__main__':
     p.show_stars()
     p.build_psf()
     p.show_psf()
+    p.measure_fwhm()
+    p.save_psf_image()
+    '''
+    getting some weird noise at the bottom of the psf image
+
+    need to read more about how it handles the edge
+
+    not sure that this will impact results significantly, so moving on...
+
+    '''
     
