@@ -95,10 +95,10 @@ class parent_image():
         flag1 = (self.secat['CLASS_STAR'] > 0.95) & (self.secat['FLAGS'] == 0)
 
         # remove stars that are near the edge
-        # being conservative by using the full image size as the buffer rather than half image size
+        # being conservative by using the 3x full image size as the buffer rather than half image size
         # in part to compensate from zeros that sometimes are seen around perimeter after swarp
-        flag2 = ((x > self.size) & (x < (self.data.shape[1] -1 - self.size)) &
-                (y > self.size) & (y < (self.data.shape[0] -1 - self.size)))
+        flag2 = ((x > 3.*self.size) & (x < (self.data.shape[1] -1 - 3.*self.size)) &
+                (y > 3.*self.size) & (y < (self.data.shape[0] -1 - 3.*self.size)))
 
         # remove stars with close neighbors
         c = SkyCoord(self.secat['ALPHA_J2000']*u.deg,self.secat['DELTA_J2000']*u.deg, frame='icrs')
@@ -146,6 +146,7 @@ class parent_image():
             norm = simple_norm(self.stars[i], 'log', percent=99.)
             ax[i].imshow(self.stars[i], norm=norm, origin='lower', cmap='viridis')
         plt.show()
+        plt.savefig('allstars.png')
     def build_psf(self):
         if self.oversampling == None:
             epsf_builder = EPSFBuilder(maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)
@@ -158,6 +159,7 @@ class parent_image():
         plt.imshow(self.epsf.data, norm=norm, origin='lower', cmap='viridis')
         plt.colorbar()
         plt.show()
+        plt.savefig('psf.png')
     def measure_fwhm(self):
         nx,ny = self.epsf.data.shape
         x,y = np.mgrid[:nx,:ny]
@@ -176,11 +178,11 @@ class parent_image():
         self.fwhm = self.std*gaussian_sigma_to_fwhm
         print('image fwhm = %.2f pix (%.2f arcsec)'%(self.fwhm, self.fwhm*self.pixelscale))
     def save_psf_image(self):
+        # save the psf file
+        # outfile = append '-psf' to the input image name
         outname = self.image_name.split('.fits')[0]+'-psf.fits'
         fits.writeto(outname,self.epsf.data, overwrite=True)
         
-        pass
-
 if __name__ == '__main__':
     image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
     p = parent_image(image=image, size=21, nstars=100, oversampling=2)
