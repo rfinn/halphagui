@@ -29,32 +29,45 @@
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <layout class="QGridLayout" name="leftLayout" columnstretch="0">
+      <layout class="QGridLayout" name="leftLayout">
        <item row="0" column="0">
         <widget class="QWidget" name="button_bar" native="true">
-         <layout class="QGridLayout" name="buttonLayout">
-          <item row="0" column="0">
-           <widget class="QPushButton" name="wfratio">
-            <property name="text">
-             <string>Get Filter Ratio</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QComboBox" name="wgalid"/>
-          </item>
-          <item row="0" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
            <widget class="QPushButton" name="wmark">
             <property name="text">
              <string>Find Galaxies</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="3">
+          <item>
            <widget class="QPushButton" name="wclear">
             <property name="text">
              <string>Clear Canvas</string>
             </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="wgalid"/>
+          </item>
+          <item>
+           <widget class="QWidget" name="widget_3" native="true">
+            <layout class="QVBoxLayout" name="leftButtonLayout">
+             <item>
+              <widget class="QPushButton" name="wfratio">
+               <property name="text">
+                <string>Get Filter Ratio</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="psfButton">
+               <property name="text">
+                <string>Build PSF</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -99,7 +112,21 @@
          </property>
          <layout class="QGridLayout" name="cutoutsLayout">
           <item row="0" column="0">
-           <widget class="QWidget" name="tempWidget" native="true"/>
+           <widget class="QWidget" name="tempWidget" native="true">
+            <widget class="QPushButton" name="resetSizeButton">
+             <property name="geometry">
+              <rect>
+               <x>300</x>
+               <y>40</y>
+               <width>151</width>
+               <height>32</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Reset Cutout Size</string>
+             </property>
+            </widget>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -188,13 +215,6 @@
                </property>
                <property name="tickPosition">
                 <enum>QSlider::TicksBelow</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="resetSizeButton">
-               <property name="text">
-                <string>Reset Cutout Size</string>
                </property>
               </widget>
              </item>

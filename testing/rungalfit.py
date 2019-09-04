@@ -53,7 +53,7 @@ def parse_galfit_1comp(galfit_outimage,asymflag=0,ncomp=1):
 
 
 class galfit:
-    def __init__(self,galname=None,image=None,sigma_image=None,psf_image=None,psf_oversampling=None,mask_image=None,xminfit=None,yminfit=None,xmaxfit=None,ymaxfit=None,convolution_size=None,magzp=None,pscale=None,convflag=1,constraintflag=1,fitallflag=0,ncomp=1):
+    def __init__(self,galname=None,image=None,sigma_image=None,psf_image=None,psf_oversampling=None,mask_image=None,xminfit=None,yminfit=None,xmaxfit=None,ymaxfit=None,convolution_size=None,magzp=None,pscale=None,convflag=1,constraintflag=1,fitallflag=False,ncomp=1):
         self.galname=galname
         self.image=image
 
@@ -73,14 +73,14 @@ class galfit:
         self.fitallflag=fitallflag
         self.ncomp=ncomp
         self.asymmetry=0
+        if self.sigma_image == None:
+            self.sigma_image = 'none'
 
-        print '***%%%%%%%%%%%%%%%%%'
-        print 'inside galfit class'
-        print xminfit,xmaxfit,yminfit,ymaxfit,convolution_size
-        print self.xminfit,self.xmaxfit,self.yminfit,self.ymaxfit,self.convolution_size
-        print 'psf_image = ',psf_image
-        print 'self.fitall = ',self.fitallflag
-        print '***%%%%%%%%%%%%%%%%%'
+        #print(xminfit,xmaxfit,yminfit,ymaxfit,convolution_size)
+        #print(self.xminfit,self.xmaxfit,self.yminfit,self.ymaxfit,self.convolution_size)
+        #print('psf_image = ',psf_image)
+        #print('self.fitall = ',self.fitallflag)
+        #print('***%%%%%%%%%%%%%%%%%')
 
         
 
@@ -107,12 +107,11 @@ class galfit:
         if self.convflag:
             self.galfit_input.write('D) '+self.psf_image+'     # Input PSF image and (optional) diffusion kernel\n')
             self.galfit_input.write('E) %i                   # PSF oversampling factor relative to data\n'%(self.psf_oversampling))
-        #if self.fitallflag:
-        #    self.galfit_input.write('F)            # Pixel mask (ASCII file or FITS file with non-0 values)\n')
-        #else:
-        #    self.galfit_input.write('F) '+self.mask_image+'           # Pixel mask (ASCII file or FITS file with non-0 values)\n')
-        #if self.constraintflag:
-        #    self.galfit_input.write('G) /Users/rfinn/research/LocalClusters/GalfitAnalysis/sersic.constraint        # Parameter constraint file (ASCII)\n')
+        if self.fitallflag:
+            self.galfit_input.write('F)            # Pixel mask (ASCII file or FITS file with non-0 values)\n')
+        else:
+            self.galfit_input.write('F) '+self.mask_image+'           # Pixel mask (ASCII file or FITS file with non-0 values)\n')
+
         self.galfit_input.write('H) '+str(int(round(self.xminfit)))+' '+str(int(round(self.xmaxfit)))+' '+str(int(round(self.yminfit)))+' '+str(int(round(self.ymaxfit)))+'     # Image region to fit (xmin xmax ymin ymax)\n')
         #if self.convflag:
         #    self.galfit_input.write('I) '+str(int(round(self.convolution_size)))+' '+str(int(round(self.convolution_size)))+'             # Size of convolution box (x y)\n')
@@ -137,7 +136,7 @@ class galfit:
         self.fitrad=fitrad
         self.fitBA=fitBA
         self.fitPA=fitPA
-
+        print('inside rungalfit, fitBA = ',self.fitBA)
 
         if first_time:
             self.xobj0=xobj
@@ -181,9 +180,9 @@ class galfit:
         self.galfit_input.write(' 1) %8.1f  %8.1f %i %i  # position x, y        [pixel] \n'%(self.xobj,self.yobj,int(self.fitcenter),int(self.fitcenter)))
         self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(self.mag,self.fitmag))
         self.galfit_input.write(' 4) %8.2f       %i       #     R_e              [Pixels] \n'%(self.rad,self.fitrad))
-        print 'sersic n, fitsersicn = ',self.nsersic,self.fitn
+        print('sersic n, fitsersicn = ',self.nsersic,self.fitn)
         self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(self.nsersic,int(self.fitn)))
-        print 'BA, fitBA = ',self.BA,self.fitBA
+        print('BA, fitBA = ',self.BA,self.fitBA)
         self.galfit_input.write(' 9) %5.2f       %i       # axis ratio (b/a)    \n'%(self.BA,int(self.fitBA)))
         self.galfit_input.write('10) %5.2f       %i       # position angle (PA)  [Degrees: Up=0, Left=90] \n'%(self.PA,int(self.fitPA)))
         if self.asymmetry:
@@ -204,7 +203,7 @@ class galfit:
         #print 'self.fitall = ',self.fitall
         self.create_output_names()
         self.open_galfit_input()
-        print 'in rungalfit.run_galfit, self.psf_image = ',self.psf_image
+        print('in rungalfit.run_galfit, self.psf_image = ',self.psf_image)
         self.write_image_params()
         #print 'self.fitall = ',self.fitall
         self.write_sersic(1,'sersic')
@@ -212,13 +211,13 @@ class galfit:
         self.write_sky(2)
         #print 'self.fitall = ',self.fitall
         if (self.fitallflag):
-            print '%%%%%%%%%%%%%% HEY %%%%%%%%%%%%%'
-            print 'I think fitall is true, just sayin...'
+            print('%%%%%%%%%%%%%% HEY %%%%%%%%%%%%%')
+            print('I think fitall is true, just sayin...')
             self.fitall()
         self.close_input_file()
         #print 'self.fitall = ',self.fitall
         s = 'galfit '+self.galfile
-        print 'run the following: ',s
+        print('run the following: ',s)
 
         #try:
         #    errno=os.system(s)
@@ -240,19 +239,13 @@ class galfit:
         try:
             os.rename('galfit.01',self.galfit_out)
         except:
-            print "appears like galfit did not complete"
+            print("appears like galfit did not complete")
             #galflag[j]=0
             self.galfit_flag=0
             return
         if displayflag:
             self.display_results()
 
-    def display_results(self):
-        print '%%%%%%%%%%%%%%%%%%'
-        print 'inside display_results'
-        print 'self.galfit_flag = ',self.galfit_flag
-        ### THIS SHOULD BE MOVED TO PARENT PROGRAM
-        ### BECAUSE HOW U DISPLAY RESULTS WILL VARY WITH USAGE
 
     def fitall(self,mindistance=8):
         os.system('cp '+homedir+'research/LocalClusters/sextractor/default.param .')
@@ -262,19 +255,19 @@ class galfit:
         # read in SE table to get x,y for sources
         #fname=self.galname+'test.fits'
         fname=self.galname+'test.cat'
-        print 'FITALL CATALOG NAME = ',fname
+        print('FITALL CATALOG NAME = ',fname)
         objnumber=2
         profile='sersic'
         try:
             se=atpy.Table(fname,type='ascii')
-            print 'found ',len(se.X_IMAGE),' sources on the field of ',self.galname
+            print('found ',len(se.X_IMAGE),' sources on the field of ',self.galname)
             nearbyobjflag=sqrt((se.X_IMAGE-self.xobj)**2+(se.Y_IMAGE-self.yobj)**2) > mindistance
             for k in range(len(se.X_IMAGE)):
                 if nearbyobjflag[k]:
                     objnumer=objnumber+1
                     self.add_simple_sersic_object(objnumber,profile,se.X_IMAGE[k],se.Y_IMAGE[k],se.MAG_BEST[k],se.FLUX_RADIUS[k,0],2,se.B_IMAGE[k]/se.A_IMAGE[k],se.THETA_IMAGE[k])
         except AttributeError:
-            print 'WARNING: no sources detected in image!'
+            print('WARNING: no sources detected in image!')
         raw_input=('hit any key to continue \n')
 
     def add_simple_sersic_object(self,objnumber,profile,x,y,mag,rad,nsersic,BA,PA):
@@ -294,7 +287,7 @@ class galfit:
         self.galfit_input.close()
 
     def print_params(self):
-        print 'CURRENT INPUTS: \n mag = %5.2f %i \n Re = %5.2f %i \n n = %5.2f %i\n B/A = %5.2f %i \n PA = %5.2f %i \n fitall = %i \n fitcenter = %i \n'%(self.mag,self.fitmag,self.rad,self.fitrad,self.nsersic,self.fitn,self.BA,self.fitBA,self.PA,self.fitPA,self.fitallflag,self.fitcenter)
+        print('CURRENT INPUTS: \n mag = %5.2f %i \n Re = %5.2f %i \n n = %5.2f %i\n B/A = %5.2f %i \n PA = %5.2f %i \n fitall = %i \n fitcenter = %i \n'%(self.mag,self.fitmag,self.rad,self.fitrad,self.nsersic,self.fitn,self.BA,self.fitBA,self.PA,self.fitPA,self.fitallflag,self.fitcenter))
                                 
     def print_galfit_results(self,image):            
         if self.asymmetry:
@@ -307,9 +300,9 @@ class galfit:
         t=parse_galfit_1comp(image)
         for i in range(len(header_keywords)):
             try:
-                print '%6s : %5.2f +/- %5.2f'%(header_keywords[i],t[i][0],t[i][1])
+                print('%6s : %5.2f +/- %5.2f'%(header_keywords[i],t[i][0],t[i][1]))
             except:
-                print '%6s : %5.2f'%(header_keywords[i],t[i])
+                print('%6s : %5.2f'%(header_keywords[i],t[i]))
     def edit_params_menu(self):
         flag=str(raw_input('What is wrong?\n n = adjust sersic \n r = reset Re \n o = nearby object (toggle fitall) \n b = B/A \n p = PA \n m = mag \n c = recenter \n f = hold values fixed \n a = toggle asymmetry parameter \n R = reset to original values \n g = go (run galfit) \n x=quit \n '))
         return flag
@@ -334,11 +327,9 @@ class galfit:
         r=float(raw_input('mag = '))
         self.mag=r
 
-    def set_center(self):
-        r=float(raw_input('xc = '))
-        self.xobj=r
-        r=float(raw_input('yc = '))
-        self.yobj=r
+    def set_center(self, xc, yc):
+        self.xobj=xc
+        self.yobj=yc
 
     def toggle_fitall(self):
         self.fitallflag=toggle(self.fitallflag)
@@ -361,7 +352,7 @@ class galfit:
 
     def fix_BA(self):
         self.fitBA=toggle(self.fitBA)
-        print self.fitBA, self.BA
+        print(self.fitBA, self.BA)
     def fix_PA(self):
         self.fitPA=toggle(self.fitPA)
 

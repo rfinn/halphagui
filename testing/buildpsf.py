@@ -46,7 +46,7 @@ from astropy.stats import gaussian_sigma_to_fwhm
 
 from matplotlib import pyplot as plt
 
-class parent_image():
+class psf_parent_image():
     def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=25, pixelscale=0.43,oversampling=None):
         self.image_name = image
         self.data, self.header = fits.getdata(self.image_name, header=True)
@@ -64,7 +64,10 @@ class parent_image():
         self.nstars = nstars
         # default pixelscale is set for HDI camera
         self.pixelscale = pixelscale
-        self.oversampling = oversampling
+        if oversampling == None:
+            self.oversampling = 2
+        else:
+            self.oversampling = oversampling
     def link_files(self):
         # these are the sextractor files that we need
         # set up symbolic links from sextractor directory to the current working directory        
@@ -76,6 +79,17 @@ class parent_image():
         # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
         for file in self.sextractor_files:
             os.system('unlink '+file)
+    def run_all(self):
+        self.runse()
+        self.read_se_table()
+        self.find_stars()
+        self.extract_stars()
+        self.show_stars()
+        self.build_psf()
+        self.show_psf()
+        self.measure_fwhm()
+        self.save_psf_image()
+
     def runse(self):
         self.link_files()
         s = 'sex %s -c %s  -SATUR_LEVEL 40000.0'%(self.image_name,self.config)
@@ -180,12 +194,12 @@ class parent_image():
     def save_psf_image(self):
         # save the psf file
         # outfile = append '-psf' to the input image name
-        outname = self.image_name.split('.fits')[0]+'-psf.fits'
-        fits.writeto(outname,self.epsf.data, overwrite=True)
+        self.psf_image_name = self.image_name.split('.fits')[0]+'-psf.fits'
+        fits.writeto(self.psf_image_name,self.epsf.data, overwrite=True)
         
 if __name__ == '__main__':
     image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
-    p = parent_image(image=image, size=21, nstars=100, oversampling=2)
+    p = psf_parent_image(image=image, size=21, nstars=100, oversampling=2)
     p.runse()
     p.read_se_table()
     p.find_stars()

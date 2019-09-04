@@ -43,7 +43,12 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from photwrapper import ellipse
 
 from maskwrapper import maskwindow
+
+from galfitwrapper import galfitwindow
+
+from buildpsf import psf_parent_image
 from halphaCommon import cutout_image
+
 from fit_profile import profile, dualprofile
 # code from HalphaImaging repository
 import uat_sextractor_2image as runse
@@ -315,6 +320,7 @@ class hafunctions(Ui_MainWindow):
         #self.connect_buttons()
         #self.add_image(self.ui.gridLayout_2)
         #self.add_image(self.ui.gridLayout_2)
+        self.oversampling = 2
         self.connect_buttons()
     def connect_buttons(self):
         self.ui.wmark.clicked.connect(self.find_galaxies)
@@ -327,6 +333,8 @@ class hafunctions(Ui_MainWindow):
         self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
         self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
         self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse)
+        self.ui.galfitButton.clicked.connect(self.run_galfit)
+        self.ui.psfButton.clicked.connect(self.build_psf)
         self.setup_testing()
     def setup_testing(self):
         self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_ha16.coadd.fits'
@@ -482,11 +490,11 @@ class hafunctions(Ui_MainWindow):
         #
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
-        os.chdir(image_dir)
+        #os.chdir(image_dir)
         runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
         ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, image_dir = current_dir)
         print(ave,std)
-        os.chdir(current_dir)
+        #os.chdir(current_dir)
         self.filter_ratio = ave
         self.reset_ratio = ave
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
@@ -675,10 +683,21 @@ class hafunctions(Ui_MainWindow):
         #self.mask_image = mask_image_name
         self.maskcutout.load_file(self.mask_image_name)
         self.mask_image_exists = True
+    def build_psf(self):
+
+        print('oversampling = ',self.oversampling)
+        self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+        self.psf.run_all()
+    def run_galfit(self):
+        self.gwindow = QtWidgets.QWidget()
+        self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling)
+        self.galfit.setupUi(self.gwindow)
+        self.gwindow.show()
+        
     def fit_ellipse(self):
-        current_dir = os.getcwd()
-        image_dir = os.path.dirname(self.rcoadd_fname)
-        os.chdir(image_dir)
+        #current_dir = os.getcwd()
+        #image_dir = os.path.dirname(self.rcoadd_fname)
+        #os.chdir(image_dir)
 
         ### CLEAR R-BAND CUTOUT CANVAS
         self.rcutout.canvas.delete_all_objects()
@@ -699,7 +718,7 @@ class hafunctions(Ui_MainWindow):
         self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout)
         self.e.run_for_gui()
         self.e.plot_profiles()
-        os.chdir(current_dir)
+        #os.chdir(current_dir)
 
     def fit_profiles(self):
         current_dir = os.getcwd()
