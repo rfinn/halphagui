@@ -11,7 +11,7 @@ import platform
 #from PyQt5.Qtcore import  Qt
 from PyQt5 import QtCore,QtWidgets, QtGui
 #from ginga.qtw.QtHelp import QtGui #, QtCore
-from halphav3 import Ui_MainWindow
+from halphav4 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga import colors
@@ -26,6 +26,7 @@ from astropy.coordinates import SkyCoord
 from astropy.coordinates import ICRS, FK5
 import astropy.units as u
 from astropy import nddata
+from astropy.table import Table, Column
 
 # packages for ellipse fitting routine
 # https://photutils.readthedocs.io/en/stable/isophote.html
@@ -51,7 +52,7 @@ from halphaCommon import cutout_image
 
 from fit_profile import profile, dualprofile
 # code from HalphaImaging repository
-import uat_sextractor_2image as runse
+import sextractor_2image as runse
 #from uat_mask import mask_image
 # filter information
 lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
@@ -299,10 +300,100 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
                       fill=False)
         ax.add_patch(r)
 
+class output_table():
+    def initialize_results_table(self):
+        '''
+        Data to store:
+        - NSAID
+        * AGC number
+        - RA
+        - DEC
+        - filter_ratio
+        - cutout_size
+        - xmin:xmax,ymin:ymax from parent image
+        - ha_flag -- boolean
+        - ha_class -- category of Halpha emission
+        - psf_fwhm
+        - galfit re
+        - galfit n
+        - galfit BA
+        - galfit PA
+        - galfit (xc,yc)
+        - galfit (RA,DEC) - translate the pixel coords to RA and Dec of galaxy center
+        - galfit mag
+        - galfit sky
+        - ellipse PA
+        - ellipse BA
+        - ellipse Gini
+        - ellipse skynoise
+        - ellipse mag R
+        - ellipse mag Ha
+        - ellipse SFR Ha
+        - profiles Re r
+        - profiles Re Ha
+        - becky inner ssfr
+        - becky outer ssfr
+        - becky C30
+        - becky C70
+        '''
+        c1 = Column(self.galid, name='NSAID',dtype=np.int32, description='NSAID')
+        c2 = Column(self.gra, name='NSA_RA',dtype='f', unit=u.deg)
+        c3 = Column(self.gdec, name='NSA_DEC',dtype='f', unit=u.deg)
 
-class hafunctions(Ui_MainWindow):
+        c4 = Column(self.haflag, name='HA_FLAG')
+        # add some useful info from NSA catalog (although matching to NSA could be done down the line)
+        c4 = Column(self.nsa.cat.SERSIC_TH50,name='NSA_SERSIC_TH50', unit=u.arcsec)
+        c5 = Column(self.nsa.cat.SERSIC_N,name='NSA_SERSIC_N')
+        c6 = Column(self.nsa.cat.SERSIC_BA,name='NSA_SERSIC_BA')
+        c7 = Column(self.nsa.cat.SERSIC_PHI,name='NSA_SERSIC_PHI', unit=u.deg)
+        self.table = Table([c1,c2,c3,c4,c5,c6,c7])
+        print(self.table)
+        self.update_gui_table()
+    def update_gui_table(self):
+        self.ui.tableWidget.setColumnCount(len(self.table.columns))
+        self.ui.tableWidget.setRowCount(len(self.table))
+        
+        col_names = []
+        for c in self.table.columns:
+            col_names.append(self.table[c].name)
+        self.ui.tableWidget.setHorizontalHeaderLabels(col_names)
 
-    def __init__(self,MainWindow, logger):
+        '''
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(3, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(4, item)
+        '''
+        for col, c in enumerate(self.table.columns):
+            #item = self.ui.tableWidget.horizontalHeaderItem(col)
+            #item.setText(_translate("MainWindow", self.table.columns[col].name))
+            for row in range(len(self.table[c])):
+                item = self.table[row][col]
+                self.ui.tableWidget.setItem(row,col,QtWidgets.QTableWidgetItem(str(item)))
+        
+        
+        #item = self.tableWidget.horizontalHeaderItem(0)
+        #item.setText(_translate("MainWindow", "ID"))
+    def append_column(self, variable, var_name, var_dtype=None, var_unit=None):
+        if (var_dtype != None) & (var_unit != None):
+            z = Column(variable, name=var_name, dtype = var_dype, unit  = var_unit)
+        elif (var_dtype != None) & (var_unit == None):
+            z = Column(variable, name=var_name, dtype = var_dype)
+        elif (var_dtype == None) & (var_unit != None):
+            z = Column(variable, name=var_name, unit  = var_unit)
+        else:
+            z = Column(variable, name=var_name)
+        self.table.add_column(z)
+        
+class hafunctions(Ui_MainWindow, output_table):
+
+    def __init__(self,MainWindow, logger, sepath=None):
         super(hafunctions, self).__init__()
         #print(MainWindow)
         self.ui = Ui_MainWindow()
@@ -322,6 +413,10 @@ class hafunctions(Ui_MainWindow):
         #self.add_image(self.ui.gridLayout_2)
         self.oversampling = 2
         self.connect_buttons()
+        if sepath == None:
+            self.sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
+        else:
+            self.sepath = sepath
     def connect_buttons(self):
         self.ui.wmark.clicked.connect(self.find_galaxies)
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
@@ -337,9 +432,9 @@ class hafunctions(Ui_MainWindow):
         self.ui.psfButton.clicked.connect(self.build_psf)
         self.setup_testing()
     def setup_testing(self):
-        self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_ha16.coadd.fits'
+        self.hacoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_ha16.coadd.fits'
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
-        self.rcoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
+        self.rcoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_R.coadd.fits'
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         self.nsa_fname = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname)
@@ -444,32 +539,40 @@ class hafunctions(Ui_MainWindow):
         self.gximage = px[keepflag]
         self.gyimage = py[keepflag]
 
+        # cut down NSA catalog to keep information only for galaxies within FOV
         self.nsa.cull_catalog(keepflag)
-        self.gra=self.nsa.cat.RA#[keepflag]
-        self.gdec=self.nsa.cat.DEC#[keepflag]
-        self.gradius=self.nsa.cat.SERSIC_TH50#[keepflag]
-        self.galid=self.nsa.cat.NSAID#[keepflag]
+        self.gra=self.nsa.cat.RA
+        self.gdec=self.nsa.cat.DEC
+        self.gradius=self.nsa.cat.SERSIC_TH50
 
-        self.gredshift = self.nsa.cat.Z#[keepflag]
-        self.gzdist = self.nsa.cat.ZDIST#[keepflag]
+        self.galid=self.nsa.cat.NSAID
 
+        self.gredshift = self.nsa.cat.Z
+        self.gzdist = self.nsa.cat.ZDIST
+        
+        # set up a boolean array to track whether Halpha emission is present
+        self.haflag = np.zeros(len(self.galid),'bool')
+        
         # populate a button that contains list
-        #print('nsa galaxies on fov:')
-        #print(self.galid)
+        # of galaxies in the field of view,
+        # user can select from list to set the active galaxy
         for name in self.galid:
             self.ui.wgalid.addItem(str(name))
         print(len(self.galid),' galaxies in FOV')
         self.ui.wgalid.activated.connect(self.select_galaxy)
         print(len(self.nsa.cat.RA))
+        
         # plot location of galaxies in the coadd image
         self.mark_galaxies()
-        
+
+        # set up the output table that will store results from various fits
+        self.initialize_results_table()
     def mark_galaxies(self):
         #
         # using code in TVMark.py as a guide for adding shapes to canvas
         #
         #
-        print('testing')
+
         objlist = []
         markcolor='cyan'
         markwidth=1
@@ -482,19 +585,33 @@ class hafunctions(Ui_MainWindow):
             objlist.append(glabel)
         self.markhltag = self.coadd.canvas.add(self.coadd.dc.CompoundObject(*objlist))
         self.coadd.fitsimage.redraw()
+    def link_files(self):
+        # these are the sextractor files that we need
+        # set up symbolic links from sextractor directory to the current working directory
+        sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
+        for file in sextractor_files:
+            os.system('ln -s '+self.sepath+'/'+file+' .')
+    def clean_links(self):
+        # clean up symbolic links to sextractor files
+        # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
+        sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
+        for file in sextractor_files:
+            os.system('unlink '+file)
     def get_filter_ratio(self):
         #
         # get ratio of Halpha to Rband filters
         # 
         # cannabalizing HalphaImaging/uat_find_filter_ratio.py
         #
+        self.link_files()
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
-        #os.chdir(image_dir)
+        os.chdir(image_dir)
+        
         runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
         ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, image_dir = current_dir)
         print(ave,std)
-        #os.chdir(current_dir)
+        os.chdir(current_dir)
         self.filter_ratio = ave
         self.reset_ratio = ave
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
@@ -502,7 +619,7 @@ class hafunctions(Ui_MainWindow):
 
         self.subtract_images()
         self.setup_ratio_slider()
-        
+        self.clean_links()
     def subtract_images(self):
         self.halpha_cs = self.ha - self.filter_ratio*self.r
         # display continuum subtracted Halpha image in the large frame        
@@ -686,8 +803,12 @@ class hafunctions(Ui_MainWindow):
     def build_psf(self):
 
         print('oversampling = ',self.oversampling)
-        self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
-        self.psf.run_all()
+        print('PSF RESULTS FOR R-BAND COADDED IMAGE')
+        self.rpsf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+        self.rpsf.run_all()
+        print('PSF RESULTS FOR COADDED IMAGE')
+        self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+        self.hapsf.run_all()
     def run_galfit(self):
         self.gwindow = QtWidgets.QWidget()
         self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling)
@@ -761,6 +882,9 @@ class hafunctions(Ui_MainWindow):
         self.fig.canvas.draw()
         '''
         os.chdir(current_dir)
+
+
+        
 class galaxy_catalog():
     def __init__(self,catalog):
         self.cat = fits.getdata(catalog)
@@ -775,7 +899,8 @@ if __name__ == "__main__":
     logger = log.get_logger("example1", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
-    ui = hafunctions(MainWindow, logger)
+    sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
+    ui = hafunctions(MainWindow, logger, sepath = sepath)
     #ui.setupUi(MainWindow)
     #ui.test()
 

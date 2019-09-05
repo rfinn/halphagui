@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'halphav3.ui'
+# Form implementation generated from reading ui file 'halphav4.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1174, 678)
+        MainWindow.resize(1189, 627)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
@@ -27,12 +27,32 @@ class Ui_MainWindow(object):
         self.button_bar.setObjectName("button_bar")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.button_bar)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.wmark = QtWidgets.QPushButton(self.button_bar)
+        self.frame_7 = QtWidgets.QFrame(self.button_bar)
+        self.frame_7.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.frame_7.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame_7.setObjectName("frame_7")
+        self.verticalLayout_9 = QtWidgets.QVBoxLayout(self.frame_7)
+        self.verticalLayout_9.setObjectName("verticalLayout_9")
+        self.label = QtWidgets.QLabel(self.frame_7)
+        self.label.setLayoutDirection(QtCore.Qt.LeftToRight)
+        self.label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.label.setObjectName("label")
+        self.verticalLayout_9.addWidget(self.label)
+        self.prefixLineEdit = QtWidgets.QLineEdit(self.frame_7)
+        self.prefixLineEdit.setObjectName("prefixLineEdit")
+        self.verticalLayout_9.addWidget(self.prefixLineEdit)
+        self.horizontalLayout_2.addWidget(self.frame_7)
+        self.widget_4 = QtWidgets.QWidget(self.button_bar)
+        self.widget_4.setObjectName("widget_4")
+        self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.widget_4)
+        self.verticalLayout_7.setObjectName("verticalLayout_7")
+        self.wmark = QtWidgets.QPushButton(self.widget_4)
         self.wmark.setObjectName("wmark")
-        self.horizontalLayout_2.addWidget(self.wmark)
-        self.wclear = QtWidgets.QPushButton(self.button_bar)
+        self.verticalLayout_7.addWidget(self.wmark)
+        self.wclear = QtWidgets.QPushButton(self.widget_4)
         self.wclear.setObjectName("wclear")
-        self.horizontalLayout_2.addWidget(self.wclear)
+        self.verticalLayout_7.addWidget(self.wclear)
+        self.horizontalLayout_2.addWidget(self.widget_4)
         self.wgalid = QtWidgets.QComboBox(self.button_bar)
         self.wgalid.setObjectName("wgalid")
         self.horizontalLayout_2.addWidget(self.wgalid)
@@ -176,15 +196,7 @@ class Ui_MainWindow(object):
         self.frame_6.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.frame_6.setFrameShadow(QtWidgets.QFrame.Raised)
         self.frame_6.setObjectName("frame_6")
-        self.label = QtWidgets.QLabel(self.frame_6)
-        self.label.setGeometry(QtCore.QRect(-10, 0, 152, 16))
-        self.label.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.label.setObjectName("label")
-        self.gridLayout_4.addWidget(self.frame_6, 5, 0, 1, 1)
-        self.prefixLineEdit = QtWidgets.QLineEdit(self.rightButtons)
-        self.prefixLineEdit.setObjectName("prefixLineEdit")
-        self.gridLayout_4.addWidget(self.prefixLineEdit, 5, 1, 1, 1)
+        self.gridLayout_4.addWidget(self.frame_6, 5, 0, 1, 2)
         self.gridLayout.addWidget(self.rightButtons, 3, 1, 1, 1)
         self.horizontalLayout.addWidget(self.rightFrame)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -192,7 +204,7 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1174, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1189, 22))
         self.menubar.setObjectName("menubar")
         self.menuSetup = QtWidgets.QMenu(self.menubar)
         self.menuSetup.setObjectName("menuSetup")
@@ -257,7 +269,8 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Halpha Console"))
+        self.label.setText(_translate("MainWindow", "Output Prefix"))
         self.wmark.setText(_translate("MainWindow", "Find Galaxies"))
         self.wclear.setText(_translate("MainWindow", "Clear Canvas"))
         self.wfratio.setText(_translate("MainWindow", "Get Filter Ratio"))
@@ -274,7 +287,6 @@ class Ui_MainWindow(object):
         self.editMaskButton.setText(_translate("MainWindow", "Save Galaxy"))
         self.makeMaskButton.setText(_translate("MainWindow", "Make and Edit Mask"))
         self.saveCutoutsButton.setText(_translate("MainWindow", "Save Cutouts"))
-        self.label.setText(_translate("MainWindow", "Output Prefix"))
         self.menuSetup.setTitle(_translate("MainWindow", "Setup"))
         self.menuHalpha_Filter.setTitle(_translate("MainWindow", "Halpha Filter"))
         self.action_rcoadd.setText(_translate("MainWindow", "R-band coadd"))

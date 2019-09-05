@@ -10,21 +10,7 @@ PROCEDURE:
   - Run sextractor on each image
 
 EXAMPLE:
-   In the directory containing all flattened objects with fixed headers to run sextractor type in the command line:
-      '/Users/alfalfa/Github/HalphaImaging/uat_sextractor_2image.py --s'(or whatever the path is to where this program is stored)
 
-    from within ipython:
-    
-    %run ~/github/HalphaImaging/uat_sextractor_2image.py --image1 A1367_R
-   ...: .coadd.fits --image2 A1367_ha12.coadd.fits --plot
-
-    -You want to run rimage against the rimage to create .cat file for R, then use R image with the Haimage (image 2) to create .cat file for Ha.
-
-
-
-WHAT THIS CODE DOES:
-INPUT/OUPUT:
-REQUIRED MODULES:
 EXTRA NOTES:
 - updated 8/14/19 to encase code in two functions.  this makes it easier to import into other programs, like the Halpha gui.
 
@@ -42,12 +28,13 @@ import numpy as np
 
 
 
-def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/HalphaImaging/astromatic'):
+def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagui/astromatic'):
     # get magnitude zeropoint for image 1 and image 2
     header1 = fits.getheader(image1)
     header2 = fits.getheader(image2)
     try:
         ZP1 = header1['PHOTZP']
+        print('got ZP = ',ZP1)
         zp1flag = True
     except KeyError:
         print('no PHOTZP found in image 1 header.  Too bad :(')
@@ -55,6 +42,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/HalphaIm
         zp1flag = False
     try:
         ZP2 = header2['PHOTZP']
+        print('got ZP = ',ZP2)
         zp2flag = True
     except KeyError:
         print('no PHOTZP found in image 2 header.  Too bad :(')
@@ -68,7 +56,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/HalphaIm
         os.system('sex ' + image1+','+image1 + ' -c default.sex.hdi -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
     else:
         os.system('sex ' + image1+','+image1 + ' -c default.sex.hdi -CATALOG_NAME ' + froot1 + '.cat')
-    os.rename('check.fits', froot1 + 'check.fits')
+    #os.rename('check.fits', froot1 + 'check.fits')
     # run on second image
     t = image2.split('.fits')
     froot2 = t[0]
@@ -76,7 +64,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/HalphaIm
         os.system('sex ' + image1+','+image2 + ' -c default.sex.hdi -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
     else:
         os.system('sex ' + image1+','+image2 + ' -c default.sex.hdi -CATALOG_NAME ' + froot2 + '.cat')
-    os.rename('check.fits', froot2 + 'check.fits')
+    #os.rename('check.fits', froot2 + 'check.fits')
 
 def make_plot(image1, image2, return_flag = False, image_dir = './'):
     from matplotlib import pyplot as plt
@@ -99,8 +87,8 @@ def make_plot(image1, image2, return_flag = False, image_dir = './'):
     std = np.std(y[(x > 50) & flag])
     plt.axhline(y=ave)
     print('%.4f (%.4f)'%(ave,std))
-    plt.ylabel('$Flux (Halpha)/Flux(R) $',fontsize=20)
-    plt.xlabel('$Flux(R) \ (ADU)$',fontsize=20)
+    plt.ylabel('$Flux (Halpha)/Flux(R) $',fontsize=16)
+    plt.xlabel('$Flux(R) \ (ADU)$',fontsize=16)
     plt.text(20,.07,'$ ratio = %.4f (%.4f)$'%(ave,std),fontsize=12)
     plt.gca().set_xscale('log')
     filename = os.path.basename(image2)
