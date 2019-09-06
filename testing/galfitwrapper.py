@@ -45,7 +45,7 @@ import rungalfit as rg
 # cutout, mask, model, residual
 
 class galfitwindow(Ui_galfitWindow, QtCore.QObject):
-    mask_saved = QtCore.pyqtSignal(str)
+    model_saved = QtCore.pyqtSignal(str)
     def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None):
         super(galfitwindow, self).__init__()
 
@@ -153,16 +153,28 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.output_image=self.image_rootname+'-'+ str(self.ncomp) +'Comp-galfit-out.fits'
         # continue with other functions
         self.logger = logger
+
+        ############################################################
+        # set up gui
+        ############################################################
         self.add_cutout_frames()
         self.connect_buttons()
         self.display_image()
+        self.display_initial_params()
 
+        ############################################################
+        # create an instance of rungalfit.galfit
+        ############################################################        
         self.initialize_galfit()        
-        #self.galfit = rg.galfit(galname=self.image_rootname,image=self.image, mask_image = self.mask_image, sigma_image=self.sigma_image,psf_image=self.psf_image,psf_oversampling=self.psf_oversampling,xminfit=self.xminfit,yminfit=self.yminfit,xmaxfit=self.xmaxfit,ymaxfit=self.ymaxfit,convolution_size=self.convolution_size,magzp=self.magzp,pscale=self.pscale,ncomp=self.ncomp,convflag=convflag)
+
+        ############################################################
+        # the remaining commands come from user input through the gui
+        ############################################################        
 
 
     def add_cutout_frames(self):
-        # r-band cutout
+        # gui stuff
+        # set up text labels for image, model, and residual
         a = QtWidgets.QLabel('Image')
         self.ui.cutoutsLayout.addWidget(a, 0, 0, 1, 1)
         a = QtWidgets.QLabel('Model')
@@ -170,16 +182,24 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         a = QtWidgets.QLabel('Residual')
         self.ui.cutoutsLayout.addWidget(a, 0, 2, 1, 1)
 
-        #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
+        # gui stuff
+        # set up image frames for image, model, and residual
         self.cutout_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1)
         self.model_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
         self.residual_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 4, 1)
+
+        # connect key press function to each of the image frames
+        # so that the user can call them with cursor over any image, including mainframe
+        self.cutout_frame.key_pressed.connect(self.key_press_func)
+        self.model_frame.key_pressed.connect(self.key_press_func)
         self.residual_frame.key_pressed.connect(self.key_press_func)
+        
     def display_image(self):
         if self.mask_image == None:
             self.cutout_frame.load_file(self.image)
         else:
             # display image with masked values
+            # if a mask is available
             self.cutout_frame.load_image(self.image_data)
 
     def display_galfit_results(self):
@@ -187,16 +207,84 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
     def connect_buttons(self):
         self.ui.quitButton.clicked.connect(self.quit_program)
         self.ui.helpButton.clicked.connect(self.print_help_menu)
+        # this is the work horse function
         self.ui.runGalfitButton.clicked.connect(lambda: self.run_galfit(fitBA=self.fitBA, fitPA=self.fitPA))
+        self.ui.xcLineEdit.textChanged.connect(self.set_xc)
+        self.ui.ycLineEdit.textChanged.connect(self.set_yc)
+        self.ui.magLineEdit.textChanged.connect(self.set_mag)
+        self.ui.ReLineEdit.textChanged.connect(self.set_Re)
+        self.ui.nLineEdit.textChanged.connect(self.set_nsersic)
+        self.ui.PALineEdit.textChanged.connect(self.set_PA)
+        self.ui.BALineEdit.textChanged.connect(self.set_BA)
+ 
+    def display_initial_params(self):
+        self.ui.xcLineEdit.setText(str(self.xc))
+        self.ui.ycLineEdit.setText(str(self.yc))
+        self.ui.magLineEdit.setText(str(self.mag))
+        self.ui.ReLineEdit.setText(str(self.re))
+        self.ui.nLineEdit.setText(str(self.nsersic))
+        self.ui.PALineEdit.setText(str(self.PA))
+        self.ui.BALineEdit.setText(str(self.BA))
+    def display_fitted_params(self):
+        self.ui.xcFitLineEdit.setText(str(self.xc))
+        self.ui.ycFitLineEdit.setText(str(self.yc))
+        self.ui.magFitLineEdit.setText(str(self.mag))
+        self.ui.ReFitLineEdit.setText(str(self.re))
+        self.ui.nFitLineEdit.setText(str(self.nsersic))
+        self.ui.PAFitLineEdit.setText(str(self.PA))
+        self.ui.BAFitLineEdit.setText(str(self.BA))
+        self.ui.skyFitLineEdit.setText(str(self.sky))
+        self.ui.errorFitLineEdit.setText(str(self.error))
+        self.ui.chiFitLineEdit.setText(str(self.chi2nu))
+       
+    def set_xc(self,dat):
+        try:
+            self.xc = float(dat)
+        except ValueError:
+            pass
+    def set_yc(self,dat):
+        try:
+            self.yc = float(dat)
+        except ValueError:
+            pass
+    def set_mag(self,dat):
+        try:
+            self.mag = float(dat)
+        except ValueError:
+            pass
+    def set_Re(self,dat):
+        try:
+            self.re = float(dat)
+        except ValueError:
+            pass
+    def set_nsersic(self,dat):
+        try:
+            self.nsersic = float(dat)
+        except ValueError:
+            pass
+    def set_PA(self,dat):
+        try:
+            self.PA = float(dat)
+        except ValueError:
+            pass
+    def set_BA(self,dat):
+        try:
+            self.BA = float(dat)
+        except ValueError:
+            pass
+
+
     def key_press_func(self,text):
         key, x, y = text.split(',')
         self.xcursor = float(x)
         self.ycursor = float(y)
+        '''
         if key == 'n':
             self.galfit.set_n()
         elif key == 'r':
             self.galfit.set_r()
-        elif key == 'o':
+        '''
+        if key == 'o':
             self.galfit.toggle_fitall()
         elif key == 'c':
             if ((self.xcursor > self.image_data.shape[0]) | (self.ycursor > self.image_data.shape[0]) | (self.xcursor < 1.) | (self.ycursor < 1.)):
@@ -219,8 +307,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
             print('did not understand that.  \n Try again!')
 
     def print_help_menu(self):
-        print('What is wrong?\n n = adjust sersic \
-        \n r = reset Re \
+        print('What is wrong?\n \
         \n o = nearby object (toggle fitall)\
         \n b = B/A \n p = PA \n m = mag\
         \n c = recenter\
@@ -250,7 +337,8 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
 
         '''
         print('self.psfimage = ',self.psf_image)
-        
+
+        ## establish instance of rungalfit.galfit
         self.galfit = rg.galfit(galname=self.image_rootname,image=self.image_name,
                                 mask_image = self.mask_image,
                                 sigma_image=self.sigma_image,psf_image=self.psf_image,
@@ -261,24 +349,20 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
                                 fitallflag = self.fitallflag)
         
     def run_galfit(self,fitBA=1,fitPA=1):
-        '''
-        GOAL: take values from NSA tables in /Virgo 
-
-        INPUT: nsaid, ba/pa = 1
-
-        OUTPUT: several output files
-
-        '''
 
         self.galfit.set_sersic_params(xobj=self.xc,yobj=self.yc,mag=self.mag,rad=self.re,nsersic=self.nsersic,BA=self.BA,PA=self.PA,fitmag=1,fitcenter=1,fitrad=1,fitBA=fitBA,fitPA=fitPA,fitn=1,first_time=0)
-        print('in galfitwrapper, run_galfit: fitBA = ',fitBA)
+        #print('in galfitwrapper, run_galfit: fitBA = ',fitBA)
         self.galfit.set_sky(0)
         self.galfit.run_galfit()
         self.display_results()
         self.get_galfit_results(printflag=True)
+        self.display_fitted_params()
         #self.galfit.close_input_file()
         #self.galfit.print_params()
         #self.galfit.print_galfit_results()
+
+        # send message that a new model is available
+        self.model_saved.emit(str(self.ncomp))
     def get_galfit_results(self,printflag = False):
         '''
         GOAL: Grab results from galfit (xc, yc, mag, re, nsersic, BA, PA, sky, error, chi2nu) and parse them into self.filename
@@ -290,10 +374,10 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         '''
 
 
-        t = rg.parse_galfit_1comp(self.output_image)
+        t = rg.parse_galfit_results(self.output_image, ncomp = self.ncomp)
         if printflag:
             self.galfit.print_galfit_results(self.output_image)
-        
+        self.galfit_results = t
         header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','ERROR','CHI2NU']
         self.xc, self.xc_err = t[0]
         self.yc, self.yc_err = t[1]
@@ -305,6 +389,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.sky, self.sky_err = t[7]
         self.error = t[8]
         self.chi2nu = t[9]
+
     def display_results(self):
         self.model_data = fits.getdata(self.output_image,2)
         self.residual_data = fits.getdata(self.output_image,3)
@@ -313,7 +398,11 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         pass
         ### THIS SHOULD BE MOVED TO PARENT PROGRAM
         ### BECAUSE HOW U DISPLAY RESULTS WILL VARY WITH USAGE
+    def closeEvent(self, event):
+        # send signal that window is closed
 
+
+        event.accept()
         
 if __name__ == "__main__":
     #catalog = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'

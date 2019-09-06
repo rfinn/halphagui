@@ -196,6 +196,17 @@ class psf_parent_image():
         # outfile = append '-psf' to the input image name
         self.psf_image_name = self.image_name.split('.fits')[0]+'-psf.fits'
         fits.writeto(self.psf_image_name,self.epsf.data, overwrite=True)
+
+        # update image header
+        # I know this is a kludge, but not sure how to access the default header that it writes
+        # BEFORE it gets written
+
+        data, header = fits.getdata(self.psf_image_name, header=True)
+
+        header.append(card=('FWHM', float('{:.2f}'.format(self.fwhm)), 'PSF fwhm in pixels'))
+        header.append(card=('STD', float('{:.2f}'.format(self.std)), 'PSF STD in pixels'))
+        header.append(card=('OVERSAMP', self.oversampling, 'PSF oversampling'))
+        fits.writeto(self.psf_image_name, data, header=header, overwrite=True)
         
 if __name__ == '__main__':
     image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'

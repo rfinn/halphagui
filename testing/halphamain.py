@@ -342,11 +342,13 @@ class output_table():
 
         c4 = Column(self.haflag, name='HA_FLAG')
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
-        c4 = Column(self.nsa.cat.SERSIC_TH50,name='NSA_SERSIC_TH50', unit=u.arcsec)
-        c5 = Column(self.nsa.cat.SERSIC_N,name='NSA_SERSIC_N')
-        c6 = Column(self.nsa.cat.SERSIC_BA,name='NSA_SERSIC_BA')
-        c7 = Column(self.nsa.cat.SERSIC_PHI,name='NSA_SERSIC_PHI', unit=u.deg)
-        self.table = Table([c1,c2,c3,c4,c5,c6,c7])
+        r = 22.5 - 2.5*np.log10(self.nsa.cat.NMGY[:,4])
+        c5 = Column(r,name='NSA_RMAG')
+        c6 = Column(self.nsa.cat.SERSIC_TH50,name='NSA_SERSIC_TH50', unit=u.arcsec)
+        c7 = Column(self.nsa.cat.SERSIC_N,name='NSA_SERSIC_N')
+        c8 = Column(self.nsa.cat.SERSIC_BA,name='NSA_SERSIC_BA')
+        c9 = Column(self.nsa.cat.SERSIC_PHI,name='NSA_SERSIC_PHI', unit=u.deg)
+        self.table = Table([c1,c2,c3,c4,c5,c6,c7,c8,c9])
         print(self.table)
         self.update_gui_table()
     def update_gui_table(self):
@@ -393,13 +395,13 @@ class output_table():
         
 class hafunctions(Ui_MainWindow, output_table):
 
-    def __init__(self,MainWindow, logger, sepath=None):
+    def __init__(self,MainWindow, logger, sepath=None, testing=False):
         super(hafunctions, self).__init__()
         #print(MainWindow)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(MainWindow)
         self.prefix='none'
-
+        self.testing = testing
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
@@ -417,6 +419,8 @@ class hafunctions(Ui_MainWindow, output_table):
             self.sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
         else:
             self.sepath = sepath
+
+
     def connect_buttons(self):
         self.ui.wmark.clicked.connect(self.find_galaxies)
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
@@ -428,9 +432,11 @@ class hafunctions(Ui_MainWindow, output_table):
         self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
         self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
         self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse)
-        self.ui.galfitButton.clicked.connect(self.run_galfit)
+        self.ui.galfitButton.clicked.connect(lambda: self.run_galfit(ncomp=1))
+        self.ui.galfit2Button.clicked.connect(lambda: self.run_galfit(ncomp=2))
         self.ui.psfButton.clicked.connect(self.build_psf)
-        self.setup_testing()
+        if self.testing:
+            self.setup_testing()
     def setup_testing(self):
         self.hacoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_ha16.coadd.fits'
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
@@ -447,6 +453,9 @@ class hafunctions(Ui_MainWindow, output_table):
         self.setup_ratio_slider()
         self.cutout_size = 100
         self.setup_cutout_slider()
+
+
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
     def add_coadd_frame(self,panel_name):
         logger = log.get_logger("example1", log_stderr=True, level=40)
@@ -514,7 +523,15 @@ class hafunctions(Ui_MainWindow, output_table):
     def set_prefix(self,prefix):
         self.prefix = prefix
         #print('prefix for output files = ',self.prefix)
-        
+
+    def check_previous(self):
+        '''
+        check for data from previous runs, including
+        - psf file
+        - data table with results for all/subset of galaxies
+        - filter ratio
+        '''
+        pass
     def find_galaxies(self):
         #
         # get list of NSA galaxies on image viewer
@@ -564,7 +581,7 @@ class hafunctions(Ui_MainWindow, output_table):
         
         # plot location of galaxies in the coadd image
         self.mark_galaxies()
-
+        self.initialize_output_arrays()
         # set up the output table that will store results from various fits
         self.initialize_results_table()
     def mark_galaxies(self):
@@ -585,6 +602,19 @@ class hafunctions(Ui_MainWindow, output_table):
             objlist.append(glabel)
         self.markhltag = self.coadd.canvas.add(self.coadd.dc.CompoundObject(*objlist))
         self.coadd.fitsimage.redraw()
+    def initialize_output_arrays(self):
+        ngal = len(self.galid)
+
+        # galfit output
+        self.gal_xc = np.zeros((ngal,2),'f')
+        self.gal_xc = np.zeros((ngal,2),'f')
+        self.gal_mag = np.zeros((ngal,2),'f')
+        self.gal_n = np.zeros((ngal,2),'f')
+        self.gal_re = np.zeros((ngal,2),'f')
+        self.gal_PA = np.zeros((ngal,2),'f')
+        self.gal_BA = np.zeros((ngal,2),'f')
+        self.gal_sky = np.zeros((ngal,2),'f')
+        
     def link_files(self):
         # these are the sextractor files that we need
         # set up symbolic links from sextractor directory to the current working directory
@@ -757,6 +787,12 @@ class hafunctions(Ui_MainWindow, output_table):
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
         newfile.header.set('NSAID',float('{:d}'.format(self.galid[self.igal])))
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        # set the exposure time to 1 sec
+        # for some reason, in the coadded images produced by swarp, the gain has been corrected
+        # to account for image units in ADU/s, but the exptime was not adjusted.
+        # this will impact galfit magnitudes if we don't correct it here.
+        # alternatively, we could fix it right after running swarp
+        newfile.header['EXPTIME']=1.0 
         fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
 
         # saving Ha Cutout as fits image
@@ -780,20 +816,13 @@ class hafunctions(Ui_MainWindow, output_table):
             print('are you rushing to make a mask w/out selecting galaxies?')
             print('try selecting filter, then selecting galaxies')
             return
-
         self.mwindow = QtWidgets.QWidget()
         self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/')
         self.mui.mask_saved.connect(self.display_mask)
         self.mui.setupUi(self.mwindow)
         self.mwindow.show()
-        
-        #print('make mask')
-        #m.edit_mask()
-        #m.clean_links()
-        #self.display_mask()
         os.chdir(current_dir)
         
-
     def display_mask(self, mask_image_name):
         t = self.cutout_name_r.split('.fit')
         self.mask_image_name=t[0]+'-mask.fits'
@@ -801,20 +830,49 @@ class hafunctions(Ui_MainWindow, output_table):
         self.maskcutout.load_file(self.mask_image_name)
         self.mask_image_exists = True
     def build_psf(self):
-
         print('oversampling = ',self.oversampling)
         print('PSF RESULTS FOR R-BAND COADDED IMAGE')
-        self.rpsf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
-        self.rpsf.run_all()
+        self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=50, oversampling=self.oversampling)
+        self.psf.run_all()
         print('PSF RESULTS FOR COADDED IMAGE')
-        self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+        self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=50, oversampling=self.oversampling)
         self.hapsf.run_all()
-    def run_galfit(self):
+    def run_galfit(self, ncomp=1):
+        print('running galfit with ',ncomp,' components')
         self.gwindow = QtWidgets.QWidget()
-        self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling)
+
+        if self.testing:
+            self.ncomp = ncomp
+            self.galfit = galfitwindow(self.gwindow, self.logger, image = 'MKW8-18037-R.fits', mask_image = 'MKW8-18037-R-mask.fits', psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
+        else:
+            self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp)
+        self.galfit.model_saved.connect(self.galfit_save)        
         self.galfit.setupUi(self.gwindow)
+
         self.gwindow.show()
-        
+
+        '''
+        try:
+            self.gwindow = QtWidgets.QWidget()
+            self.gwindow.aboutToQuit.connect(self.galfit_closed)
+            if self.testing:
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
+            else:
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp)
+            self.galfit.setupUi(self.gwindow)
+            self.gwindow.show()
+        except AttributeError:
+            print('WARNING - ERROR RUNNING GALFIT!!!')
+            print('Make sure you have measured the PSF and made a mask!')
+        '''
+    def galfit_save(self,msg):
+        print('galfit model saved!!!',msg)
+        if self.testing:
+            self.ncomp = int(msg)
+        if self.ncomp == 1:
+            self.galfit_results = self.galfit.galfit_results
+        elif self.ncomp == 2:
+            self.galfit_results2 = self.galfit.galfit_results
     def fit_ellipse(self):
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
@@ -900,7 +958,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
-    ui = hafunctions(MainWindow, logger, sepath = sepath)
+    ui = hafunctions(MainWindow, logger, sepath = sepath, testing=True)
     #ui.setupUi(MainWindow)
     #ui.test()
 

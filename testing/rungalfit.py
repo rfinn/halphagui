@@ -13,7 +13,7 @@ pyds9
 import os
 from astropy.io import fits
 
-def parse_galfit_1comp(galfit_outimage,asymflag=0,ncomp=1):
+def parse_galfit_results(galfit_outimage,asymflag=0,ncomp=1):
     numerical_error_flag=0
     if asymflag:
         header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','1_F1','1_F1PA','CHI2NU']
@@ -173,7 +173,7 @@ class galfit:
     def set_sky(self,sky):
         self.sky=sky
 
-    def write_sersic(self,objnumber,profile):
+    def write_sersic(self,objnumber,profile, nsersic=None):
         self.galfit_input.write(' \n')
         self.galfit_input.write('# Object number: %i \n'%(objnumber))
         self.galfit_input.write(' 0) %s             # Object type \n'%(profile))
@@ -181,7 +181,10 @@ class galfit:
         self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(self.mag,self.fitmag))
         self.galfit_input.write(' 4) %8.2f       %i       #     R_e              [Pixels] \n'%(self.rad,self.fitrad))
         print('sersic n, fitsersicn = ',self.nsersic,self.fitn)
-        self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(self.nsersic,int(self.fitn)))
+        if nsersic == None:
+            self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(self.nsersic,int(self.fitn)))
+        else:
+            self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(nsersic,int(self.fitn)))
         print('BA, fitBA = ',self.BA,self.fitBA)
         self.galfit_input.write(' 9) %5.2f       %i       # axis ratio (b/a)    \n'%(self.BA,int(self.fitBA)))
         self.galfit_input.write('10) %5.2f       %i       # position angle (PA)  [Degrees: Up=0, Left=90] \n'%(self.PA,int(self.fitPA)))
@@ -200,16 +203,17 @@ class galfit:
 
 
     def run_galfit(self,displayflag=False):
-        #print 'self.fitall = ',self.fitall
         self.create_output_names()
         self.open_galfit_input()
         print('in rungalfit.run_galfit, self.psf_image = ',self.psf_image)
         self.write_image_params()
-        #print 'self.fitall = ',self.fitall
         self.write_sersic(1,'sersic')
-        #print 'self.fitall = ',self.fitall
-        self.write_sky(2)
-        #print 'self.fitall = ',self.fitall
+        if self.ncomp == 2:
+            # start second component with n=4 to try to get the bulge (if it exists)
+            self.write_sersic(2,'sersic', nsersic=4)
+            self.write_sky(3)
+        else:
+            self.write_sky(2)
         if (self.fitallflag):
             print('%%%%%%%%%%%%%% HEY %%%%%%%%%%%%%')
             print('I think fitall is true, just sayin...')
@@ -268,7 +272,7 @@ class galfit:
                     self.add_simple_sersic_object(objnumber,profile,se.X_IMAGE[k],se.Y_IMAGE[k],se.MAG_BEST[k],se.FLUX_RADIUS[k,0],2,se.B_IMAGE[k]/se.A_IMAGE[k],se.THETA_IMAGE[k])
         except AttributeError:
             print('WARNING: no sources detected in image!')
-        raw_input=('hit any key to continue \n')
+        input=('hit any key to continue \n')
 
     def add_simple_sersic_object(self,objnumber,profile,x,y,mag,rad,nsersic,BA,PA):
         self.galfit_input.write(' \n')
@@ -297,68 +301,44 @@ class galfit:
         if self.ncomp == 2:
             header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_XC','2_YC','2_MAG','2_RE','2_N','2_AR','2_PA','3_SKY','ERROR','CHI2NU']
 
-        t=parse_galfit_1comp(image)
+        t=parse_galfit_results(image, ncomp = self.ncomp)
         for i in range(len(header_keywords)):
             try:
                 print('%6s : %5.2f +/- %5.2f'%(header_keywords[i],t[i][0],t[i][1]))
             except:
                 print('%6s : %5.2f'%(header_keywords[i],t[i]))
     def edit_params_menu(self):
-        flag=str(raw_input('What is wrong?\n n = adjust sersic \n r = reset Re \n o = nearby object (toggle fitall) \n b = B/A \n p = PA \n m = mag \n c = recenter \n f = hold values fixed \n a = toggle asymmetry parameter \n R = reset to original values \n g = go (run galfit) \n x=quit \n '))
+        flag=str(input('What is wrong?\n o = nearby object (toggle fitall)  \n c = recenter \n f = hold values fixed \n a = toggle asymmetry parameter \n R = reset to original values \n g = go (run galfit) \n x=quit \n '))
         return flag
 
-    def set_n(self):
-        n=float(raw_input('sersic exponent = '))
-        self.nsersic=n
-
-    def set_r(self):
-        r=float(raw_input('radius = '))
-        self.rad=r
-
-    def set_BA(self):
-        r=float(raw_input('BA = '))
-        self.BA=r
-
-    def set_PA(self):
-        r=float(raw_input('PA = '))
-        self.PA=r
-
-    def set_mag(self):
-        r=float(raw_input('mag = '))
-        self.mag=r
-
-    def set_center(self, xc, yc):
-        self.xobj=xc
-        self.yobj=yc
-
     def toggle_fitall(self):
-        self.fitallflag=toggle(self.fitallflag)
+        self.fitallflag=not(self.fitallflag)
 
     def toggle_asymmetry(self):
-        self.asymmetry=toggle(self.asymmetry)
+        self.asymmetry=not(self.asymmetry)
 
     def print_fix_menu(self):
         self.print_params()
-        flag3=str(raw_input('What do you want to hold fixed/toggle?\n n = fix sersic index \n r = fix Re \n b = fix B/A \n p = PA \n c = center \n f = use constraint file \n R = reset to original values \n g = go (run galfit) \n x=quit \n '))
+        flag3=str(input('What do you want to hold fixed/toggle?\n n = fix sersic index \n r = fix Re \n b = fix B/A \n p = PA \n c = center \n f = use constraint file \n R = reset to original values \n g = go (run galfit) \n x=quit \n '))
         return flag3
 
     def fix_n(self):
-        n=float(raw_input('sersic exponent = '))
+        n=float(input('sersic exponent = '))
         self.nsersic=n
-        self.fitn=toggle(self.fitn)
+        self.fitn=not(self.fitn)
 
     def fix_rad(self):
-        self.fitrad=toggle(self.fitrad)
+        self.fitrad=not(self.fitrad)
 
     def fix_BA(self):
-        self.fitBA=toggle(self.fitBA)
+        self.fitBA=not(self.fitBA)
         print(self.fitBA, self.BA)
     def fix_PA(self):
-        self.fitPA=toggle(self.fitPA)
+        self.fitPA=not(self.fitPA)
 
     def fix_center(self):
-        self.fitcenter=toggle(self.fitcenter)
+        self.fitcenter=not(self.fitcenter)
 
     def add_constraint_file(self):
-        self.constraintflag=toggle(self.constraintflag)
+        self.constraintflag=not(self.constraintflag)
         

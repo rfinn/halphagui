@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1174</width>
-    <height>678</height>
+    <width>1189</width>
+    <height>627</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Halpha Console</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -34,17 +34,51 @@
         <widget class="QWidget" name="button_bar" native="true">
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QPushButton" name="wmark">
-            <property name="text">
-             <string>Find Galaxies</string>
+           <widget class="QFrame" name="frame_7">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
             </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_9">
+             <item>
+              <widget class="QLabel" name="label">
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
+               <property name="text">
+                <string>Output Prefix</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="prefixLineEdit"/>
+             </item>
+            </layout>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="wclear">
-            <property name="text">
-             <string>Clear Canvas</string>
-            </property>
+           <widget class="QWidget" name="widget_4" native="true">
+            <layout class="QVBoxLayout" name="verticalLayout_7">
+             <item>
+              <widget class="QPushButton" name="wmark">
+               <property name="text">
+                <string>Find Galaxies</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="wclear">
+               <property name="text">
+                <string>Clear Canvas</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item>
@@ -231,7 +265,14 @@
              <item>
               <widget class="QPushButton" name="galfitButton">
                <property name="text">
-                <string>galfit</string>
+                <string>galfit 1 comp</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="galfit2Button">
+               <property name="text">
+                <string>galfit 2 comp</string>
                </property>
               </widget>
              </item>
@@ -297,7 +338,7 @@
             </layout>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="5" column="0" colspan="2">
            <widget class="QFrame" name="frame_6">
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
@@ -305,29 +346,7 @@
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
-            <widget class="QLabel" name="label">
-             <property name="geometry">
-              <rect>
-               <x>-10</x>
-               <y>0</y>
-               <width>152</width>
-               <height>16</height>
-              </rect>
-             </property>
-             <property name="layoutDirection">
-              <enum>Qt::LeftToRight</enum>
-             </property>
-             <property name="text">
-              <string>Output Prefix</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
            </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QLineEdit" name="prefixLineEdit"/>
           </item>
          </layout>
         </widget>
@@ -343,7 +362,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1174</width>
+     <width>1189</width>
      <height>22</height>
     </rect>
    </property>
