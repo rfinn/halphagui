@@ -261,6 +261,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
     def display_cutouts(self):
         self.rcutout.load_file(self.image_name)
+        self.rcutout.fitsimage.set_autocut_params('histogram')
         self.hacutout.load_file(self.haimage_name)
         self.display_mask()
     def display_mask(self):

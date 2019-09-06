@@ -27,6 +27,7 @@ from astropy.coordinates import ICRS, FK5
 import astropy.units as u
 from astropy import nddata
 from astropy.table import Table, Column
+from astropy.visualization import simple_norm
 
 # packages for ellipse fitting routine
 # https://photutils.readthedocs.io/en/stable/isophote.html
@@ -39,6 +40,8 @@ from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
+from datetime import date
 
 # routines for measuring elliptical photometry
 from photwrapper import ellipse
@@ -80,7 +83,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         #self.figure = plt.figure()
         fi = CanvasView(self.logger, render='widget')
         fi.enable_autocuts('on')
-        fi.set_autocut_params('zscale')
+        fi.set_autocut_params('histogram')
         fi.enable_autozoom('on')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move',self.cursor_cb)
@@ -210,6 +213,10 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         image = load_data(filepath, logger=self.logger)
         self.image_wcs = WCS(filepath)
         self.fitsimage.set_image(image)
+        #t = fits.getdata(image)
+        #v1 = np.scoreatpercentile(image,1)
+        #v2 = np.scoreatpercentile(image,99.5)
+        #self.fitsimage.auto_levels(autocuts=(v1,v2))
         #self.setWindowTitle(filepath)
         self.coadd_filename = filepath
 
@@ -348,17 +355,40 @@ class output_table():
         c7 = Column(self.nsa.cat.SERSIC_N,name='NSA_SERSIC_N')
         c8 = Column(self.nsa.cat.SERSIC_BA,name='NSA_SERSIC_BA')
         c9 = Column(self.nsa.cat.SERSIC_PHI,name='NSA_SERSIC_PHI', unit=u.deg)
-        self.table = Table([c1,c2,c3,c4,c5,c6,c7,c8,c9])
+        # cutout region in coadded images
+        c10 = Column(np.zeros(len(r),dtype='U20'), name='BBOX')
+        # R-band scale factor for making continuum-subtracted image
+        c11 = Column(np.zeros(len(r),'f'), name='FILTER_RATIO')
+        # galfit sersic parameters from 1 comp fit
+        c12 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC')
+        c13 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC_ERR')
+        c14 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_SKY')
+        c15 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_CHISQ')
+        # galfit sersic parameters from 2 comp fit
+        c16 = Column(np.zeros((len(r),16),'f'), name='GALFIT_2SERSIC')
+        c17 = Column(np.zeros((len(r),16),'f'), name='GALFIT_2SERSIC_ERR')
+        c18 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_SKY')
+        c19 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_CHISQ')
+        # ellipse output
+        # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
+        e1 = Column(np.zeros(len(r),'f'), name='ELLIP_XCENTROID', unit='pixel')
+        e2 = Column(np.zeros(len(r),'f'), name='ELLIP_YCENTROID', unit='pixel')
+        e3 = Column(np.zeros(len(r),'f'), name='ELLIP_EPS')
+        e4 = Column(np.zeros(len(r),'f'), name='ELLIP_THETA', unit=u.radian)
+        e5 = Column(np.zeros(len(r),'f'), name='ELLIP_GINI')
+        #e6 = Column(np.zeros(len(r)), name='ELLIP_SKYCENTROID', dtype='object')
+        e7 = Column(np.zeros(len(r),'f'), name='ELLIP_AREA')
+        e8 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM')
+        e9 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM_ERR')
+        self.table = Table([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,\
+                            e1,e2,e3,e4,e5,e7,e8,e9])
         print(self.table)
         self.update_gui_table()
     def update_gui_table(self):
         self.ui.tableWidget.setColumnCount(len(self.table.columns))
         self.ui.tableWidget.setRowCount(len(self.table))
         
-        col_names = []
-        for c in self.table.columns:
-            col_names.append(self.table[c].name)
-        self.ui.tableWidget.setHorizontalHeaderLabels(col_names)
+        self.ui.tableWidget.setHorizontalHeaderLabels(self.table.colnames)
 
         '''
         item = QtWidgets.QTableWidgetItem()
@@ -392,6 +422,30 @@ class output_table():
         else:
             z = Column(variable, name=var_name)
         self.table.add_column(z)
+    def update_gui_table_cell(self,row,col,item):
+        # row will be igal, so that's easy
+        # how to make it easy to get the right column number?
+        #
+        # easiest is to pass the column name, and
+        # then match the column name to find the
+
+        colmatch = False
+        for i,c in enumerate(self.table.colnames):
+            if c == col:
+                ncol = i
+                colmatch = True
+        if colmatch:    
+            self.ui.tableWidget.setItem(row,ncol,QtWidgets.QTableWidgetItem(str(item)))
+        else:
+            print('could not match column name ',col)
+    def write_fits_table(self):
+        # get directory after Users - this should be username for 
+        user = os.getenv('USER')
+        today = date.today()
+        str_date_today = today.strftime('%Y-%b-%d')
+        output_table = 'halpha-data-'+user+'-'+str_date_today+'.fits'
+        #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
+        self.table.write(output_table, format='fits')
         
 class hafunctions(Ui_MainWindow, output_table):
 
@@ -435,6 +489,8 @@ class hafunctions(Ui_MainWindow, output_table):
         self.ui.galfitButton.clicked.connect(lambda: self.run_galfit(ncomp=1))
         self.ui.galfit2Button.clicked.connect(lambda: self.run_galfit(ncomp=2))
         self.ui.psfButton.clicked.connect(self.build_psf)
+        self.ui.saveButton.clicked.connect(self.write_fits_table)
+
         if self.testing:
             self.setup_testing()
     def setup_testing(self):
@@ -667,8 +723,6 @@ class hafunctions(Ui_MainWindow, output_table):
             self.coadd.canvas.redraw()
         elif key == 'h':
             self.coadd.fitsimage.set_data(self.halpha_cs)
-        else:
-            pass
     def setup_ratio_slider(self):
         self.ui.ratioSlider.setRange(0,100)
         self.ui.ratioSlider.setValue(50)
@@ -804,8 +858,12 @@ class hafunctions(Ui_MainWindow, output_table):
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
         newfile.header.set('NSAID',float('{:d}'.format(self.galid[self.igal])))
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile.header['EXPTIME']=1.0 
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
-        
+
+        # write bounding box to output table
+        self.table['BBOX'][self.igal] = self.cutoutR.bbox_original
+        self.update_gui_table_cell(self.igal,'BBOX',str(self.cutoutR.bbox_original))
     def make_mask(self):
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
@@ -840,7 +898,7 @@ class hafunctions(Ui_MainWindow, output_table):
     def run_galfit(self, ncomp=1):
         print('running galfit with ',ncomp,' components')
         self.gwindow = QtWidgets.QWidget()
-
+        '''
         if self.testing:
             self.ncomp = ncomp
             self.galfit = galfitwindow(self.gwindow, self.logger, image = 'MKW8-18037-R.fits', mask_image = 'MKW8-18037-R-mask.fits', psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
@@ -850,29 +908,44 @@ class hafunctions(Ui_MainWindow, output_table):
         self.galfit.setupUi(self.gwindow)
 
         self.gwindow.show()
-
         '''
+        
         try:
             self.gwindow = QtWidgets.QWidget()
-            self.gwindow.aboutToQuit.connect(self.galfit_closed)
+            #self.gwindow.aboutToQuit.connect(self.galfit_closed)
             if self.testing:
                 self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
             else:
                 self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp)
+            self.galfit.model_saved.connect(self.galfit_save)        
             self.galfit.setupUi(self.gwindow)
             self.gwindow.show()
         except AttributeError:
             print('WARNING - ERROR RUNNING GALFIT!!!')
             print('Make sure you have measured the PSF and made a mask!')
-        '''
+        
     def galfit_save(self,msg):
         print('galfit model saved!!!',msg)
         if self.testing:
             self.ncomp = int(msg)
         if self.ncomp == 1:
             self.galfit_results = self.galfit.galfit_results
+            # save results to output table
+            self.table['GALFIT_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
+            self.table['GALFIT_SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
+            self.table['GALFIT_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
+            self.table['GALFIT_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
+            print(self.table[self.igal])
+
         elif self.ncomp == 2:
             self.galfit_results2 = self.galfit.galfit_results
+            self.table['GALFIT_2SERSIC'][self.igal] = np.array(self.galfit.galfit_results2[:-2])[:,0]
+            self.table['GALFIT_2SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results2[:-2])[:,1]
+            self.table['GALFIT_2SERSIC_SKY'][self.igal] = (self.galfit.galfit_results2[-2])
+            self.table['GALFIT_2SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results2[-1])
+            print(self.table[self.igal])
+        self.update_gui_table()
+
     def fit_ellipse(self):
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
@@ -899,6 +972,14 @@ class hafunctions(Ui_MainWindow, output_table):
         self.e.plot_profiles()
         #os.chdir(current_dir)
 
+        ### SAVE DATA TO TABLE
+
+        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','AREA','SUM','SUM_ERR']
+        values = [self.e.xcenter, self.e.ycenter,self.e.eps, self.e.theta, self.e.gini,self.e.cat[self.e.objectID].area.value,self.e.cat[self.e.objectID].source_sum, self.e.cat[self.e.objectID].source_sum_err]
+        for i,f in enumerate(fields):
+            colname = 'ELLIP_'+f
+            self.table[colname][self.igal]=values[i]
+        self.update_gui_table()
     def fit_profiles(self):
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
@@ -941,6 +1022,13 @@ class hafunctions(Ui_MainWindow, output_table):
         '''
         os.chdir(current_dir)
 
+    def closeEvent(self, event):
+        # send signal that window is closed
+
+        # write the data table
+        print('writing fits table')
+        self.table.write_fits_table()
+        #event.accept()
 
         
 class galaxy_catalog():

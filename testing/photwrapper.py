@@ -123,6 +123,8 @@ class ellipse():
         self.start_size = self.sma
         self.b = obj.semiminor_axis_sigma.value * r
         self.eps = 1 - self.b/self.sma
+        self.gini = obj.gini
+        self.sky_centroid = obj.sky_centroid
         t = obj.orientation.value
         if t < 0:
             self.theta = np.radians(180. - t)
@@ -299,10 +301,10 @@ class ellipse():
 if __name__ == '__main__':
     image = 'MKW8-18216-R.fits'
     mask = 'MKW8-18216-R-mask.fits'
-    image = 'MKW8-18037-R.fits'
-    mask = 'MKW8-18037-R-mask.fits'
-    image = 'r-18045-R.fits'
-    mask = 'r-18045-R-mask.fits'
+    #image = 'MKW8-18037-R.fits'
+    #mask = 'MKW8-18037-R-mask.fits'
+    #image = 'r-18045-R.fits'
+    #mask = 'r-18045-R-mask.fits'
     e = ellipse(image,mask=mask, use_mpl=True)
     ## print('detect objects')
     ## e.detect_objects()
