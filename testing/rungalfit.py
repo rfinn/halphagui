@@ -192,6 +192,53 @@ class galfit:
             self.galfit_input.write('F1) 0.0001 0.00   1  1     # azim. Fourier mode 1, amplitude & phase angle \n')
         self.galfit_input.write(" Z) 0                  # Output option (0 = residual, 1 = Don't subtract)  \n")
 
+    def write_sersic_BD(self):
+        ########################
+        # assume bulge contains 30% of light for initial guess
+        ########################
+        mag_disk = self.mag+.4
+        mag_bulge = self.mag + 1.3
+        
+        ########################
+        # require n=1 for disk, n=4 for bulge
+        # also start PA=0 and BA=1
+        ########################
+        nsersic_disk=1
+        nsersic_bulge=4
+        
+        ########################
+        # write disk profile
+        ########################    
+        self.galfit_input.write(' \n')
+        self.galfit_input.write('# Object number: 1 \n')
+        self.galfit_input.write(' 0) sersic             # Object type \n')
+        self.galfit_input.write(' 1) %8.1f  %8.1f %i %i  # position x, y        [pixel] \n'%(self.xobj,self.yobj,int(self.fitcenter),int(self.fitcenter)))
+        self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(mag_disk,self.fitmag))
+        self.galfit_input.write(' 4) %8.2f       %i       #     R_e              [Pixels] \n'%(self.rad,self.fitrad))
+        self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(nsersic_disk,0))
+        self.galfit_input.write(' 9) %5.2f       %i       # axis ratio (b/a)    \n'%(self.BA,int(self.fitBA)))
+        self.galfit_input.write('10) %5.2f       %i       # position angle (PA)  [Degrees: Up=0, Left=90] \n'%(self.PA,int(self.fitPA)))
+        if self.asymmetry:
+            self.galfit_input.write('F1) 0.0001 0.00   1  1     # azim. Fourier mode 1, amplitude & phase angle \n')
+        self.galfit_input.write(" Z) 0                  # Output option (0 = residual, 1 = Don't subtract)  \n")
+
+        ########################
+        # write bulge profile
+        ########################
+        self.galfit_input.write(' \n')
+        self.galfit_input.write('# Object number: 2 \n')
+        self.galfit_input.write(' 0) sersic             # Object type \n')
+        self.galfit_input.write(' 1) %8.1f  %8.1f %i %i  # position x, y        [pixel] \n'%(self.xobj,self.yobj,int(self.fitcenter),int(self.fitcenter)))
+        self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(mag_bulge,self.fitmag))
+        self.galfit_input.write(' 4) %8.2f       %i       #     R_e              [Pixels] \n'%(self.rad,self.fitrad))
+        self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(nsersic_bulge,0))
+        self.galfit_input.write(' 9) %5.2f       %i       # axis ratio (b/a)    \n'%(1,int(self.fitBA)))
+        self.galfit_input.write('10) %5.2f       %i       # position angle (PA)  [Degrees: Up=0, Left=90] \n'%(0,int(self.fitPA)))
+        if self.asymmetry:
+            self.galfit_input.write('F1) 0.0001 0.00   1  1     # azim. Fourier mode 1, amplitude & phase angle \n')
+        self.galfit_input.write(" Z) 0                  # Output option (0 = residual, 1 = Don't subtract)  \n")
+        
+
     def write_sky(self,objnumber):    
         self.galfit_input.write(' \n')
         self.galfit_input.write('# Object number: %i \n'%(objnumber))
@@ -200,36 +247,36 @@ class galfit:
         self.galfit_input.write(' 2) 0      0       # dsky/dx (sky gradient in x)    \n')
         self.galfit_input.write(' 3) 0      0       # dsky/dy (sky gradient in y) \n')
         self.galfit_input.write(" Z) 0                  # Output option (0 = residual, 1 = Don't subtract)  \n")
+    
+        
 
-
-    def run_galfit(self,displayflag=False):
+    def write_input_file(self):
         self.create_output_names()
         self.open_galfit_input()
         print('in rungalfit.run_galfit, self.psf_image = ',self.psf_image)
+        
         self.write_image_params()
-        self.write_sersic(1,'sersic')
-        if self.ncomp == 2:
-            # start second component with n=4 to try to get the bulge (if it exists)
-            self.write_sersic(2,'sersic', nsersic=4)
-            self.write_sky(3)
-        else:
+                
+        if (self.ncomp == 1):
+            self.write_sersic(1,'sersic')
             self.write_sky(2)
+            
+        elif (self.ncomp == 2):
+            self.write_sersic_BD()
+            self.write_sky(3)
+            
         if (self.fitallflag):
             print('%%%%%%%%%%%%%% HEY %%%%%%%%%%%%%')
             print('I think fitall is true, just sayin...')
             self.fitall()
         self.close_input_file()
+        
+    def run_galfit(self,displayflag=False):
+        self.write_input_file()
         #print 'self.fitall = ',self.fitall
         s = 'galfit '+self.galfile
         print('run the following: ',s)
 
-        #try:
-        #    errno=os.system(s)
-        #    self.galfit_flag=1
-        #except:
-        #    print "PROBLEM RUNNING GALFIT!!!!"
-        #    self.galfit_flag=0
-        #    return
 
         errno=os.system(s)
         self.galfit_flag=1

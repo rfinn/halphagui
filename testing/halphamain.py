@@ -360,15 +360,42 @@ class output_table():
         # R-band scale factor for making continuum-subtracted image
         c11 = Column(np.zeros(len(r),'f'), name='FILTER_RATIO')
         # galfit sersic parameters from 1 comp fit
-        c12 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC')
-        c13 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC_ERR')
-        c14 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_SKY')
-        c15 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_CHISQ')
+        #c12 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC')
+        #c13 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC_ERR')
+        #c14 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_SKY')
+        #c15 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_CHISQ')
+
+        self.table = Table([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11])
+
+        #####################################################################
+        # galfit output
+        #####################################################################
+        fields = ['XC','YC','MAG','RE','N','PA','BA']
+        units = ['pixel','pixel','mag','pixel',None,'deg',None]
+        for f,unit in zip(fields,units):
+            if unit == None:
+                c1 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f)
+                c2 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f+'_ERR')
+            else:
+                c1 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f, unit=unit)
+                c2 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f+'_ERR', unit=unit)
+
+            self.table.add_column(c1)
+            self.table.add_column(c2)
+
+        c1 = Column(np.zeros(len(r),'f'),name='GALFIT_SKY')
+        c2 = Column(np.zeros(len(r),'f'),name='GALFIT_CHISQ')
+        self.table.add_column(c1)
+        self.table.add_column(c2)
+
         # galfit sersic parameters from 2 comp fit
-        c16 = Column(np.zeros((len(r),16),'f'), name='GALFIT_2SERSIC')
-        c17 = Column(np.zeros((len(r),16),'f'), name='GALFIT_2SERSIC_ERR')
-        c18 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_SKY')
+        c16 = Column(np.zeros((len(r),15),'f'), name='GALFIT_2SERSIC')
+        c17 = Column(np.zeros((len(r),15),'f'), name='GALFIT_2SERSIC_ERR')
+        c18 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_ERROR')
         c19 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_CHISQ')
+        self.table.add_columns([c16,c17,c18,c19])
+        
+        #####################################################################
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
         e1 = Column(np.zeros(len(r),'f'), name='ELLIP_XCENTROID', unit='pixel')
@@ -380,8 +407,7 @@ class output_table():
         e7 = Column(np.zeros(len(r),'f'), name='ELLIP_AREA')
         e8 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM')
         e9 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM_ERR')
-        self.table = Table([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,\
-                            e1,e2,e3,e4,e5,e7,e8,e9])
+        self.table.add_columns([e1,e2,e3,e4,e5,e7,e8,e9])
         print(self.table)
         self.update_gui_table()
     def update_gui_table(self):
@@ -445,7 +471,7 @@ class output_table():
         str_date_today = today.strftime('%Y-%b-%d')
         output_table = 'halpha-data-'+user+'-'+str_date_today+'.fits'
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
-        self.table.write(output_table, format='fits')
+        self.table.write(output_table, format='fits', overwrite=True)
         
 class hafunctions(Ui_MainWindow, output_table):
 
@@ -572,9 +598,12 @@ class hafunctions(Ui_MainWindow, output_table):
         ha_types = ['Ha Emission','No Ha','Cont Sub Problem']
         for name in ha_types:
             self.ui.haTypeComboBox.addItem(str(name))
-        self.ui.haTypeComboBox.activated.connect(self.select_galaxy)
+        self.ui.haTypeComboBox.activated.connect(self.set_halpha_type)
     def set_halpha_type(self,hatype):
         self.halpha_type = hatype
+        if hatype == 'Ha Emission':
+            self.haflag[self.igal]=True
+        self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
 
     def set_prefix(self,prefix):
         self.prefix = prefix
@@ -862,8 +891,11 @@ class hafunctions(Ui_MainWindow, output_table):
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
 
         # write bounding box to output table
-        self.table['BBOX'][self.igal] = self.cutoutR.bbox_original
-        self.update_gui_table_cell(self.igal,'BBOX',str(self.cutoutR.bbox_original))
+        # save this for later
+        ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))
+        self.table['BBOX'][self.igal] = bbox
+        self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
     def make_mask(self):
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
@@ -916,7 +948,13 @@ class hafunctions(Ui_MainWindow, output_table):
             if self.testing:
                 self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
             else:
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp)
+                if ncomp == 1:
+                    self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp, mag=self.nsa.r[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.cat.SERSIC_PHI[self.igal])
+                elif ncomp == 2:
+                    # use results from 1 component fit as input
+                    
+                    self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp, mag=self.nsa.r[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.cat.SERSIC_PHI[self.igal])
+                    
             self.galfit.model_saved.connect(self.galfit_save)        
             self.galfit.setupUi(self.gwindow)
             self.gwindow.show()
@@ -928,21 +966,41 @@ class hafunctions(Ui_MainWindow, output_table):
         print('galfit model saved!!!',msg)
         if self.testing:
             self.ncomp = int(msg)
+            print('ncomp = ',self.ncomp)
         if self.ncomp == 1:
             self.galfit_results = self.galfit.galfit_results
+            fields = ['XC','YC','MAG','RE','N','PA','BA']
+            values = np.array(self.galfit.galfit_results[:-2])[:,0].tolist()
+            for i,f in enumerate(fields):
+                colname = 'GALFIT_'+f
+                self.table[colname][self.igal]=values[i]
+            fields = ['XC','YC','MAG','RE','N','PA','BA']
+            values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
+            for i,f in enumerate(fields):
+                colname = 'GALFIT_'+f+'_ERR'
+                self.table[colname][self.igal]=values[i]
+            fields = ['SKY','CHISQ']
+            values = [self.galfit.galfit_results[-2],self.galfit.galfit_results[-1]]
+            for i,f in enumerate(fields):
+                colname = 'GALFIT_'+f
+                self.table[colname][self.igal]=values[i]
+
+            self.update_gui_table()
+
             # save results to output table
-            self.table['GALFIT_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
-            self.table['GALFIT_SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
-            self.table['GALFIT_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
-            self.table['GALFIT_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
-            print(self.table[self.igal])
+            #self.table['GALFIT_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
+            #self.table['GALFIT_SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
+            #self.table['GALFIT_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
+            #self.table['GALFIT_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
+            #print(self.table[self.igal])
 
         elif self.ncomp == 2:
             self.galfit_results2 = self.galfit.galfit_results
-            self.table['GALFIT_2SERSIC'][self.igal] = np.array(self.galfit.galfit_results2[:-2])[:,0]
-            self.table['GALFIT_2SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results2[:-2])[:,1]
-            self.table['GALFIT_2SERSIC_SKY'][self.igal] = (self.galfit.galfit_results2[-2])
-            self.table['GALFIT_2SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results2[-1])
+            print(self.galfit_results2)
+            self.table['GALFIT_2SERSIC'][self.igal] = np.array(self.galfit_results2[:-2])[:,0]
+            self.table['GALFIT_2SERSIC_ERR'][self.igal] = np.array(self.galfit_results2[:-2])[:,1]
+            self.table['GALFIT_2SERSIC_ERROR'][self.igal] = (self.galfit_results2[-2])
+            self.table['GALFIT_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
             print(self.table[self.igal])
         self.update_gui_table()
 
@@ -1037,6 +1095,7 @@ class galaxy_catalog():
 
     def cull_catalog(self, keepflag):
         self.cat = self.cat[keepflag]
+        self.rmag = 22.5 - 2.5*np.log10(self.cat.NMGY[:,4])
 
         
 if __name__ == "__main__":

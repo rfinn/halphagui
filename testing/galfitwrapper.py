@@ -46,7 +46,7 @@ import rungalfit as rg
 
 class galfitwindow(Ui_galfitWindow, QtCore.QObject):
     model_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None):
+    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None, mag2=None, nsersic2=None):
         super(galfitwindow, self).__init__()
 
         # boiler plate gui stuff
@@ -145,6 +145,13 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
             self.PA=0
         else:
             self.PA=PA
+
+        # parameters for second component B/D fit
+        if mag2 == None:
+            self.mag2=16
+        else:
+            self.mag2=mag2
+
 
         self.fitBA = 1
         self.fitPA = 1
@@ -363,6 +370,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
 
         # send message that a new model is available
         self.model_saved.emit(str(self.ncomp))
+        
     def get_galfit_results(self,printflag = False):
         '''
         GOAL: Grab results from galfit (xc, yc, mag, re, nsersic, BA, PA, sky, error, chi2nu) and parse them into self.filename
