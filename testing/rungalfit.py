@@ -153,6 +153,36 @@ class galfit:
             self.fitBA0=fitBA
             self.fitPA0=fitPA
             self.asymmetry0=self.asymmetry
+            
+    def set_sersic_params_comp2(self,xobj=None,yobj=None,mag=None,rad=None,nsersic=None,BA=None,PA=None,fitmag=1,fitcenter=1,fitrad=1,fitBA=1,fitPA=1,fitn=1,first_time=0):
+        self.xobj2=xobj
+        self.yobj2=yobj
+        self.mag2=mag
+        self.rad2=rad
+        self.nsersic2=nsersic
+        self.BA2=BA
+        self.PA2=PA
+        self.fitmag2=fitmag
+        self.fitn2=fitn
+        self.fitcenter2=fitcenter
+        self.fitrad2=fitrad
+        self.fitBA2=fitBA
+        self.fitPA2=fitPA
+        if first_time:
+            self.xobj02=xobj
+            self.yobj02=yobj
+            self.mag02=mag
+            self.rad02=rad
+            self.nsersic02=nsersic
+            self.BA02=BA
+            self.PA02=PA
+            self.fitmag02=fitmag
+            self.fitn02=fitn
+            self.fitcenter02=fitcenter
+            self.fitrad02=fitrad
+            self.fitBA02=fitBA
+            self.fitPA02=fitPA
+            self.asymmetry02=self.asymmetry
 
     def reset_sersic_params(self):
         self.xobj=self.xobj0
@@ -193,18 +223,6 @@ class galfit:
         self.galfit_input.write(" Z) 0                  # Output option (0 = residual, 1 = Don't subtract)  \n")
 
     def write_sersic_BD(self):
-        ########################
-        # assume bulge contains 30% of light for initial guess
-        ########################
-        mag_disk = self.mag+.4
-        mag_bulge = self.mag + 1.3
-        
-        ########################
-        # require n=1 for disk, n=4 for bulge
-        # also start PA=0 and BA=1
-        ########################
-        nsersic_disk=1
-        nsersic_bulge=4
         
         ########################
         # write disk profile
@@ -213,9 +231,9 @@ class galfit:
         self.galfit_input.write('# Object number: 1 \n')
         self.galfit_input.write(' 0) sersic             # Object type \n')
         self.galfit_input.write(' 1) %8.1f  %8.1f %i %i  # position x, y        [pixel] \n'%(self.xobj,self.yobj,int(self.fitcenter),int(self.fitcenter)))
-        self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(mag_disk,self.fitmag))
+        self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(self.mag,self.fitmag))
         self.galfit_input.write(' 4) %8.2f       %i       #     R_e              [Pixels] \n'%(self.rad,self.fitrad))
-        self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(nsersic_disk,0))
+        self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(self.nsersic,0))
         self.galfit_input.write(' 9) %5.2f       %i       # axis ratio (b/a)    \n'%(self.BA,int(self.fitBA)))
         self.galfit_input.write('10) %5.2f       %i       # position angle (PA)  [Degrees: Up=0, Left=90] \n'%(self.PA,int(self.fitPA)))
         if self.asymmetry:
@@ -228,12 +246,12 @@ class galfit:
         self.galfit_input.write(' \n')
         self.galfit_input.write('# Object number: 2 \n')
         self.galfit_input.write(' 0) sersic             # Object type \n')
-        self.galfit_input.write(' 1) %8.1f  %8.1f %i %i  # position x, y        [pixel] \n'%(self.xobj,self.yobj,int(self.fitcenter),int(self.fitcenter)))
-        self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(mag_bulge,self.fitmag))
-        self.galfit_input.write(' 4) %8.2f       %i       #     R_e              [Pixels] \n'%(self.rad,self.fitrad))
-        self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(nsersic_bulge,0))
-        self.galfit_input.write(' 9) %5.2f       %i       # axis ratio (b/a)    \n'%(1,int(self.fitBA)))
-        self.galfit_input.write('10) %5.2f       %i       # position angle (PA)  [Degrees: Up=0, Left=90] \n'%(0,int(self.fitPA)))
+        self.galfit_input.write(' 1) %8.1f  %8.1f %i %i  # position x, y        [pixel] \n'%(self.xobj2,self.yobj2,int(self.fitcenter),int(self.fitcenter)))
+        self.galfit_input.write(' 3) %5.2f      %i       # total magnitude     \n'%(self.mag2,self.fitmag))
+        self.galfit_input.write(' 4) %8.2f       %i       #     R_e              [Pixels] \n'%(self.rad2,self.fitrad))
+        self.galfit_input.write(' 5) %5.2f       %i       # Sersic exponent (deVauc=4, expdisk=1)   \n'%(self.nsersic2,1)) # allow n to vary
+        self.galfit_input.write(' 9) %5.2f       %i       # axis ratio (b/a)    \n'%(self.BA2,int(self.fitBA)))
+        self.galfit_input.write('10) %5.2f       %i       # position angle (PA)  [Degrees: Up=0, Left=90] \n'%(self.PA2,int(self.fitPA)))
         if self.asymmetry:
             self.galfit_input.write('F1) 0.0001 0.00   1  1     # azim. Fourier mode 1, amplitude & phase angle \n')
         self.galfit_input.write(" Z) 0                  # Output option (0 = residual, 1 = Don't subtract)  \n")

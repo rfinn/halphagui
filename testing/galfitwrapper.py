@@ -36,7 +36,8 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
 
-from galfitWidget import Ui_Form as Ui_galfitWindow
+#from galfitWidget import Ui_Form as Ui_galfitWindow
+from galfitWidgetBD import Ui_Form as Ui_galfitWindow
 from maskwrapper import my_cutout_image
 
 import rungalfit as rg
@@ -46,7 +47,7 @@ import rungalfit as rg
 
 class galfitwindow(Ui_galfitWindow, QtCore.QObject):
     model_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None, mag2=None, nsersic2=None):
+    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None, mag2=None, nsersic2=None, rad2=None, BA2=None, PA2=None, xc2=None, yc2=None, fitn=True, fitn2=True):
         super(galfitwindow, self).__init__()
 
         # boiler plate gui stuff
@@ -146,13 +147,45 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         else:
             self.PA=PA
 
+        self.fitn = fitn
         # parameters for second component B/D fit
         if mag2 == None:
             self.mag2=16
         else:
             self.mag2=mag2
 
+        if nsersic2 == None:
+            self.nsersic2=4
+        else:
+            self.nsersic2=nsersic2
+            
+        if rad2 == None:
+            self.re2=0.5*self.re
+        else:
+            self.re2=rad2
+            
+        if PA2 == None:
+            self.PA2=0
+        else:
+            self.PA2=PA2
 
+        if BA2 == None:
+            self.BA2= 1
+        else:
+            self.BA2=BA2
+
+        if xc2 == None:
+            self.xc2= self.xc
+        else:
+            self.xc2=xc2
+
+        if yc2 == None:
+            self.yc2= self.yc
+        else:
+            self.yc2=yc2
+
+        self.fitn2 = fitn2
+        
         self.fitBA = 1
         self.fitPA = 1
 
@@ -191,7 +224,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
 
         # gui stuff
         # set up image frames for image, model, and residual
-        self.cutout_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1)
+        self.cutout_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1,autocut_params='histogram')
         self.model_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
         self.residual_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 4, 1)
 
@@ -202,13 +235,17 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.residual_frame.key_pressed.connect(self.key_press_func)
         
     def display_image(self):
+        '''
+        # I set this up initially to show the masked image
+        # but this is making the displayed not so nice
         if self.mask_image == None:
             self.cutout_frame.load_file(self.image)
         else:
             # display image with masked values
             # if a mask is available
             self.cutout_frame.load_image(self.image_data)
-
+        '''
+        self.cutout_frame.load_file(self.image_name)
     def display_galfit_results(self):
         pass
     def connect_buttons(self):
@@ -225,24 +262,43 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.ui.BALineEdit.textChanged.connect(self.set_BA)
  
     def display_initial_params(self):
-        self.ui.xcLineEdit.setText(str(self.xc))
-        self.ui.ycLineEdit.setText(str(self.yc))
-        self.ui.magLineEdit.setText(str(self.mag))
-        self.ui.ReLineEdit.setText(str(self.re))
-        self.ui.nLineEdit.setText(str(self.nsersic))
-        self.ui.PALineEdit.setText(str(self.PA))
-        self.ui.BALineEdit.setText(str(self.BA))
+
+        self.ui.xcLineEdit.setText(str(round(self.xc,2)))
+        self.ui.ycLineEdit.setText(str(round(self.yc,2)))
+        self.ui.magLineEdit.setText(str(round(self.mag,2)))
+        self.ui.ReLineEdit.setText(str(round(self.re,2)))
+        self.ui.nLineEdit.setText(str(round(self.nsersic,2)))
+        self.ui.PALineEdit.setText(str(round(self.PA,2)))
+        self.ui.BALineEdit.setText(str(round(self.BA,2)))
+        if self.ncomp == 2:
+            self.ui.xc2LineEdit.setText(str(round(self.xc2,2)))
+            self.ui.yc2LineEdit.setText(str(round(self.yc2,2)))
+            self.ui.mag2LineEdit.setText(str(round(self.mag2,2)))
+            self.ui.Re2LineEdit.setText(str(round(self.re2,2)))
+            self.ui.n2LineEdit.setText(str(round(self.nsersic2,2)))
+            self.ui.PA2LineEdit.setText(str(round(self.PA2,2)))
+            self.ui.BA2LineEdit.setText(str(round(self.BA2,2)))
+            
     def display_fitted_params(self):
-        self.ui.xcFitLineEdit.setText(str(self.xc))
-        self.ui.ycFitLineEdit.setText(str(self.yc))
-        self.ui.magFitLineEdit.setText(str(self.mag))
-        self.ui.ReFitLineEdit.setText(str(self.re))
-        self.ui.nFitLineEdit.setText(str(self.nsersic))
-        self.ui.PAFitLineEdit.setText(str(self.PA))
-        self.ui.BAFitLineEdit.setText(str(self.BA))
-        self.ui.skyFitLineEdit.setText(str(self.sky))
-        self.ui.errorFitLineEdit.setText(str(self.error))
-        self.ui.chiFitLineEdit.setText(str(self.chi2nu))
+        self.ui.xcFitLineEdit.setText(str(round(self.xc,2)))
+        self.ui.ycFitLineEdit.setText(str(round(self.yc,2)))
+        self.ui.magFitLineEdit.setText(str(round(self.mag,2)))
+        self.ui.ReFitLineEdit.setText(str(round(self.re,2)))
+        self.ui.nFitLineEdit.setText(str(round(self.nsersic,2)))
+        self.ui.PAFitLineEdit.setText(str(round(self.PA,2)))
+        self.ui.BAFitLineEdit.setText(str(round(self.BA,2)))
+        self.ui.skyFitLineEdit.setText(str(round(self.sky,2)))
+        self.ui.errorFitLineEdit.setText(str(round(self.error,2)))
+        self.ui.chiFitLineEdit.setText(str(round(self.chi2nu,2)))
+        if self.ncomp == 2:
+            self.ui.xc2FitLineEdit.setText(str(round(self.xc2,2)))
+            self.ui.yc2FitLineEdit.setText(str(round(self.yc2,2)))
+            self.ui.mag2FitLineEdit.setText(str(round(self.mag2,2)))
+            self.ui.Re2FitLineEdit.setText(str(round(self.re2,2)))
+            self.ui.n2FitLineEdit.setText(str(round(self.nsersic2,2)))
+            self.ui.PA2FitLineEdit.setText(str(round(self.PA2,2)))
+            self.ui.BA2FitLineEdit.setText(str(round(self.BA2,2)))
+            self.ui.chiFitLineEdit.setText(str(round(self.chi2nu,2)))
        
     def set_xc(self,dat):
         try:
@@ -356,11 +412,16 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
                                 fitallflag = self.fitallflag)
         
     def run_galfit(self,fitBA=1,fitPA=1):
-
-        self.galfit.set_sersic_params(xobj=self.xc,yobj=self.yc,mag=self.mag,rad=self.re,nsersic=self.nsersic,BA=self.BA,PA=self.PA,fitmag=1,fitcenter=1,fitrad=1,fitBA=fitBA,fitPA=fitPA,fitn=1,first_time=0)
+        if self.ncomp == 1:
+            self.galfit.set_sersic_params(xobj=self.xc,yobj=self.yc,mag=self.mag,rad=self.re,nsersic=self.nsersic,BA=self.BA,PA=self.PA,fitmag=1,fitcenter=1,fitrad=1,fitBA=fitBA,fitPA=fitPA,fitn=1,first_time=0)
         #print('in galfitwrapper, run_galfit: fitBA = ',fitBA)
-        self.galfit.set_sky(0)
-        self.galfit.run_galfit()
+            self.galfit.set_sky(0)
+            self.galfit.run_galfit()
+        elif self.ncomp == 2:
+            self.galfit.set_sersic_params(xobj=self.xc,yobj=self.yc,mag=self.mag,rad=self.re,nsersic=self.nsersic,BA=self.BA,PA=self.PA,fitmag=1,fitcenter=1,fitrad=1,fitBA=fitBA,fitPA=fitPA,fitn=1,first_time=0)
+            self.galfit.set_sersic_params_comp2(xobj=self.xc2,yobj=self.yc2,mag=self.mag2,rad=self.re2,nsersic=self.nsersic2,BA=self.BA2,PA=self.PA2,fitmag=1,fitcenter=1,fitrad=1,fitBA=fitBA,fitPA=fitPA,fitn=1,first_time=0)
+            self.galfit.set_sky(0)
+            self.galfit.run_galfit()
         self.display_results()
         self.get_galfit_results(printflag=True)
         self.display_fitted_params()
@@ -386,7 +447,10 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         if printflag:
             self.galfit.print_galfit_results(self.output_image)
         self.galfit_results = t
-        header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','ERROR','CHI2NU']
+        # for 1 comp fit
+        # header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','ERROR','CHI2NU']
+        # for 2 component fit
+        # header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_XC','2_YC','2_MAG','2_RE','2_N','2_AR','2_PA','3_SKY','CHI2NU']
         self.xc, self.xc_err = t[0]
         self.yc, self.yc_err = t[1]
         self.mag, self.mag_err = t[2]
@@ -394,9 +458,22 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.nsersic, self.nsersic_err = t[4]
         self.BA, self.BA_err = t[5]
         self.PA, self.PA_err = t[6]
-        self.sky, self.sky_err = t[7]
-        self.error = t[8]
-        self.chi2nu = t[9]
+
+        if self.ncomp == 2:
+            self.xc2, self.xc2_err = t[7]
+            self.yc2, self.yc2_err = t[8]
+            self.mag2, self.mag2_err = t[9]
+            self.re2, self.re2_err = t[10]
+            self.nsersic2, self.nsersic2_err = t[11]
+            self.BA2, self.BA2_err = t[12]
+            self.PA2, self.PA2_err = t[13]
+            self.sky, self.sky_err = t[14]
+            self.error = t[15]
+            self.chi2nu = t[16]
+        else:
+            self.sky, self.sky_err = t[7]
+            self.error = t[8]
+            self.chi2nu = t[9]
 
     def display_results(self):
         self.model_data = fits.getdata(self.output_image,2)

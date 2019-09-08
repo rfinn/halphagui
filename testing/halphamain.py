@@ -84,7 +84,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         fi = CanvasView(self.logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params('histogram')
-        fi.enable_autozoom('on')
+        fi.enable_autozoom('once')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move',self.cursor_cb)
         # not sure how to add tab for multiple images.
@@ -555,7 +555,7 @@ class hafunctions(Ui_MainWindow, output_table):
         self.ui.cutoutsLayout.addWidget(a, 0, 2, 1, 1)
 
         #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
-        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 8, 1)
+        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 8, 1,autocut_params='histogram')
         self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1)
         self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1)
 
@@ -946,22 +946,58 @@ class hafunctions(Ui_MainWindow, output_table):
             self.gwindow = QtWidgets.QWidget()
             #self.gwindow.aboutToQuit.connect(self.galfit_closed)
             if self.testing:
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
+                psf = 'MKW8_R.coadd-psf.fits'
+                psf_oversampling=2
             else:
-                if ncomp == 1:
-                    self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp, mag=self.nsa.r[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.cat.SERSIC_PHI[self.igal])
-                elif ncomp == 2:
-                    # use results from 1 component fit as input
+                psf = self.psf.psf_image_name
+                psf_oversampling = self.oversampling
+            
+            if ncomp == 1:
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal])
+            elif ncomp == 2:
+                # use results from 1 component fit as input
+                try:
+                    mag = self.table['GALFIT_MAG'][self.igal]
+                    re = self.table['GALFIT_RE'][self.igal]
+                    BA = self.table['GALFIT_BA'][self.igal]
+                    PA = self.table['GALFIT_BA'][self.igal]
+                except KeyError:
+                    print('WARNING!!!!')
+                    print('trouble reading galfit results from data table')
+                    print('make sure you run 1 component fit first')
+                    return
+                ########################
+                # assume bulge contains 20% of light for initial guess
+                ########################
+                mag_disk = mag+.25
+                mag_bulge = mag + 1.75
+        
+                ########################
+                # require n=1 for disk, n=4 for bulge (allow bulge to vary)
+                # also start PA=0 and BA=1 for bulge
+                ########################
+                nsersic_disk=1
+                nsersic_bulge=4
+        
+                ########################
+                # set re=1.5*re_initial for disk
+                # set re = 0.5*re_initial for bulge
+                ########################
+                re1=1.2*re
+                re2=.5*re
                     
-                    self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp, mag=self.nsa.r[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.cat.SERSIC_PHI[self.igal])
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True)
                     
             self.galfit.model_saved.connect(self.galfit_save)        
             self.galfit.setupUi(self.gwindow)
             self.gwindow.show()
-        except AttributeError:
+        except ValueError:
             print('WARNING - ERROR RUNNING GALFIT!!!')
             print('Make sure you have measured the PSF and made a mask!')
-        
+            print("error:", sys.exc_info()[0])
+        #except:
+        #    print("Unexpected error:", sys.exc_info()[0])
+        #    raise
     def galfit_save(self,msg):
         print('galfit model saved!!!',msg)
         if self.testing:
@@ -1039,9 +1075,9 @@ class hafunctions(Ui_MainWindow, output_table):
             self.table[colname][self.igal]=values[i]
         self.update_gui_table()
     def fit_profiles(self):
-        current_dir = os.getcwd()
-        image_dir = os.path.dirname(self.rcoadd_fname)
-        os.chdir(image_dir)
+        #current_dir = os.getcwd()
+        #image_dir = os.path.dirname(self.rcoadd_fname)
+        #os.chdir(image_dir)
 
         rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.dat'
 
@@ -1078,7 +1114,7 @@ class hafunctions(Ui_MainWindow, output_table):
         # force an update of the figure
         self.fig.canvas.draw()
         '''
-        os.chdir(current_dir)
+        #os.chdir(current_dir)
 
     def closeEvent(self, event):
         # send signal that window is closed

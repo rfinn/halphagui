@@ -14,7 +14,7 @@ from astropy.wcs import WCS
 
 class cutout_image():
     #key_pressed = QtCore.pyqtSignal(str)
-    def __init__(self,panel_name,ui, logger, row, col, drow, dcol):
+    def __init__(self,panel_name,ui, logger, row, col, drow, dcol, autocut_params='zscale'):
         #super(image_panel, self).__init__()
         # enable some user interaction
         #fi.get_bindings.enable_all(True)
@@ -24,7 +24,8 @@ class cutout_image():
         self.dc = get_canvas_types()
         fi = CanvasView(self.logger, render='widget')
         fi.enable_autocuts('on')
-        fi.set_autocut_params('zscale')
+        fi.set_autocut_params(autocut_params)
+        #fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         #fi.set_callback('drag-drop', self.drop_file)
         #fi.set_callback('none-move',self.cursor_cb)
