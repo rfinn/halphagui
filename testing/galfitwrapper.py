@@ -112,6 +112,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.convflag = convflag
         if convolution_size == None:
             self.convolution_size = min(self.xmaxfit, self.ymaxfit)
+            print('convolution size = ',self.convolution_size)
         else:
             self.convolution_size = convolution_size
             

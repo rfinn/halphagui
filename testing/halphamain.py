@@ -356,7 +356,7 @@ class output_table():
         c8 = Column(self.nsa.cat.SERSIC_BA,name='NSA_SERSIC_BA')
         c9 = Column(self.nsa.cat.SERSIC_PHI,name='NSA_SERSIC_PHI', unit=u.deg)
         # cutout region in coadded images
-        c10 = Column(np.zeros(len(r),dtype='U20'), name='BBOX')
+        c10 = Column(np.zeros(len(r),dtype='U22'), name='BBOX')
         # R-band scale factor for making continuum-subtracted image
         c11 = Column(np.zeros(len(r),'f'), name='FILTER_RATIO')
         # galfit sersic parameters from 1 comp fit
@@ -795,7 +795,9 @@ class hafunctions(Ui_MainWindow, output_table):
         # when galaxy is selected from list, trigger
         # cutout imaages
 
-        size = 16*self.gradius[self.igal]
+        size = 18*self.gradius[self.igal]
+        # set the min size to 100x100 pixels (43"x43")
+        size = max(100,size)
         print('new cutout size = ',size, self.igal, self.gradius[self.igal])
         self.reset_size = size
         self.cutout_size = u.Quantity((size, size), u.arcsec)
@@ -897,9 +899,9 @@ class hafunctions(Ui_MainWindow, output_table):
         self.table['BBOX'][self.igal] = bbox
         self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
     def make_mask(self):
-        current_dir = os.getcwd()
-        image_dir = os.path.dirname(self.rcoadd_fname)
-        os.chdir(image_dir)
+        #current_dir = os.getcwd()
+        #image_dir = os.path.dirname(self.rcoadd_fname)
+        #os.chdir(image_dir)
         try:
             self.write_cutouts()
         except AttributeError:
@@ -911,7 +913,7 @@ class hafunctions(Ui_MainWindow, output_table):
         self.mui.mask_saved.connect(self.display_mask)
         self.mui.setupUi(self.mwindow)
         self.mwindow.show()
-        os.chdir(current_dir)
+        #os.chdir(current_dir)
         
     def display_mask(self, mask_image_name):
         t = self.cutout_name_r.split('.fit')
@@ -953,7 +955,7 @@ class hafunctions(Ui_MainWindow, output_table):
                 psf_oversampling = self.oversampling
             
             if ncomp == 1:
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal])
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal], convolution_size=80)
             elif ncomp == 2:
                 # use results from 1 component fit as input
                 try:
@@ -986,7 +988,7 @@ class hafunctions(Ui_MainWindow, output_table):
                 re1=1.2*re
                 re2=.5*re
                     
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True)
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True, convolution_size=80)
                     
             self.galfit.model_saved.connect(self.galfit_save)        
             self.galfit.setupUi(self.gwindow)
@@ -1032,12 +1034,12 @@ class hafunctions(Ui_MainWindow, output_table):
 
         elif self.ncomp == 2:
             self.galfit_results2 = self.galfit.galfit_results
-            print(self.galfit_results2)
+            #print(self.galfit_results2)
             self.table['GALFIT_2SERSIC'][self.igal] = np.array(self.galfit_results2[:-2])[:,0]
             self.table['GALFIT_2SERSIC_ERR'][self.igal] = np.array(self.galfit_results2[:-2])[:,1]
             self.table['GALFIT_2SERSIC_ERROR'][self.igal] = (self.galfit_results2[-2])
             self.table['GALFIT_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
-            print(self.table[self.igal])
+            #print(self.table[self.igal])
         self.update_gui_table()
 
     def fit_ellipse(self):
