@@ -28,8 +28,11 @@ from astropy.convolution import Gaussian2DKernel
 from astropy.stats import gaussian_fwhm_to_sigma
 import astropy.units as u
 from astropy.io import fits
+from astropy.table import Table, Column
 from astropy.visualization import SqrtStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
+
+
 
 
 from matplotlib import pyplot as plt
@@ -39,6 +42,11 @@ import numpy as np
 
 import time
 start_time = time.time()
+
+## filter information
+## from https://www.noao.edu/kpno/mosaic/filters/
+central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28} # angstrom
+dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17} # angstrom
 
 # read in image and mask
 
@@ -52,11 +60,12 @@ start_time = time.time()
 
 class ellipse():
 
-    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20):
+    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None):
         # use mpl for testing purposes, before integrating with pyqt gui
         # image2 is intended to be the Halpha image - use apertures from r-band but measure on Halpha
         self.image, self.header = fits.getdata(image, header=True)
         self.image_name = image
+
         # image 2 is designed to be the Halpha image, but it can be any second
         # image whereby you define the ellipse geometry using image 1, and
         # measure the photometry on image 1 and image 2
@@ -68,7 +77,11 @@ class ellipse():
             self.image2_flag = True
         else:
             self.image2_flag = False
-
+        self.image2_filter = image2_filter
+        self.filter_ratio = filter_ratio
+        # will use the gain to calculate the noise in the image
+        self.gain = self.header['GAIN']
+        
         # the mask should identify all pixels in the cutout image that are not associated with the target galaxy
         # these will be ignored when defining the shape of the ellipse and when measuring the photometry
         #
@@ -90,20 +103,30 @@ class ellipse():
         # use this if running this code as the main program
         self.use_mpl = use_mpl
         self.napertures = napertures
+        
+    def get_noise_in_aper(self, flux, area):
+        noise_e = np.sqrt(flux*self.gain + area*self.sky_noise*self.gain)
+        noise_adu = noise_e/self.gain
+        return noise_adu
 
     def run_for_gui(self):
         self.detect_objects()
         self.find_central_object()
         self.get_ellipse_guess()
         self.measure_phot()
-        self.calc_surface_brightness()
+        self.calc_sb()
+        self.convert_units()
         self.write_phot_tables()
+        self.write_phot_fits_tables()
         if self.use_mpl:
             self.draw_phot_results_mpl()
         else:
             self.draw_phot_results()
     def detect_objects(self, snrcut=2):
         self.threshold = detect_threshold(self.masked_image, nsigma=snrcut)
+        # get average sky noise per pixel
+        # threshold is the sky noise at the snrcut level, so need to divide by this
+        self.sky_noise = np.mean(self.threshold)/snrcut
         self.segmentation = detect_sources(self.masked_image, self.threshold, npixels=10)
         self.cat = source_properties(self.masked_image, self.segmentation)
         #self.tbl = self.cat.to_table()
@@ -162,7 +185,7 @@ class ellipse():
         ### DRAW RESULTING FIT ON R-BAND CUTOUT
         markcolor='cyan'
         if len(self.isolist) > 5:
-            smas = np.linspace(np.min(self.isolist.sma), np.max(self.isolist.sma), 8)
+            smas = np.linspace(np.min(self.isolist.sma), np.max(self.isolist.sma), 5)
             objlist = []
             for sma in smas:
                 iso = self.isolist.get_closest(sma)
@@ -196,12 +219,17 @@ class ellipse():
         # rmax is max radius to measure ellipse
         # could cut this off based on SNR
         # or could cut this off based on enclosed flux?
-        rmax = 1.5*self.sma
-        self.apertures_a = np.linspace(2,rmax,20)
+        rmax = 2.5*self.sma
+        self.apertures_a = np.linspace(2,rmax,40)
         self.apertures_b = (1.-self.eps)*self.apertures_a
+        self.area = np.pi*self.apertures_a*self.apertures_b # area of each ellipse
+
+
         self.flux1 = np.zeros(len(self.apertures_a),'f')
+        self.flux1_err = np.zeros(len(self.apertures_a),'f')
         if self.image2_flag:
             self.flux2 = np.zeros(len(self.apertures_a),'f')
+            self.flux2_err = np.zeros(len(self.apertures_a),'f')
         for i in range(len(self.apertures_a)):
             ap = EllipticalAperture((self.xcenter, self.ycenter),self.apertures_a[i],self.apertures_b[i],self.theta)#,ai,bi,theta) for ai,bi in zip(a,b)]
 
@@ -215,38 +243,121 @@ class ellipse():
                 if self.image2_flag:
                     self.phot_table2 = aperture_photometry(self.image2, ap, method = 'subpixel', subpixels=5)
             self.flux1[i] = self.phot_table1['aperture_sum'][0]
+            
+            # calculate noise
+            self.flux1_err[i] = self.get_noise_in_aper(self.flux1[i], self.area[i])
             if self.image2_flag:
                 self.flux2[i] = self.phot_table2['aperture_sum'][0]
-
-    def calc_surface_brightness(self):
+                self.flux2_err[i] = self.get_noise_in_aper(self.flux2[i], self.area[i])
+    def calc_sb(self):
         # calculate surface brightness in each aperture
 
-        area = np.pi*self.apertures_a*self.apertures_b # area of each ellipse
-
         # first aperture is calculated differently
-        self.surface_brightness1 = np.zeros(len(self.apertures_a),'f')
-        self.surface_brightness1[0] = self.flux1[0]/area[0]
-        # outer apertures need flux from inner aperture subtracted
-        for i in range(1,len(area)):
-            self.surface_brightness1[i] = (self.flux1[i] - self.flux1[i-1])/(area[i]-area[i-1])
+        self.sb1 = np.zeros(len(self.apertures_a),'f')
+        self.sb1_err = np.zeros(len(self.apertures_a),'f')
 
+        self.sb1[0] = self.flux1[0]/self.area[0]
+        self.sb1_err[0] = self.get_noise_in_aper(self.flux1[0], self.area[0])/self.area[0]
+        # outer apertures need flux from inner aperture subtracted
+        for i in range(1,len(self.area)):
+            self.sb1[i] = (self.flux1[i] - self.flux1[i-1])/(self.area[i]-self.area[i-1])
+            self.sb1_err[i] = self.get_noise_in_aper((self.flux1[i] - self.flux1[i-1]),(self.area[i]-self.area[i-1]))/(self.area[i]-self.area[i-1])
+
+        # calculate SNR to follow Becky's method of cutting off analysis where SNR = 2
+        self.sb1_snr = np.abs(self.sb1/self.sb1_err)
         # repeat for image 2 if it is provided
         if self.image2_flag:
-            self.surface_brightness2 = np.zeros(len(self.apertures_a),'f')
-            self.surface_brightness2[0] = self.flux2[0]/area[0]
-            for i in range(1,len(area)):
-                self.surface_brightness2[i] = (self.flux2[i] - self.flux2[i-1])/(area[i]-area[i-1])
+            self.sb2 = np.zeros(len(self.apertures_a),'f')
+            self.sb2_err = np.zeros(len(self.apertures_a),'f')
+            self.sb2[0] = self.flux2[0]/self.area[0]
+            self.sb2_err[0] = self.get_noise_in_aper(self.flux2[0], self.area[0])/self.area[0]
+            for i in range(1,len(self.area)):
+                self.sb2[i] = (self.flux2[i] - self.flux2[i-1])/(self.area[i]-self.area[i-1])
+                self.sb2_err[i] = self.get_noise_in_aper((self.flux2[i] - self.flux2[i-1]),(self.area[i]-self.area[i-1]))/(self.area[i]-self.area[i-1])
+            self.sb2_snr = np.abs(self.sb2/self.sb2_err)
 
+    def convert_units(self):
+        ###########################################################
+        ### SET UP INITIAL PARAMETERS TO CALCULATE CONVERSION
+        ### FROM ADU/S TO PHYSICAL UNITS
+        ###########################################################
+        self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
+        try:
+            self.magzp = float(self.header['PHOTZP'])
+        except:
+            self.magzp = 25.
+        # multiply by bandwidth of filter to convert from Jy to erg/s/cm^2
+        bandwidth1 = 3.e8*dwavelength['R']*1.e-10/(central_wavelength['R']*1.e-10)**2
+        self.uconversion1 = 3631.*10**(self.magzp/-2.5)*1.e-23*bandwidth1
+        if self.image2_filter:
+            bandwidth2 = 3.e8*dwavelength[self.image2_filter]*1.e-10/(central_wavelength[self.image2_filter]*1.e-10)**2
+            try:
+                self.magzp2 = float(self.header2['PHOTZP'])
+                self.uconversion2 = 3631.*10**(self.magzp2/-2.5)*1.e-23*bandwidth2
+            except:
+                # use 25 as default ZP if none is provided in header
+                self.uconversion2 = 3631.*10**(25/-2.5)*1.e-23*bandwidth2
+        if self.filter_ratio != None:
+            if self.image2_flag:
+                self.uconversion2b = self.filter_ratio*self.uconversion1
+        else:
+            self.uconversion2b = None
+            
+        ###########################################################
+        ### CONVERT UNITS TO
+        ### FLUX -> ERG/S/CM^2
+        ### FLUX -> MAG
+        ### SURFACE BRIGHTNESS -> ERG/S/CM^2/ARCSEC^2
+        ### SURFACE BRIGHTNESS -> MAG/ARCSEC^2
+        ###########################################################
+        self.flux1_erg = self.uconversion1*self.flux1
+        self.flux1_err_erg = self.uconversion1*self.flux1_err
+        self.mag1 = self.magzp - 2.5*np.log10(self.flux1)
+        self.mag1_err = self.mag1 - (self.magzp - 2.5*np.log10(self.flux1 + self.flux1_err))
+        self.sb1_erg_sqarcsec = self.uconversion1*self.sb1/self.pixel_scale**2
+        self.sb1_erg_sqarcsec_err = self.uconversion1*self.sb1_err/self.pixel_scale**2
+        self.sb1_mag_sqarcsec = self.magzp - 2.5*np.log10(self.sb1/self.pixel_scale**2)
+        self.sb1_mag_sqarcsec_err = self.sb1_mag_sqarcsec - (self.magzp - 2.5*np.log10((self.sb1 + self.sb1_err)/self.pixel_scale**2))
+        if self.image2_flag:
+            self.flux2_erg = self.uconversion2*self.flux2
+            self.flux2_err_erg = self.uconversion2*self.flux2_err
+            self.mag2 = self.magzp2 - 2.5*np.log10(self.flux2)
+            self.mag2_err = self.mag2 - (self.magzp2 - 2.5*np.log10(self.flux2 + self.flux2_err))
+            self.sb2_erg_sqarcsec = self.uconversion2*self.sb2/self.pixel_scale**2
+            self.sb2_erg_sqarcsec_err = self.uconversion2*self.sb2_err/self.pixel_scale**2
+            self.sb2_mag_sqarcsec = self.magzp2 - 2.5*np.log10(self.sb2/self.pixel_scale**2)
+            # add error to flux and calculate magnitude, then take difference with original mag
+            self.sb2_mag_sqarcsec_err = self.sb2_mag_sqarcsec - (self.magzp2 - 2.5*np.log10((self.sb2+self.sb2_err)/self.pixel_scale**2))
+            # this next set uses the filter ratio and the filter 1 flux conversion to
+            # convert narrow-band flux (filter 2) to physical units.
+            if self.uconversion2b:
+                conversion = self.uconversion2b
+                self.flux2b_erg = conversion*self.flux2
+                self.flux2b_err_erg = conversion*self.flux2_err
+                self.sb2b_erg_sqarcsec = conversion*self.sb2/self.pixel_scale**2
+                self.sb2b_erg_sqarcsec_err = conversion*self.sb2_err/self.pixel_scale**2
+                self.sb2b_mag_sqarcsec = self.magzp2 - 2.5*np.log10(conversion*self.sb2/self.pixel_scale**2)
+                self.sb2b_mag_sqarcsec_err = self.sb2b_mag_sqarcsec - (self.magzp2 - 2.5*np.log10(conversion*(self.sb2+self.sb2_err)/self.pixel_scale**2))
+                
     def write_phot_tables(self):
         # write out photometry for r-band
         # radius enclosed flux
         outfile = open(self.image_name.split('.fits')[0]+'_phot.dat','w')#used to be _phot.dat, but changing it to .dat so that it can be read into code for ellipse profiles
 
-        outfile.write('# X_IMAGE Y_IMAGE ELLIPTICITY THETA_J2000 \n')
-        outfile.write('# %.2f %.2f %.2f %.2f \n'%(self.xcenter,self.ycenter,self.eps,self.theta))
-        outfile.write('# radius enclosed_flux \n')
+        #outfile.write('# X_IMAGE Y_IMAGE ELLIPTICITY THETA_J2000 \n')
+        #outfile.write('# %.2f %.2f %.2f %.2f \n'%(self.xcenter,self.ycenter,self.eps,self.theta))
+        outfile.write('# radius flux flux_err sb sb_err sb_snr flux_erg flux_erg_err mag mag_err sb_ergsqarc sb_err_ergsqarc sb_magsqarc sb_err_magsqarc \n')
         for i in range(len(self.apertures_a)):
-            outfile.write('%.2f %.3e %.3e \n'%(self.apertures_a[i],self.flux1[i],self.surface_brightness1[i]))
+            s='%.2f %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e '% \
+                          (self.apertures_a[i],self.flux1[i],self.flux1_err[i],\
+                           self.sb1[i], self.sb1_err[i], \
+                          self.sb1_snr[i], \
+                          self.flux1_erg[i], self.flux1_err_erg[i],\
+                          self.mag1[i], self.mag1_err[i], \
+                          self.sb1_erg_sqarcsec[i],self.sb1_erg_sqarcsec[i], \
+                          self.sb1_mag_sqarcsec[i],self.sb1_mag_sqarcsec[i])
+            s=s+'\n'
+            outfile.write(s)
         outfile.close()
 
         if self.image2_flag:
@@ -254,12 +365,107 @@ class ellipse():
             # radius enclosed flux
             outfile = open(self.image2_name.split('.fits')[0]+'_phot.dat','w')#used to be _phot.dat, but changing it to .dat so that it can be read into code for ellipse profiles
     
-            outfile.write('# X_IMAGE Y_IMAGE ELLIPTICITY THETA_J2000 \n')
-            outfile.write('# %.2f %.2f %.2f %.2f \n'%(self.xcenter,self.ycenter,self.eps,self.theta))
-            outfile.write('# radius enclosed_flux \n')
+            #outfile.write('# X_IMAGE Y_IMAGE ELLIPTICITY THETA_J2000 \n')
+            #outfile.write('# %.2f %.2f %.2f %.2f \n'%(self.xcenter,self.ycenter,self.eps,self.theta))
+            s = '# radius flux flux_err sb sb_err sb_snr flux_erg flux_erg_err mag mag_err sb_ergsqarc sb_err_ergsqarc sb_magsqarc sb_err_magsqarc'
+            if self.uconversion2b:
+                s = s +' fluxb_erg fluxb_erg_err sbb_ergsqarc sbb_err_ergsqarc sbb_magsqarc sbb_err_magsqarc'
+            s = s + '\n'
+            outfile.write(s)
             for i in range(len(self.apertures_a)):
-                outfile.write('%.2f %.3e %.3e \n'%(self.apertures_a[i],self.flux2[i],self.surface_brightness2[i]))
+                s = '%.2f %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e '% \
+                              (self.apertures_a[i],self.flux2[i],self.flux2_err[i],\
+                               self.sb2[i], self.sb2_err[i],self.sb2_snr[i],\
+                              self.flux2_erg[i], self.flux2_err_erg[i],\
+                              self.mag2[i], self.mag2_err[i], \
+                              self.sb2_erg_sqarcsec[i],self.sb2_erg_sqarcsec[i], \
+                              self.sb2_mag_sqarcsec[i],self.sb2_mag_sqarcsec[i])
+                if self.uconversion2b:
+                    s=s+' %.3e %.3e %.3e %.3e %.3e %.3e'% \
+                      (self.flux2b_erg[i], self.flux2b_err_erg[i],\
+                      self.sb2b_erg_sqarcsec[i],self.sb2b_erg_sqarcsec[i], \
+                      self.sb2b_mag_sqarcsec[i],self.sb2b_mag_sqarcsec[i])
+                s = s+'\n'
+                outfile.write(s)
+
             outfile.close()
+    def write_phot_fits_tables(self):
+        # write out photometry for r-band
+        # radius enclosed flux
+        outfile = self.image_name.split('.fits')[0]+'_phot.fits'
+        data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
+             self.flux1,self.flux1_err,\
+             self.sb1, self.sb1_err, \
+             self.sb1_snr, \
+             self.flux1_erg, self.flux1_err_erg,\
+             self.mag1, self.mag1_err, \
+             self.sb1_erg_sqarcsec,self.sb1_erg_sqarcsec, \
+             self.sb1_mag_sqarcsec,self.sb1_mag_sqarcsec]
+        names = ['sma_arcsec','sma_pix','flux','flux_err',\
+                 'sb', 'sb_err', \
+                 'sb_snr', \
+                 'flux_erg', 'flux_err_erg',\
+                 'mag', 'mag_err', \
+                 'sb_erg_sqarcsec','sb_erg_sqarcsec_err', \
+                 'sb_mag_sqarcsec','sb_mag_sqarcsec_err']
+        units = [u.arcsec,u.pixel,u.adu/u.s,u.adu/u.s, \
+                 u.adu/u.s/u.pixel**2, u.adu/u.s/u.pixel**2, '',\
+                 u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
+                 u.mag,u.mag,\
+                 u.erg/u.s/u.cm**2/u.arcsec**2,u.erg/u.s/u.cm**2/u.arcsec**2,\
+                 u.mag/u.arcsec**2,u.mag/u.arcsec**2]
+        columns = []
+        for i in range(len(data)):
+            columns.append(Column(data[i],name=names[i],unit=units[i]))
+        
+        t = Table(columns)
+        t.write(outfile, format='fits', overwrite=True)
+
+        if self.image2_flag:
+            # write out photometry for h-alpha
+            # radius enclosed flux
+            outfile = self.image2_name.split('.fits')[0]+'_phot.fits'
+    
+            data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
+                self.flux2,self.flux2_err,\
+                self.sb2, self.sb2_err, \
+                self.sb2_snr, \
+                self.flux2_erg, self.flux2_err_erg,\
+                self.mag2, self.mag2_err, \
+                self.sb2_erg_sqarcsec,self.sb2_erg_sqarcsec, \
+                self.sb2_mag_sqarcsec,self.sb2_mag_sqarcsec]
+            names = ['sma_arcsec','sma_pix','flux','flux_err',\
+                'sb', 'sb_err', \
+                'sb_snr', \
+                'flux_erg', 'flux_err_erg',\
+                'mag', 'mag_err', \
+                'sb_erg_sqarcsec','sb_erg_sqarcsec_err', \
+                'sb_mag_sqarcsec','sb_mag_sqarcsec_err']
+            units = [u.arcsec,u.pixel,u.adu/u.s,u.adu/u.s, \
+                 u.adu/u.s/u.pixel**2, u.adu/u.s/u.pixel**2, '',\
+                 u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
+                 u.mag,u.mag,\
+                 u.erg/u.s/u.cm**2/u.arcsec**2,u.erg/u.s/u.cm**2/u.arcsec**2,\
+                 u.mag/u.arcsec**2,u.mag/u.arcsec**2]
+            columns = []
+            for i in range(len(data)):
+                columns.append(Column(data[i],name=names[i],unit=units[i]))
+            if self.uconversion2b:
+                data = [self.flux2_erg, self.flux2_err_erg,\
+                      self.sb2_erg_sqarcsec,self.sb2_erg_sqarcsec, \
+                      self.sb2_mag_sqarcsec,self.sb2_mag_sqarcsec]
+                names = ['flux2_erg', 'flux2_err_erg',\
+                         'sb2_erg_sqarcsec','sb2_erg_sqarcsec_err', \
+                         'sb2_mag_sqarcsec','sb2_mag_sqarcsec_err']
+                units = [u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
+                         u.erg/u.s/u.cm**2/u.arcsec**2,u.erg/u.s/u.cm**2/u.arcsec**2,\
+                         u.mag/u.arcsec**2,u.mag/u.arcsec**2]
+                for i in range(len(data)):
+                    columns.append(Column(data[i],name=names[i],unit=units[i]))
+            t = Table(columns)
+            t.write(outfile, format='fits', overwrite=True)
+
+            
     def draw_phot_results(self):
         ### DRAW RESULTING FIT ON R-BAND CUTOUT
         markcolor='cyan'
@@ -287,25 +493,44 @@ class ellipse():
     def plot_profiles(self):
         plt.figure(figsize=(10,4))
         plt.subplots_adjust(wspace=.3)
-        plt.subplot(1,2,1)
-        plt.plot(self.apertures_a,self.flux1,'bo')
-        plt.xlabel('semi-major axis (pixels)')
+        plt.subplot(2,2,1)
+        #plt.plot(self.apertures_a,self.flux1,'bo')
+        plt.errorbar(self.apertures_a,self.flux1,self.flux1_err,fmt='b.')
+        plt.title('R-band')
+        #plt.xlabel('semi-major axis (pixels)')
         plt.ylabel('Enclosed flux')
+        plt.gca().set_yscale('log')
         if self.image2_flag:
-            plt.subplot(1,2,2)
-            plt.plot(self.apertures_a,self.flux2,'bo')
-            plt.xlabel('semi-major axis (pixels)')
+            plt.subplot(2,2,2)
+            plt.errorbar(self.apertures_a,self.flux2,self.flux2_err,fmt='b.')
+            #plt.xlabel('semi-major axis (pixels)')
             plt.ylabel('Enclosed flux')
+            plt.title('H-alpha')
+            plt.gca().set_yscale('log')
+        # plot surface brightness vs radius
+        plt.subplot(2,2,3)
+        #plt.plot(self.apertures_a,self.flux1,'bo')
+        plt.errorbar(self.apertures_a,self.sb1,self.sb1_err,fmt='b.')
+        plt.xlabel('semi-major axis (pixels)')
+        plt.ylabel('Surface Brightess')
+        plt.gca().set_yscale('log')
+        if self.image2_flag:
+            plt.subplot(2,2,4)
+            plt.errorbar(self.apertures_a,self.sb2,self.sb2_err,fmt='b.')
+            plt.xlabel('semi-major axis (pixels)')
+            plt.ylabel('Surface Brightness')
+            plt.gca().set_yscale('log')
         plt.show()
         plt.savefig(self.image_name.split('.fits')[0]+'-enclosed-flux.png')
 if __name__ == '__main__':
     image = 'MKW8-18216-R.fits'
     mask = 'MKW8-18216-R-mask.fits'
+    image2 = 'MKW8-18216-CS.fits'
     #image = 'MKW8-18037-R.fits'
     #mask = 'MKW8-18037-R-mask.fits'
     #image = 'r-18045-R.fits'
     #mask = 'r-18045-R-mask.fits'
-    e = ellipse(image,mask=mask, use_mpl=True)
+    e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter='16', filter_ratio=.0422)
     ## print('detect objects')
     ## e.detect_objects()
     ## print('find central')

@@ -438,6 +438,7 @@ class output_table():
         
         #item = self.tableWidget.horizontalHeaderItem(0)
         #item.setText(_translate("MainWindow", "ID"))
+        self.write_fits_table()
     def append_column(self, variable, var_name, var_dtype=None, var_unit=None):
         if (var_dtype != None) & (var_unit != None):
             z = Column(variable, name=var_name, dtype = var_dype, unit  = var_unit)
@@ -464,6 +465,7 @@ class output_table():
             self.ui.tableWidget.setItem(row,ncol,QtWidgets.QTableWidgetItem(str(item)))
         else:
             print('could not match column name ',col)
+        self.write_fits_table()
     def write_fits_table(self):
         # get directory after Users - this should be username for 
         user = os.getenv('USER')
@@ -721,12 +723,12 @@ class hafunctions(Ui_MainWindow, output_table):
         self.link_files()
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
-        os.chdir(image_dir)
+        #os.chdir(image_dir)
         
         runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
         ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, image_dir = current_dir)
         print(ave,std)
-        os.chdir(current_dir)
+        #os.chdir(current_dir)
         self.filter_ratio = ave
         self.reset_ratio = ave
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio

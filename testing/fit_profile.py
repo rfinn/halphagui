@@ -94,9 +94,10 @@ class profile():
         self.linear_fit()
            
     def read_phot_file(self):
-        self.radius, self.enc_flux, self.intensity = read_phot_file(self.phot_file)
+        self.radius, self.enc_flux, self.enc_flux_err, self.intensity, self.intensity_err = read_phot_file(self.phot_file)
         self.radius_arcsec = self.radius*self.pixelscale
         self.intensity_normalized = self.intensity/self.intensity[0]
+
 
     def read_se_file(self):
         cat = fits.getdata(self.se_file,2)

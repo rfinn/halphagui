@@ -50,16 +50,17 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
         zp2flag = False
 
     print('RUNNING SEXTRACTOR')
-    t = image1.split('.fits')
-    froot1 = t[0]
+    base = os.path.basename(image1)
+    froot1 = os.path.splitext(base)[0]
+    base = os.path.basename(image2)
+    froot2 = os.path.splitext(base)[0]
+
     if zp1flag:
         os.system('sex ' + image1+','+image1 + ' -c default.sex.hdi -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
     else:
         os.system('sex ' + image1+','+image1 + ' -c default.sex.hdi -CATALOG_NAME ' + froot1 + '.cat')
     #os.rename('check.fits', froot1 + 'check.fits')
     # run on second image
-    t = image2.split('.fits')
-    froot2 = t[0]
     if zp2flag:
         os.system('sex ' + image1+','+image2 + ' -c default.sex.hdi -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
     else:
@@ -68,11 +69,14 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
 
 def make_plot(image1, image2, return_flag = False, image_dir = './'):
     from matplotlib import pyplot as plt
-    t = image1.split('.fits')
-    froot1 = t[0]
+    base = os.path.basename(image1)
+    froot1 = os.path.splitext(base)[0]
+    #cat1 = fits.getdata(froot1+'.cat')
     cat1 = fits.getdata(froot1+'.cat',2)
-    t = image2.split('.fits')
-    froot2 = t[0]
+    print(froot1+'.cat')
+
+    base = os.path.basename(image2)
+    froot2 = os.path.splitext(base)[0]
     cat2 = fits.getdata(froot2+'.cat',2)
     plt.figure(figsize=(6,4))
     plt.subplots_adjust(bottom=.2,left=.15,right=.95)

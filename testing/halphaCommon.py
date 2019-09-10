@@ -12,6 +12,13 @@ from ginga.misc import log
 from ginga.util.loader import load_data
 from astropy.wcs import WCS
 
+## filter information
+## from https://www.noao.edu/kpno/mosaic/filters/
+central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28} # angstrom
+dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17} # angstrom
+
+
+
 class cutout_image():
     #key_pressed = QtCore.pyqtSignal(str)
     def __init__(self,panel_name,ui, logger, row, col, drow, dcol, autocut_params='zscale'):
