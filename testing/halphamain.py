@@ -28,6 +28,7 @@ import astropy.units as u
 from astropy import nddata
 from astropy.table import Table, Column
 from astropy.visualization import simple_norm
+from astropy.cosmology import WMAP9 as cosmo
 
 # packages for ellipse fitting routine
 # https://photutils.readthedocs.io/en/stable/isophote.html
@@ -398,6 +399,7 @@ class output_table():
         #####################################################################
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
+        #####################################################################
         e1 = Column(np.zeros(len(r),'f'), name='ELLIP_XCENTROID', unit='pixel')
         e2 = Column(np.zeros(len(r),'f'), name='ELLIP_YCENTROID', unit='pixel')
         e3 = Column(np.zeros(len(r),'f'), name='ELLIP_EPS')
@@ -408,6 +410,64 @@ class output_table():
         e8 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM')
         e9 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM_ERR')
         self.table.add_columns([e1,e2,e3,e4,e5,e7,e8,e9])
+
+        #####################################################################
+        # profile fitting
+        #####################################################################
+        #
+        # r-band parameters
+        # 
+        fields = ['R235','R24','R25','F25','F50','F75','M235','M24','M25', 'F_30R24','F_R24','C30']
+        units = [u.arcsec,u.arcsec,u.arcsec,\
+                u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
+                u.mag, u.mag, u.mag, \
+                u.arcsec,u.arcsec,'']
+        for f,unit in zip(fields,units):
+            if unit == None:
+                c1 = Column(np.zeros(len(r),'f'),name=f)
+                c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+            else:
+                c1 = Column(np.zeros(len(r),'f'),name=f, unit=unit)
+                c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR', unit=unit)
+
+            self.table.add_column(c1)
+            self.table.add_column(c2)
+        #
+        # Halpha parameters
+        # 
+        fields = ['R165','R17','R175','F25','F50','F75','M165','M217','M175', 'F_30R24','F_R24','C30','F_9524','F_TOT','SFR_HA']
+        units = [u.arcsec,u.arcsec,u.arcsec,\
+                u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
+                u.mag, u.mag, u.mag, \
+                u.arcsec,u.arcsec,'',\
+                u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,u.M_sun/u.yr]
+        for f,unit in zip(fields,units):
+            if unit == None:
+                c1 = Column(np.zeros(len(r),'f'),name='H'+f)
+                c2 = Column(np.zeros(len(r),'f'),name='H'+f+'_ERR')
+            else:
+                c1 = Column(np.zeros(len(r),'f'),name='H'+f, unit=unit)
+                c2 = Column(np.zeros(len(r),'f'),name='H'+f+'_ERR', unit=unit)
+
+            self.table.add_column(c1)
+            self.table.add_column(c2)
+            
+        ######################################################################
+        ### LAST TWO QUANTITIES, I SWEAR!
+        ######################################################################        
+        
+        f='SSFR_INNER'
+        c1 = Column(np.zeros(len(r),'f'),name=f)
+        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        self.table.add_column(c1)
+        self.table.add_column(c2)
+        f='SSFR_OUTER'
+        c1 = Column(np.zeros(len(r),'f'),name=f)
+        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        self.table.add_column(c1)
+        self.table.add_column(c2)
+
+        
         print(self.table)
         self.update_gui_table()
     def update_gui_table(self):
@@ -1083,14 +1143,24 @@ class hafunctions(Ui_MainWindow, output_table):
         #image_dir = os.path.dirname(self.rcoadd_fname)
         #os.chdir(image_dir)
 
-        rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.dat'
+        rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.fits'
 
-        haphot_table = self.cutout_name_ha.split('.fits')[0]+'_phot.dat'
+        haphot_table = self.cutout_name_ha.split('.fits')[0]+'_phot.fits'
         
-        r = profile(self.cutout_name_r, rphot_table, label='R')
-        ha = profile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
+        self.rfit = profile(self.cutout_name_r, rphot_table, label='R')
+        self.rfit.becky_measurements()
+        self.hafit = profile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
+        self.hafit.becky_measurements()
+        self.hafit.get_r24_stuff(r.iso_radii[r.isophotes == 24.][0][0])
         both = dualprofile(r,ha)
         both.make_3panel_plot()
+
+
+        ###############################################################3
+        ##### UPDATE DATA TABLE !!!
+        ###############################################################3
+        # in self.write_profile_fits() function
+
         '''
 
         I can get the plot to print to the frame,
@@ -1119,7 +1189,60 @@ class hafunctions(Ui_MainWindow, output_table):
         self.fig.canvas.draw()
         '''
         #os.chdir(current_dir)
+    def write_profile_fits(self):
+        fields = ['R235','R24','R25','F25','F50','F75','M235','M24','M25', 'F_30R24','F_R24','C30']
+        d = self.rfit
+        values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],\
+                  d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
+                  d.iso_mag[0],d.iso_mag[1],d.iso_mag[2],\
+                  d.flux_30r24,d.flux_r24,d.c30
+                  ]
+        for i,f in enumerate(fields):
+            colname = f
+            self.table[colname][self.igal]=values[i][0]
+            self.table[colname+'_ERR'][self.igal]=values[i][1]
+            
+        fields = ['R165','R17','R175','F25','F50','F75','M165','M217','M175', 'F_30R24','F_R24','C30','F_9524','F_TOT']
+        d = self.hafit
+        values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],\
+                  d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
+                  d.iso_mag[0],d.iso_mag[1],d.iso_mag[2],\
+                  d.flux_30r24,d.flux_r24,d.c30,d.total_flux
+                  ]
+        for i,f in enumerate(fields):
+            colname = f
+            self.table[colname][self.igal]=values[i][0]
+            self.table[colname+'_ERR'][self.igal]=values[i][1]
 
+        # SFR conversion from Kennicutt and Evans (2012)
+        # log (dM/dt/Msun/yr) = log(Lx) - logCx
+        logCx = 41.27
+        L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.nsa.cat.ZDIST[self.igal]).cgs.value**2)
+        self.sfr = np.log10(L) - logCx
+        colname=['SFR_HA']
+        self.table[colname][self.igal]=self.sfr[0]
+        self.table[colname+'_ERR'][self.igal]=self.sfr[1]
+
+        # inner ssfr
+        a = self.hafit.flux_30r24
+        b = self.rfit.flux_30r24
+        self.inner_ssfr = a[0]/b[0]
+        self.inner_ssfr_err = ratio_error(a[0],b[0],a[1],b[1])
+        colname=['SSFR_INNER']
+        self.table[colname][self.igal]=self.inner_ssfr
+        self.table[colname+'_ERR'][self.igal]=self.inner_ssfr_err
+        # outer ssfr
+        c = self.hafit.flux_r24
+        d = self.rfit.flux_r24
+        self.outer_ssfr = (c[0] - a[0])/(d[0] - b[0])
+        self.outer_ssfr_err = ratio_error(c[0] - a[0],d[0] - b[0],np.sqrt(a[1]**2 + c[1]**2),np.sqrt(b[1]**2 + d[1]**2))
+        colname=['SSFR_OUTER']
+        self.table[colname][self.igal]=self.outer_ssfr
+        self.table[colname+'_ERR'][self.igal]=self.outer_ssfr_err
+        
+        
+        self.update_gui_table()
+        self.write_fits_table()
     def closeEvent(self, event):
         # send signal that window is closed
 

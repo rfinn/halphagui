@@ -399,12 +399,12 @@ class ellipse():
              self.sb1_snr, \
              self.flux1_erg, self.flux1_err_erg,\
              self.mag1, self.mag1_err, \
-             self.sb1_erg_sqarcsec,self.sb1_erg_sqarcsec, \
-             self.sb1_mag_sqarcsec,self.sb1_mag_sqarcsec]
+             self.sb1_erg_sqarcsec,self.sb1_erg_sqarcsec_err, \
+             self.sb1_mag_sqarcsec,self.sb1_mag_sqarcsec_err]
         names = ['sma_arcsec','sma_pix','flux','flux_err',\
                  'sb', 'sb_err', \
                  'sb_snr', \
-                 'flux_erg', 'flux_err_erg',\
+                 'flux_erg', 'flux_erg_err',\
                  'mag', 'mag_err', \
                  'sb_erg_sqarcsec','sb_erg_sqarcsec_err', \
                  'sb_mag_sqarcsec','sb_mag_sqarcsec_err']
@@ -432,12 +432,12 @@ class ellipse():
                 self.sb2_snr, \
                 self.flux2_erg, self.flux2_err_erg,\
                 self.mag2, self.mag2_err, \
-                self.sb2_erg_sqarcsec,self.sb2_erg_sqarcsec, \
-                self.sb2_mag_sqarcsec,self.sb2_mag_sqarcsec]
+                self.sb2_erg_sqarcsec,self.sb2_erg_sqarcsec_err, \
+                self.sb2_mag_sqarcsec,self.sb2_mag_sqarcsec_err]
             names = ['sma_arcsec','sma_pix','flux','flux_err',\
                 'sb', 'sb_err', \
                 'sb_snr', \
-                'flux_erg', 'flux_err_erg',\
+                'flux_erg', 'flux_erg_err',\
                 'mag', 'mag_err', \
                 'sb_erg_sqarcsec','sb_erg_sqarcsec_err', \
                 'sb_mag_sqarcsec','sb_mag_sqarcsec_err']
@@ -452,8 +452,8 @@ class ellipse():
                 columns.append(Column(data[i],name=names[i],unit=units[i]))
             if self.uconversion2b:
                 data = [self.flux2_erg, self.flux2_err_erg,\
-                      self.sb2_erg_sqarcsec,self.sb2_erg_sqarcsec, \
-                      self.sb2_mag_sqarcsec,self.sb2_mag_sqarcsec]
+                      self.sb2_erg_sqarcsec,self.sb2_erg_sqarcsec_err, \
+                      self.sb2_mag_sqarcsec,self.sb2_mag_sqarcsec_err]
                 names = ['flux2_erg', 'flux2_err_erg',\
                          'sb2_erg_sqarcsec','sb2_erg_sqarcsec_err', \
                          'sb2_mag_sqarcsec','sb2_mag_sqarcsec_err']
