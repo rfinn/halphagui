@@ -136,11 +136,11 @@ class profile():
         plt.axvline(x=1./self.popt[1],ls='-.',label='exp fit R50=%5.1f'%(1./self.popt[1]))
         plt.axvline(x=self.flux_radii[1][0], ls='--',label='phot R50=%5.1f'%(self.flux_radii[1][0]))
     def fit_sersic_n1(self):
-        flag = (self.tab.sb > 0)
+        flag = (self.tab.sb_snr > 2)
         self.popt, self.pcov = scipy.optimize.curve_fit(sersic_neq1,self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag])
         
     def linear_fit(self):
-        flag = (self.tab.sb > 0)
+        flag = (self.tab.sb_snr > 2)
         self.cc = np.polyfit(self.tab.sma_arcsec[flag],np.log10(self.tab.sb_erg_sqarcsec[flag]),1)
         
     def plot_linear_fit(self):
@@ -149,13 +149,14 @@ class profile():
         plt.plot(xl, 10.**yl, 'k--', label='linear fit to log(I)')
         
     def plot_profiles(self):
-        plt.errorbar(self.tab.sma_arcsec,self.tab.sb_erg_sqarcsec,yerr=self.tab.sb_erg_sqarcsec_err,fmt='b.', label=self.rootname,markersize=6)
+        flag = self.tab.sb_snr > 2.
+        plt.errorbar(self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag],yerr=self.tab.sb_erg_sqarcsec_err[flag],fmt='b.', label=self.rootname,markersize=6)
         #plt.plot(self.tab.sma_arcsec, self.tab.sb_erg_sqarcsec, 'b.', label=self.rootname,markersize=6)
         plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
         self.plot_linear_fit()
         self.plot_lines()
-        y = self.tab.sb_erg_sqarcsec,
-        plt.ylim(np.min(y), np.max(y))
+        y = self.tab.sb_erg_sqarcsec[flag]
+        plt.ylim(.25*np.min(y), 2.*np.max(y))
 
         
     def get_isophote_rad(self,sb=None, sberr=None):
@@ -172,54 +173,62 @@ class profile():
         Less thinking to pass in sb, so going with that for now.  :)
         '''
 
-        try:
-
-            if sb == None:
-                sb = self.tab.sb_mag_sqarcsec
-                sberr =self.tab.sb_mag_sqarcsec_err
-        except ValueError:
-            # will get here is user passes in array for sb
-            pass
-            
+        if sb is None:
+            sb = self.tab.sb_mag_sqarcsec
+            sberr =self.tab.sb_mag_sqarcsec_err
+            rad = self.tab.sma_arcsec
+        else:
+            sb = np.flip(sb)
+            sberr = np.flip(sberr)
+            rad = np.flip(self.tab.sma_arcsec)
         self.iso_radii = np.zeros([len(self.isophotes),2],'f') # store radius, lower and upper errors
         # isophotal radius where sb = 24 mag/arcsec^2, for example
-        for i,refsb in enumerate(self.isophotes):
-            self.iso_radii[i,0] = np.interp(refsb,sb,self.tab.sma_arcsec)
-            errm = abs(self.iso_radii[i,0] - np.interp(refsb,sb-sberr,self.tab.sma_arcsec))
-            errp = abs(self.iso_radii[i,0] - np.interp(refsb,sb+sberr,self.tab.sma_arcsec))            
-            # store errors as delta values rather than upper and lower limits
-            self.iso_radii[i,1] = max(errm, errp)
-        
+        # need to flip arrays because sb is decreasing, and np.interp does not work with this        
+        self.iso_radii[:,0] = np.interp(self.isophotes,sb, rad)
+        errm = abs(self.iso_radii[:,0] - np.interp(self.isophotes,sb-sberr,rad))
+        errp = abs(self.iso_radii[:,0] - np.interp(self.isophotes,sb+sberr,rad))
+                    
+        # store errors as delta values rather than upper and lower limits
+        # use max of + and - error
+        for i in range(len(errm)):
+            #print(errm[i],errp[i])
+            self.iso_radii[i,1] = np.max([errm[i], errp[i]])
+
     def get_fluxradii(self):
         # measure the radii that enclose 25, 50 and 75% of total flux
-        self.fluxfrac = [.25,.5,.75]
+        self.fluxfrac = np.array([.25,.5,.75])
         # the array self.tab.flux is the enclosed flux as a function of radius
         # set the total flux to the max of this array
         total_flux = np.max(self.tab.flux)
         self.flux_radii = np.zeros([len(self.fluxfrac),2],'f')
 
         # use linear interpolation to find radius that encloses XX% of total flux
-        for i,frac in enumerate(self.fluxfrac):
-            self.flux_radii[i,0] = np.interp(frac*total_flux,self.tab.flux,self.tab.sma_arcsec)
-            errm = abs(self.flux_radii[i,0] - np.interp(frac*total_flux,self.tab.flux-self.tab.flux_err,self.tab.sma_arcsec))
-            errp = abs(self.flux_radii[i,0] - np.interp(frac*total_flux,self.tab.flux+self.tab.flux_err,self.tab.sma_arcsec))
-            # store errors as delta values rather than upper and lower limits
-            self.flux_radii[:,1] = max(errm, errp)
+        self.flux_radii[:,0] = np.interp(self.fluxfrac*total_flux,self.tab.flux,self.tab.sma_arcsec)
+        errm = abs(self.flux_radii[:,0] - np.interp(self.fluxfrac*total_flux,self.tab.flux-self.tab.flux_err,self.tab.sma_arcsec))
+        errp = abs(self.flux_radii[:,0] - np.interp(self.fluxfrac*total_flux,self.tab.flux+self.tab.flux_err,self.tab.sma_arcsec))
+        # store errors as delta values rather than upper and lower limits
+        for i in range(len(errm)):
+            self.flux_radii[i,1] = np.max([errm[i], errp[i]])
 
     def get_isophote_mag(self, sb=None, sberr=None):
-        try:
-            if sb == None:
-                sb = self.tab.sb_mag_sqarcsec
-                sberr =self.tab.sb_mag_sqarcsec_err
-        except ValueError:
-            pass
-
+        if sb is None:
+            sb = self.tab.sb_mag_sqarcsec
+            sberr =self.tab.sb_mag_sqarcsec_err
+            mag = self.tab.mag
+            magerr = self.tab.mag_err
+        else:    
+            sb = np.flip(sb)
+            sberr = np.flip(sberr)
+            mag = np.flip(self.tab.mag)
+            magerr = np.flip(self.tab.mag_err)
+        
         self.iso_mag = np.zeros([len(self.isophotes),2],'f')
-        for i,refsb in enumerate(self.isophotes):
-            self.iso_mag[i,0] = np.interp(refsb,sb, self.tab.mag)
-            errm = abs(self.iso_mag[i,0] - np.interp(refsb,sb, self.tab.mag-self.tab.mag_err))
-            errp = abs(self.iso_mag[i,0] - np.interp(refsb,sb, self.tab.mag+self.tab.mag_err))
-            self.iso_mag[:,1] = max(errm, errp)
+        self.iso_mag[:,0] = np.interp(self.isophotes ,sb, mag)
+        errm = abs(self.iso_mag[:,0] - np.interp(self.isophotes,sb, mag-magerr))
+        errp = abs(self.iso_mag[:,0] - np.interp(self.isophotes,sb, mag+magerr))
+
+        for i in range(len(errm)):
+            self.iso_mag[i,1] = np.max([errm[i], errp[i]])
 
 
 class rprofile(profile): # functions specific to r-band data
@@ -232,9 +241,9 @@ class rprofile(profile): # functions specific to r-band data
 
     def becky_measurements(self):
         self.set_isophotes()
-        self.get_isophote_rad(sb=self.tab.sb_mag_sqarcsec, sberr=self.tab.sb_mag_sqarcsec_err)
+        self.get_isophote_rad()#sb=self.tab.sb_mag_sqarcsec, sberr=self.tab.sb_mag_sqarcsec_err)
         self.get_fluxradii()
-        self.get_isophote_mag(sb=self.tab.sb_mag_sqarcsec, sberr=self.tab.sb_mag_sqarcsec_err)
+        self.get_isophote_mag()#sb=self.tab.sb_mag_sqarcsec, sberr=self.tab.sb_mag_sqarcsec_err)
         self.get_c30()
      
     def get_c30(self):
@@ -242,18 +251,18 @@ class rprofile(profile): # functions specific to r-band data
         self.c30 = np.zeros(2,'f')
         r24 = self.iso_radii[self.isophotes == 24.][0][0]
         # use linear interpolation to find flux within 0.3*r24
-        inner = np.interp(.3*r24,self.tab.sma_arcsec, self.tab.flux)
-        inner_perr = abs(inner - np.interp(.3*r24,self.tab.sma_arcsec, self.tab.flux+self.tab.flux_err))
-        inner_merr = abs(inner - np.interp(.3*r24,self.tab.sma_arcsec, self.tab.flux-self.tab.flux_err))
+        inner = np.interp(.3*r24,self.tab.sma_arcsec, self.tab.flux_erg)
+        inner_perr = abs(inner - np.interp(.3*r24,self.tab.sma_arcsec, self.tab.flux_erg+self.tab.flux_erg_err))
+        inner_merr = abs(inner - np.interp(.3*r24,self.tab.sma_arcsec, self.tab.flux_erg-self.tab.flux_erg_err))
         inner_err = max(inner_perr,inner_merr)
         self.flux_30r24 = np.array([inner,inner_err],'f')
         # use linear interpolation to find flux  within r24
-        outer = np.interp(r24,self.tab.sma_arcsec, self.tab.flux)
-        outer_perr = abs(outer - np.interp(r24,self.tab.sma_arcsec, self.tab.flux+self.tab.flux_err))
-        outer_merr = abs(outer - np.interp(r24,self.tab.sma_arcsec, self.tab.flux-self.tab.flux_err))
+        outer = np.interp(r24,self.tab.sma_arcsec, self.tab.flux_erg)
+        outer_perr = abs(outer - np.interp(r24,self.tab.sma_arcsec, self.tab.flux_erg+self.tab.flux_erg_err))
+        outer_merr = abs(outer - np.interp(r24,self.tab.sma_arcsec, self.tab.flux_erg-self.tab.flux_erg_err))
         outer_err = max(outer_perr,outer_merr)
         self.flux_r24 = np.array([outer,outer_err],'f')
-        print(inner, outer)
+        #print(inner, outer)
         self.c30[0] = inner/outer
         self.c30[1] = ratio_error(inner,outer,inner_err,outer_err)
         
@@ -263,15 +272,15 @@ class haprofile(profile): # functions specific to r-band data
     '''
     def set_isophotes(self):
         # surface brightness isophotes for measuring radii and fluxes
-        self.isophotes = np.array([16.5, 17, 17.5]) # these are in erg/s/cm^2/arcsec^2
-
+        self.isophotes = np.array([-16.5, -17, -17.5]) # these are in erg/s/cm^2/arcsec^2
+        self.isophotes = 10.**self.isophotes
     def becky_measurements(self):
         self.set_isophotes()
         self.get_isophote_rad(sb=self.tab.sb_erg_sqarcsec, sberr=self.tab.sb_erg_sqarcsec_err)
         self.get_fluxradii()
         self.get_isophote_mag(sb=self.tab.sb_erg_sqarcsec, sberr=self.tab.sb_erg_sqarcsec_err)
         self.get_isophote_flux()
-
+        self.total_flux()
     def total_flux(self):
         '''
         sum flux for regions where sb_snr > 2
@@ -279,7 +288,7 @@ class haprofile(profile): # functions specific to r-band data
 
         # find radius where snr drops to 2
         index = np.max(np.where(self.tab.sb_snr>2))
-        self.total_flux = np.array([self.flux_erg[index],self.flux_erg_err[index]])
+        self.total_flux = np.array([self.tab.flux_erg[index],self.tab.flux_erg_err[index]])
         
     def get_isophote_flux(self):
         sb = self.tab.sb_erg_sqarcsec
@@ -343,7 +352,8 @@ class dualprofile():
         #plt.plot(self.r.tab.sma_arcsec, self.r.sb_normalized, 'b.', label='R',markersize=6)
         plt.errorbar(self.r.tab.sma_arcsec, self.r.sb_normalized, yerr=self.r.sb_normalized_err,fmt='b.', label='R',markersize=6)
         #plt.plot(self.ha.tab.sma_arcsec, self.ha.sb_normalized, 'c.', label=r'$H\alpha$',markersize=6)
-        plt.errorbar(self.ha.tab.sma_arcsec, self.ha.sb_normalized, yerr=self.ha.sb_normalized_err,fmt='c.', label=r'$H\alpha$',markersize=6)
+        flag = self.ha.tab.sb_snr > 2
+        plt.errorbar(self.ha.tab.sma_arcsec[flag], self.ha.sb_normalized[flag], yerr=self.ha.sb_normalized_err[flag],fmt='c.', label=r'$H\alpha$',markersize=6)
         plt.ylabel(r'$\rm I(r) \ / \ max(I(r))$',fontsize=12)
     def make_3panel_plot(self):
         plt.figure(figsize=(5,8))
@@ -382,7 +392,7 @@ if __name__ == '__main__':
     '''
     setting up for testing
     '''
-    nsaid = '18216'
+    nsaid = '18215'
     rimage = 'MKW8-'+nsaid+'-R.fits'
     rphot_table = 'MKW8-'+nsaid+'-R_phot.fits'
     haimage = 'MKW8-'+nsaid+'-CS.fits'
