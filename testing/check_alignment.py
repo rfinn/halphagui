@@ -7,7 +7,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 class image_pair():
-    def __init__(self,image1,image2,default_se_dir = '/Users/rfinn/github/halphagui/astromatic'):
+    def __init__(self,image1,image2,prefix=None,default_se_dir = '/Users/rfinn/github/halphagui/astromatic'):
         self.image1 = image1
         self.image2 = image2
         self.sepath = default_se_dir
@@ -15,7 +15,10 @@ class image_pair():
         self.froot1 = os.path.splitext(base)[0]
         base = os.path.basename(self.image2)
         self.froot2 = os.path.splitext(base)[0]
-
+        if prefix is not None:
+            self.prefix = prefix
+        else:
+            self.prefix = 'coadd'
     def link_files(self):
         # these are the sextractor files that we need
         # set up symbolic links from sextractor directory to the current working directory
@@ -47,7 +50,7 @@ class image_pair():
         print('RUNNING SEXTRACTOR')
 
         if zp1flag:
-            os.system('sex ' + self.image1 + ' -c default.sex.hdi -CATALOG_NAME ' + self.root1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
+            os.system('sex ' + self.image1 + ' -c default.sex.hdi -CATALOG_NAME ' + self.froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
         else:
             os.system('sex ' + self.image1 + ' -c default.sex.hdi -CATALOG_NAME ' + self.froot1 + '.cat')
         if zp2flag:
@@ -83,19 +86,24 @@ class image_pair():
         #plt.plot(self.cat1.X_IMAGE[self.idx][flag],self.cat1.Y_IMAGE[self.idx][flag],'r.',self.cat2.X_IMAGE[flag],self.cat2.Y_IMAGE[flag],'b.',markersize=2)
         #plt.subplot(1,2,2)
         plt.scatter(self.cat1.X_IMAGE[self.idx][flag],self.cat1.Y_IMAGE[self.idx][flag],c=self.d2d.to('arcsec')[flag],s=5,vmin=0.,vmax=.1)
-        plt.colorbar(label='offset in arcsec')
-        plt.title('mean offset = %.3f arcsec'%(np.mean(self.d2d.to('arcsec')[self.flag]).value))
-        plt.savefig(self.froot1+'-offsets.png')
+        plt.colorbar(label=r'$\Delta \theta \ b/w \ R \ and \ Halpha \ (arcsec)$')
+        plt.xlabel('X_IMAGE (pixels)')
+        plt.ylabel('Y_IMAGE (pixels)')
+        plt.title(self.prefix+': median offset = %.3f arcsec'%(np.median(self.d2d.to('arcsec')[self.flag]).value))
+        plt.savefig(self.prefix+'-offsets.png')
 
 if __name__ == '__main__':
 
     
-    prefix = 'NRGs27-'
+    prefix = 'NRGs27'
     im1 = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
     im2 = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
-    ip = image_pair(im1,im2)
+    #prefix = 'MKW8'
+    #im1 = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
+    #im2 = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_ha16.coadd.fits'
+    ip = image_pair(im1,im2,prefix=prefix)
     ip.link_files()
     #ip.run_se()
     ip.read_catalogs()
     ip.match_positions()
-    
+    ip.compare_match()

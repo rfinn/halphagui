@@ -235,6 +235,9 @@ class profile():
             funcb = np.min
         rad = self.tab.sma_arcsec
         raderr = None
+        mag = self.tab.mag
+        magerr = self.tab.mag_err
+
         # isophotal radius where sb = 24 mag/arcsec^2, for example
         # need to flip arrays because sb is decreasing, and np.interp does not work with this
         #self.iso_radii[:,0] = np.interp(self.isophotes,sb, rad)
@@ -250,6 +253,7 @@ class profile():
 
         # take 3 - just finding out where surface brightness crosses desired thresold
         self.iso_radii = np.zeros([len(self.isophotes),2],'f')
+        self.iso_mag = np.zeros([len(self.isophotes),2],'f')
         for i,iphot in enumerate(self.isophotes):
             if sum(sb > iphot) == 0:
                 print('profile does not reach sb = ',iphot)
@@ -264,7 +268,10 @@ class profile():
                 print(rad[a],rad[b])
             self.iso_radii[i,0] = np.average([rad[a],rad[b]])
             self.iso_radii[i,1] = np.abs((rad[a]-rad[b])/2)
-
+            m1 = mag[a]
+            m2 = mag[b]
+            self.iso_mag[i,0] = 2.5*np.log10(2) - 2.5*np.log10(10.**(-1*m1/2.5) + 10**(-1*m2/2.5))
+            self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,1] - m1), abs(self.iso_mag[i,1] - m2)]) 
     def get_fluxradii(self):
         # measure the radii that enclose 25, 50 and 75% of total flux
         self.fluxfrac = np.array([.25,.5,.75])
@@ -277,13 +284,22 @@ class profile():
         y = self.tab.sma_arcsec
         yerr = None
 
-        self.flux_radii[:,0], self.flux_radii[:,1] = interpxy(x, y,self.fluxfrac*total_flux, xerr= xerr, yerr=yerr)
+        self.flux_radii[:,0] = np.interp(self.fluxfrac*total_flux,x, y)
+        errm = abs(self.flux_radii[:,0] - np.interp(self.fluxfrac*total_flux,x,y))
+        errp = abs(self.flux_radii[:,0] - np.interp(self.fluxfrac*total_flux,x,y))
 
-        #for i,ffrac in enumerate(
+        for i in range(len(errm)):
+            self.flux_radii[i,1] = np.max([errm,errp])
+            
     def get_isophote_mag(self, sb=None, sberr=None):
         if sb is None:
             sb = self.tab.sb_mag_sqarcsec
             sberr =self.tab.sb_mag_sqarcsec_err
+            funca = np.min
+            funcb =  np.max
+        else:
+            funca = np.max
+            funcb = np.min
         mag = self.tab.mag
         magerr = self.tab.mag_err
         
@@ -300,8 +316,8 @@ class profile():
                 continue
             #print(np.where(sb > iphot))
             #print(np.where(sb < iphot))
-            a = np.min(np.where(sb > iphot))
-            b = np.max(np.where(sb < iphot))
+            a = funca(np.where(sb > iphot))
+            b = funcb(np.where(sb < iphot))
             if abs(a-b) > 2:
                 print('isophotal radius uncertain for isophote = ',iphot)
             # calculate mean of magnitudes
@@ -324,7 +340,7 @@ class rprofile(profile): # functions specific to r-band data
         self.set_isophotes()
         self.get_isophote_rad()#sb=self.tab.sb_mag_sqarcsec, sberr=self.tab.sb_mag_sqarcsec_err)
         self.get_fluxradii()
-        self.get_isophote_mag()#sb=self.tab.sb_mag_sqarcsec, sberr=self.tab.sb_mag_sqarcsec_err)
+        #self.get_isophote_mag()#sb=self.tab.sb_mag_sqarcsec, sberr=self.tab.sb_mag_sqarcsec_err)
         self.get_c30()
      
     def get_c30(self):
@@ -436,7 +452,8 @@ class dualprofile():
         flag = self.ha.tab.sb_erg_sqarcsec > 0.
         # scale ha flux by 100
         plt.errorbar(self.ha.tab.sma_arcsec[flag], 100.*self.ha.tab.sb_erg_sqarcsec[flag], yerr=100.*self.ha.tab.sb_erg_sqarcsec_err[flag],fmt='c.', label=r'$H\alpha$',markersize=6)
-        plt.ylabel(r'$\rm I(r) \ / \ max(I(r))$',fontsize=12)
+        #plt.ylabel(r'$\rm I(r) \ / \ max(I(r))$',fontsize=12)
+        plt.ylabel(r'$\rm \Sigma_r, \ \Sigma_{H\alpha}\times 100 $',fontsize=12)
         y = 100.*self.ha.tab.sb_erg_sqarcsec[flag & (self.ha.tab.sb_snr > 2)]
         #plt.ylim(.25*np.min(y), 2.*np.max(y))
 
@@ -459,10 +476,10 @@ class dualprofile():
     
             plt.gca().set_yscale('log')
             if i == 0:
-                plt.ylabel('$\mu_r \ (erg/s/cm^2/arcsec^2)$')
+                plt.ylabel('$\Sigma_r \ (erg/s/cm^2/arcsec^2)$')
                 plt.title(self.r.rootname)
             elif i == 1:
-                plt.ylabel(r'$\mu_{H\alpha} \ (erg/s/cm^2/arcsec^2)$')
+                plt.ylabel(r'$\Sigma_{H\alpha} \ (erg/s/cm^2/arcsec^2)$')
             elif i == 2:
                 plt.xlabel('Radius (arcsec)')
                 plt.legend(loc = 'upper right',fontsize=12)

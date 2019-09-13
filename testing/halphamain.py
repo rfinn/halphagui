@@ -404,7 +404,7 @@ class output_table():
         e1 = Column(np.zeros(len(r),'f'), name='ELLIP_XCENTROID', unit='pixel')
         e2 = Column(np.zeros(len(r),'f'), name='ELLIP_YCENTROID', unit='pixel')
         e3 = Column(np.zeros(len(r),'f'), name='ELLIP_EPS')
-        e4 = Column(np.zeros(len(r),'f'), name='ELLIP_THETA', unit=u.radian)
+        e4 = Column(np.zeros(len(r),'f'), name='ELLIP_THETA', unit=u.degree)
         e5 = Column(np.zeros(len(r),'f'), name='ELLIP_GINI')
         #e6 = Column(np.zeros(len(r)), name='ELLIP_SKYCENTROID', dtype='object')
         e7 = Column(np.zeros(len(r),'f'), name='ELLIP_AREA')
@@ -646,9 +646,13 @@ class hafunctions(Ui_MainWindow, output_table):
         
         self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
+        self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        self.haweight_flag = True
         self.rcoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_R.coadd.fits'
         self.rcoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        self.rweight_flag = True
         self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         self.nsa_fname = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname)
@@ -667,11 +671,30 @@ class hafunctions(Ui_MainWindow, output_table):
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+
+        # check for weight image
+        # assuminging naming conventions from swarp
+        # image = NRGb161_R.coadd.fits
+        # weight = NRGb161_R.coadd.weight.fits
+        
+        weight_image = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        if os.path.exists(weight_image):
+            self.rweight = weight_image
+            self.rweight_flag = True
+        else:
+            self.rweight_flag = False
+                                                        
     def load_hacoadd(self):
-        self.coadd.load_file(self.rcoadd_fname)
-        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
+        self.coadd.load_file(self.hacoadd_fname)
+        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
+
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+        weight_image = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        if os.path.exists(weight_image):
+            self.haweight = weight_image
+            self.haweight_flag = True
+        else:
+            self.haweight_flag = False
 
     def add_coadd_frame(self,panel_name):
         logger = log.get_logger("example1", log_stderr=True, level=40)
@@ -774,6 +797,27 @@ class hafunctions(Ui_MainWindow, output_table):
             print('make sure you selected the halpha filter')
             return
         keepflag=zFlag & onimageflag
+        
+        # check weight image to make sure the galaxy actually has data
+        # reject galaxies who have zero in the weight image
+        if self.rweight_flag and self.haweight_flag:
+            rweight = fits.getdata(self.rweight)
+            haweight = fits.getdata(self.haweight)
+            # multiply weights
+            # result will equal zero if exposure is zero in either image
+            weight = rweight * haweight
+
+            # check location of pixels to make sure weight is not zero
+            # this will have the length = # of galaxies that have keepflag True
+            offimage = (weight[np.array(py[keepflag],'i'),np.array(px[keepflag],'i')] == 0)
+            # store another array that has the indices in original keepflag array
+            # where keepflag = True
+            # need to take [0] element because np.where is weird
+            keepindex = np.where(keepflag)[0]
+            # change value of keepflag for galaxies that are off the image
+            keepflag[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
+            #print(offimage)
+
         self.gximage = px[keepflag]
         self.gyimage = py[keepflag]
 
@@ -953,6 +997,7 @@ class hafunctions(Ui_MainWindow, output_table):
             self.cutout_name_r = str(self.galid[self.igal])+'-R.fits'
             self.cutout_name_ha =str(self.galid[self.igal])+'-CS.fits'
         self.rcutout.canvas.delete_all_objects()
+        self.hacutout.canvas.delete_all_objects()
 
         t = self.cutout_name_r.split('.fit')
         self.mask_image_name=t[0]+'-mask.fits'
@@ -961,6 +1006,7 @@ class hafunctions(Ui_MainWindow, output_table):
         else:
             # clear mask frame
             self.maskcutout.fitsimage.clear()
+            
     def display_cutouts(self):
         position = SkyCoord(ra=self.gra[self.igal],dec=self.gdec[self.igal],unit='deg')
         
@@ -1237,7 +1283,7 @@ class hafunctions(Ui_MainWindow, output_table):
         ### SAVE DATA TO TABLE
 
         fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','AREA','SUM']#,'SUM_ERR']
-        values = [self.e.xcenter, self.e.ycenter,self.e.eps, self.e.theta, self.e.gini,self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, self.e.cat[self.e.objectIndex].source_sum_err]
+        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, self.e.cat[self.e.objectIndex].source_sum_err]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             self.table[colname][self.igal]=values[i]
@@ -1273,17 +1319,24 @@ class hafunctions(Ui_MainWindow, output_table):
         markwidth=1
         print('inside draw_ellipse_results')
         image_frames = [self.rcutout, self.hacutout]
+        radii = self.rfit.iso_radii[:,0][0:2]
         objlist = []
-        for im in image_frames:
-            for r in self.rfit.iso_radii[:,0]:
+        for i,im in enumerate(image_frames):
+            for r in radii:
                 #print('r = ',r)
                 r = r/self.pixel_scale
                 #print('r = ',r)
                 obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
                 objlist.append(obj)
+            if i == 1: # add R17 for Halpha image
+                r = self.hafit.iso_radii[:,0][1]/self.pixel_scale
+                obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
+                objlist.append(obj)
             self.markhltag = im.canvas.add(im.dc.CompoundObject(*objlist))
             im.fitsimage.redraw()
-
+        # mark R17 in halpha image
+        
+        
     def write_profile_fits(self,prefix=None):
         fields = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30']
         d = self.rfit
