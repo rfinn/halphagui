@@ -237,16 +237,16 @@
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <item>
-              <widget class="QPushButton" name="fitEllipseButton">
+              <widget class="QPushButton" name="fitEllipseGalfitButton">
                <property name="text">
-                <string>Fit Ellipse</string>
+                <string>Ellip Phot (galfit)</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="profileButton">
+              <widget class="QPushButton" name="fitEllipsePhotutilsButton">
                <property name="text">
-                <string>Fit Profiles</string>
+                <string>Ellip Phot (photutils)</string>
                </property>
               </widget>
              </item>

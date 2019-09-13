@@ -23,6 +23,7 @@ from photutils import EllipticalAperture
 from photutils.utils import calc_total_error
 from photutils.isophote import EllipseGeometry, Ellipse
 from photutils import aperture_photometry
+from photutils.morphology import gini
 
 from astropy.convolution import Gaussian2DKernel
 from astropy.stats import gaussian_fwhm_to_sigma
@@ -66,12 +67,15 @@ class ellipse():
         self.image, self.header = fits.getdata(image, header=True)
         self.image_name = image
 
+        # get image dimensions - will use this to determine the max sma to measure
+        self.ximage_max, self.yimage_max = self.image.shape
+        
         # image 2 is designed to be the Halpha image, but it can be any second
         # image whereby you define the ellipse geometry using image 1, and
         # measure the photometry on image 1 and image 2
         #
         # self.image2_flag is True is image2 is provided
-        if image2 != None:
+        if image2 is not None:
             self.image2_name = image2
             self.image2,self.header2 = fits.getdata(image2, header=True)
             self.image2_flag = True
@@ -89,12 +93,16 @@ class ellipse():
         if mask != None:
             self.mask_image, self.mask_header = fits.getdata(mask,header=True)
             self.mask_flag = True
-            self.mask_image_bool = np.array(self.mask_image,'bool')
-            self.masked_image = np.ma.array(self.image, mask = self.mask_image_bool) 
+            self.boolmask = np.array(self.mask_image,'bool')
+            #self.masked_image = np.ma.array(self.image, mask = self.boolmask)
+            #if self.image2_flag:
+            #    self.masked_image2 = np.ma.array(self.image2, mask = self.boolmask)
         else:
+            print('not using a mask')
             self.mask_flag = False
-            self.masked_image = self.image
-        
+            #self.masked_image = self.image
+            #if self.image2_flag:
+            #    self.masked_image2 = self.image2
         # image frame for plotting inside a gui
         # like if this is called from halphamain.py
         self.image_frame = image_frame
@@ -116,28 +124,103 @@ class ellipse():
         self.measure_phot()
         self.calc_sb()
         self.convert_units()
+        self.get_image2_gini()
         self.write_phot_tables()
         self.write_phot_fits_tables()
-        if self.use_mpl:
-            self.draw_phot_results_mpl()
+        #if self.use_mpl:
+        #    self.draw_phot_results_mpl()
+        #else:
+        #    self.draw_phot_results()
+    def run_with_galfit_ellipse(self, xc,yc,BA=1,THETA=0):
+        '''
+        replicating run_for_gui(), but taking input ellipse geometry from galfit
+
+        '''
+        self.detect_objects()
+        self.find_central_object()
+        self.get_ellipse_guess()
+
+        ### RESET ELLIPSE GEOMETRY USING GALFIT VALUES
+        self.xcenter = float(xc)
+        self.ycenter = float(yc)
+        self.position = (self.xcenter, self.ycenter)
+        # leave sma as it is defined in get_ellipse_guess
+        # so that we measure photometry over the same approximate region
+        # in practice this could be different areas if the ellipticity is very different
+        # self.sma = re
+
+        # need to reset b to be consistent with galfit ellipticity
+        BA = float(BA)
+        THETA = float(THETA)
+        print('THETA inside phot wrapper',THETA, BA)
+        self.b = BA*self.sma
+        self.eps = 1 - BA
+        print(self.b,self.eps,self.sma,BA)
+        t = THETA
+        if t < 0:
+            self.theta = np.radians(180. + t)
         else:
-            self.draw_phot_results()
+            self.theta = np.radians(t) # orientation in radians
+        # EllipticalAperture gives rotation angle in radians from +x axis, CCW
+        self.aperture = EllipticalAperture(self.position, self.sma, self.b, theta=self.theta)
+        # EllipseGeometry using angle in radians, CCW from +x axis
+        self.guess = EllipseGeometry(x0=self.xcenter,y0=self.ycenter,sma=self.sma,eps = self.eps, pa = self.theta)
+
+        ### AND NOW BACK TO OUR REGULAR PROGRAMMING
+        #print('measuring phot')
+        self.measure_phot()
+        #print('measuring phot')
+        self.calc_sb()
+        #print('measuring converting units')
+        self.convert_units()
+        #print('writing table')
+        self.get_image2_gini()
+        self.write_phot_fits_tables(prefix='GAL_')
+        #if self.use_mpl:
+        #    self.draw_phot_results_mpl()
+        #else:
+        #    self.draw_phot_results()
     def detect_objects(self, snrcut=2):
-        self.threshold = detect_threshold(self.masked_image, nsigma=snrcut)
+        if self.mask_flag:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=10, mask=self.boolmask)
+            self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+        else:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=10)
+            self.cat = source_properties(self.image, self.segmentation)
         # get average sky noise per pixel
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
-        self.segmentation = detect_sources(self.masked_image, self.threshold, npixels=10)
-        self.cat = source_properties(self.masked_image, self.segmentation)
         #self.tbl = self.cat.to_table()
+
     def find_central_object(self):
-        xdim,ydim = self.masked_image.shape
+        xdim,ydim = self.image.shape
         distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
-        self.objectID = np.arange(len(distance))[(distance == min(distance))][0]
-        #print(self.objectID)
+        self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
+        #print(self.objectIndex)
+        
+    def get_image2_gini(self, snrcut=2):
+        if self.mask_flag:
+            self.threshold2 = detect_threshold(self.image2, nsigma=snrcut, mask=self.boolmask)
+            self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10,mask=self.boolmask)
+        else:
+            self.threshold2 = detect_threshold(self.image2, nsigma=snrcut)
+            self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10)
+
+        '''
+        select pixels associated with rband image in the segmentation
+        AND
+        pixels that are above the SNR cut in the Halpha image (image2)
+        '''
+        self.gini_pixels = (self.segmentation.data == self.cat.id[self.objectIndex]) & (self.segmentation2.data > 0.)
+
+        #self.tbl = self.cat.to_table()
+        self.gini2 = gini(self.image2[self.gini_pixels])
+        
     def get_ellipse_guess(self, r=2.5):
-        obj = self.cat[self.objectID]
+        obj = self.cat[self.objectIndex]
         self.xcenter = obj.xcentroid.value
         self.ycenter = obj.ycentroid.value
         self.position = (obj.xcentroid.value, obj.ycentroid.value)
@@ -185,7 +268,7 @@ class ellipse():
         ### DRAW RESULTING FIT ON R-BAND CUTOUT
         markcolor='cyan'
         if len(self.isolist) > 5:
-            smas = np.linspace(np.min(self.isolist.sma), np.max(self.isolist.sma), 5)
+            smas = np.linspace(np.min(self.isolist.sma), np.max(self.isolist.sma), 3)
             objlist = []
             for sma in smas:
                 iso = self.isolist.get_closest(sma)
@@ -219,8 +302,11 @@ class ellipse():
         # rmax is max radius to measure ellipse
         # could cut this off based on SNR
         # or could cut this off based on enclosed flux?
-        rmax = 2.5*self.sma
-        self.apertures_a = np.linspace(2,rmax,40)
+        # or could cut off based on image dimension, and do the cutting afterward
+        
+        #rmax = 2.5*self.sma
+        rmax = (self.ximage_max - self.xcenter)/abs(np.cos(self.theta))
+        self.apertures_a = np.linspace(3,rmax,40)
         self.apertures_b = (1.-self.eps)*self.apertures_a
         self.area = np.pi*self.apertures_a*self.apertures_b # area of each ellipse
 
@@ -231,12 +317,14 @@ class ellipse():
             self.flux2 = np.zeros(len(self.apertures_a),'f')
             self.flux2_err = np.zeros(len(self.apertures_a),'f')
         for i in range(len(self.apertures_a)):
+            #print('measure phot: ',self.xcenter, self.ycenter,self.apertures_a[i],self.apertures_b[i],self.theta)
+            #,ai,bi,theta) for ai,bi in zip(a,b)]
             ap = EllipticalAperture((self.xcenter, self.ycenter),self.apertures_a[i],self.apertures_b[i],self.theta)#,ai,bi,theta) for ai,bi in zip(a,b)]
 
             if self.mask_flag:
-                self.phot_table1 = aperture_photometry(self.image, ap, mask=self.mask_image_bool)
+                self.phot_table1 = aperture_photometry(self.image, ap, mask=self.boolmask)
                 if self.image2_flag:
-                    self.phot_table2 = aperture_photometry(self.image2, ap, mask=self.mask_image_bool)
+                    self.phot_table2 = aperture_photometry(self.image2, ap, mask=self.boolmask)
             else:
                 # subpixel is the method used by Source Extractor
                 self.phot_table1 = aperture_photometry(self.image, ap, method = 'subpixel', subpixels=5)
@@ -389,10 +477,16 @@ class ellipse():
                 outfile.write(s)
 
             outfile.close()
-    def write_phot_fits_tables(self):
+    def write_phot_fits_tables(self, prefix=None):
         # write out photometry for r-band
         # radius enclosed flux
-        outfile = self.image_name.split('.fits')[0]+'_phot.fits'
+
+        if prefix is None:
+             outfile = self.image_name.split('.fits')[0]+'_phot.fits'
+        else:
+             outfile = prefix+self.image_name.split('.fits')[0]+'_phot.fits'
+        
+
         data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
              self.flux1,self.flux1_err,\
              self.sb1, self.sb1_err, \
@@ -424,7 +518,10 @@ class ellipse():
         if self.image2_flag:
             # write out photometry for h-alpha
             # radius enclosed flux
-            outfile = self.image2_name.split('.fits')[0]+'_phot.fits'
+            if prefix is None:
+                outfile = self.image2_name.split('.fits')[0]+'_phot.fits'
+            else:
+                outfile = prefix+self.image2_name.split('.fits')[0]+'_phot.fits'
     
             data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
                 self.flux2,self.flux2_err,\
@@ -526,6 +623,13 @@ if __name__ == '__main__':
     image = 'MKW8-18216-R.fits'
     mask = 'MKW8-18216-R-mask.fits'
     image2 = 'MKW8-18216-CS.fits'
+    nsaid='18045'
+    prefix = 'MKW8-'
+    nsaid='110430'
+    prefix = 'NRGs27-'
+    image = prefix+nsaid+'-R.fits'
+    mask = prefix+nsaid+'-R-mask.fits'
+    image2 = prefix+nsaid+'-CS.fits'
     #image = 'MKW8-18037-R.fits'
     #mask = 'MKW8-18037-R-mask.fits'
     #image = 'r-18045-R.fits'

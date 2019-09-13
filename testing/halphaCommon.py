@@ -1,3 +1,5 @@
+import numpy as np
+
 #from PyQt5 import  QtWidgets
 from PyQt5 import QtCore,QtWidgets, QtGui
 #from PyQt5.Qtcore import  Qt
@@ -18,6 +20,29 @@ central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513
 dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17} # angstrom
 
 
+def circle_pixels(xc,yc,r,ximage,yimage):
+    '''
+    GOAL:
+    - return pixel values that lie within a for circular aperture within radius r of position (x,y)
+    
+    INPUT:
+    -enter the center xc,yc and radius of circle in pixels
+    - also enter x and y dimensions of parent image
+
+    OUTPUT:
+    - 2D boolean array with dimension the same as the input image
+    - pixel values are true for pixels within circular aperture, false otherwise
+    '''
+
+    # add some checks to make sure numbers make sense
+    # actually, it works even if center is outside image boundaries
+    #if (xc < 0) | (xc > ximage) | (yc < 0) | (yc > yimage):
+    #    print('invalid central coordinates in circle_pixels')
+        
+    rows,cols = np.mgrid[0:ximage,0:yimage]
+    distance = np.sqrt((rows-yc)**2+(cols-xc)**2)
+    pixel_flag = distance < r
+    return pixel_flag
 
 class cutout_image():
     #key_pressed = QtCore.pyqtSignal(str)

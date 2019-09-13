@@ -371,7 +371,7 @@ class output_table():
         #####################################################################
         # galfit output
         #####################################################################
-        fields = ['XC','YC','MAG','RE','N','PA','BA']
+        fields = ['XC','YC','MAG','RE','N','BA','PA']
         units = ['pixel','pixel','mag','pixel',None,'deg',None]
         for f,unit in zip(fields,units):
             if unit == None:
@@ -395,7 +395,8 @@ class output_table():
         c18 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_ERROR')
         c19 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_CHISQ')
         self.table.add_columns([c16,c17,c18,c19])
-        
+
+
         #####################################################################
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
@@ -412,17 +413,75 @@ class output_table():
         self.table.add_columns([e1,e2,e3,e4,e5,e7,e8])
 
         #####################################################################
-        # profile fitting
+        # profile fitting using galfit geometry
         #####################################################################
         #
         # r-band parameters
         # 
-        fields = ['R235','R24','R25','R_F25','R_F50','R_F75','M235','M24','M25', 'F_30R24','F_R24','C30']
-        units = [u.arcsec,u.arcsec,u.arcsec,\
-                u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
-                u.mag, u.mag, u.mag, \
-                u.arcsec,u.arcsec,'']
-        for f,unit in zip(fields,units):
+        fields_r = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30']
+        units_r = [u.arcsec,u.arcsec,u.arcsec,\
+                   u.arcsec,u.arcsec,u.arcsec,\
+                   u.mag, u.mag, u.mag, \
+                   u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,''
+                   ]
+        for f,unit in zip(fields_r,units_r):
+            if unit == None:
+                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f)
+                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR')
+            else:
+                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f, unit=unit)
+                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR', unit=unit)
+
+            self.table.add_column(c1)
+            self.table.add_column(c2)
+        #
+        # Halpha parameters
+        # 
+        fields_ha = ['R16','R17',\
+                  'R_F25','R_F50','R_F75',\
+                  'M16','M17', \
+                  'F_30R24','F_R24','C30',\
+                  'R_F95R24','F_TOT']
+        units_ha = [u.arcsec,u.arcsec,\
+                 u.arcsec,u.arcsec, u.arcsec, \
+                 u.mag, u.mag, \
+                 u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2, '',\
+                 u.arcsec,u.erg/u.s/u.cm**2]
+        for f,unit in zip(fields_ha,units_ha):
+            if unit == None:
+                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f)
+                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f+'_ERR')
+            else:
+                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f, unit=unit)
+                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f+'_ERR', unit=unit)
+
+            self.table.add_column(c1)
+            self.table.add_column(c2)
+
+        f='GAL_'+'LOG_SFR_HA'
+        c1 = Column(np.zeros(len(r),'f'),name=f, unit=u.M_sun/u.yr)
+        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
+        self.table.add_column(c1)
+        self.table.add_column(c2)
+        
+        f='GAL_'+'SSFR_IN'
+        c1 = Column(np.zeros(len(r),'f'),name=f)
+        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        self.table.add_column(c1)
+        self.table.add_column(c2)
+        f='GAL_'+'SSFR_OUT'
+        c1 = Column(np.zeros(len(r),'f'),name=f)
+        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        self.table.add_column(c1)
+        self.table.add_column(c2)
+
+        #####################################################################
+        # profile fitting using photutils geometry
+        #####################################################################
+        #
+        # r-band parameters
+        # 
+        for f,unit in zip(fields_r,units_r):
             if unit == None:
                 c1 = Column(np.zeros(len(r),'f'),name=f)
                 c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
@@ -435,13 +494,7 @@ class output_table():
         #
         # Halpha parameters
         # 
-        fields = ['R165','R17','R175','R_F25','R_F50','R_F75','M165','M17','M175', 'F_30R24','F_R24','C30','R_F95R24','F_TOT']
-        units = [u.arcsec,u.arcsec,u.arcsec,\
-                u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
-                u.mag, u.mag, u.mag, \
-                u.arcsec,u.arcsec,'',\
-                u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2]
-        for f,unit in zip(fields,units):
+        for f,unit in zip(fields_ha,units_ha):
             if unit == None:
                 c1 = Column(np.zeros(len(r),'f'),name='H'+f)
                 c2 = Column(np.zeros(len(r),'f'),name='H'+f+'_ERR')
@@ -573,12 +626,13 @@ class hafunctions(Ui_MainWindow, output_table):
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
         self.ui.makeMaskButton.clicked.connect(self.make_mask)
         self.ui.saveCutoutsButton.clicked.connect(self.write_cutouts)
-        self.ui.profileButton.clicked.connect(self.fit_profiles)
+        self.ui.fitEllipseGalfitButton.clicked.connect(self.galfit_ellip_phot)
+        self.ui.fitEllipsePhotutilsButton.clicked.connect(self.photutils_ellip_phot)
         self.ui.wfratio.clicked.connect(self.get_filter_ratio)
         self.ui.resetRatioButton.clicked.connect(self.reset_cutout_ratio)
         self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
         self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
-        self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse)
+        #self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse_phot)
         self.ui.galfitButton.clicked.connect(lambda: self.run_galfit(ncomp=1))
         self.ui.galfit2Button.clicked.connect(lambda: self.run_galfit(ncomp=2))
         self.ui.psfButton.clicked.connect(self.build_psf)
@@ -588,13 +642,18 @@ class hafunctions(Ui_MainWindow, output_table):
             self.setup_testing()
     def setup_testing(self):
         self.hacoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_ha16.coadd.fits'
+        
+        
+        self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         self.rcoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_R.coadd.fits'
+        self.rcoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         self.nsa_fname = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname)
         self.coadd.load_file(self.rcoadd_fname)
-        self.filter_ratio = 0.0422
+        self.filter_ratio = 0.0416
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
@@ -603,7 +662,15 @@ class hafunctions(Ui_MainWindow, output_table):
         self.cutout_size = 100
         self.setup_cutout_slider()
 
-
+    def load_rcoadd(self):
+        self.coadd.load_file(self.rcoadd_fname)
+        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+    def load_hacoadd(self):
+        self.coadd.load_file(self.rcoadd_fname)
+        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
     def add_coadd_frame(self,panel_name):
@@ -634,11 +701,13 @@ class hafunctions(Ui_MainWindow, output_table):
         fname = QtGui.QFileDialog.getOpenFileName()
         self.rcoadd_fname = fname[0]
         print(self.rcoadd_fname)
+        self.load_rcoadd()
         #self.le.setPixmap(QPixmap(fname))
     def get_hacoadd_file(self):
         fname = QtGui.QFileDialog.getOpenFileName()
         self.hacoadd_fname = fname[0]
         print(self.hacoadd_fname)
+        self.load_hacoadd()
         #self.le.setPixmap(QPixmap(fname))
     def getnsafile(self):
         fname = QtGui.QFileDialog.getOpenFileName()
@@ -1074,12 +1143,12 @@ class hafunctions(Ui_MainWindow, output_table):
             print('ncomp = ',self.ncomp)
         if self.ncomp == 1:
             self.galfit_results = self.galfit.galfit_results
-            fields = ['XC','YC','MAG','RE','N','PA','BA']
+            fields = ['XC','YC','MAG','RE','N','BA','PA']
             values = np.array(self.galfit.galfit_results[:-2])[:,0].tolist()
             for i,f in enumerate(fields):
                 colname = 'GALFIT_'+f
                 self.table[colname][self.igal]=values[i]
-            fields = ['XC','YC','MAG','RE','N','PA','BA']
+            fields = ['XC','YC','MAG','RE','N','BA','PA']
             values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
             for i,f in enumerate(fields):
                 colname = 'GALFIT_'+f+'_ERR'
@@ -1108,26 +1177,56 @@ class hafunctions(Ui_MainWindow, output_table):
             self.table['GALFIT_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
             #print(self.table[self.igal])
         self.update_gui_table()
+        
 
-    def fit_ellipse(self):
+    def galfit_ellip_phot(self):
+        '''
+        use galfit ellipse parameters as input for photutils elliptical photometry
+
+        '''
+        ### CLEAR R-BAND CUTOUT CANVAS
+        #self.rcutout.canvas.delete_all_objects()
+
+        ### MAKE SURE GALFIT 1 COMP MODEL WAS RUN
+
+        try:
+            xc,yc,mag,re,n,BA,pa = np.array(self.galfit.galfit_results[:-3])[:,0].tolist()
+            print('GALFIT PA = ',xc,yc,mag,re,n,BA,pa )
+        except AttributeError:
+            print('Warning - galfit 1 comp fit results not found!')
+            print('Make sure you run galfit, then try again.')
+            return
+        
+        ### FIT ELLIPSE
+        #
+        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio)
+        #fields = ['XC','YC','MAG','RE','N','BA','PA']
+
+
+        # TRANSFORM THETA
+        # GALFIT DEFINES THETA RELATIVE TO Y AXIS
+        # PHOT UTILS DEFINES THETA RELATIVE TO X AXIS
+        THETA = pa + 90 # in degrees
+        print('THETA = ',THETA)
+        self.e.run_with_galfit_ellipse(xc,yc,BA=BA,THETA=THETA)
+        self.e.plot_profiles()
+        #os.chdir(current_dir)
+
+
+        # fit profiles
+        self.fit_profiles(prefix='GAL_')
+        # save results
+        self.write_profile_fits(prefix='GAL_')
+        self.draw_ellipse_results(color='cyan')
+
+    def photutils_ellip_phot(self):
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
         #os.chdir(image_dir)
 
         ### CLEAR R-BAND CUTOUT CANVAS
-        self.rcutout.canvas.delete_all_objects()
+        #self.rcutout.canvas.delete_all_objects()
 
-        ### GENERATE GUESS ELLIPSE USING NSA VALUES ###
-        # use center of cutout as first get for xcenter
-        ## xcenter = int(rdata.shape[0]/2.)
-        ## ycenter = int(rdata.shape[1]/2.)
-        ## sma = 4.*self.gradius[self.igal]
-        ## eps = (1.-self.nsa.cat.SERSIC_BA[self.igal])
-        ## pa = self.nsa.cat.SERSIC_PHI[self.igal]
-        ## print('initial PA = ',pa, self.nsa.cat.SERSIC_PHI[self.igal])
-        ## guess = EllipseGeometry(x0=xcenter,y0=ycenter,sma=sma,eps = eps, pa = np.radians(pa))
-        ## aper = EllipticalAperture((guess.x0, guess.y0),guess.sma, guess.sma*(1 - guess.eps), (guess.pa))
-                
         ### FIT ELLIPSE
         #
         self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio)
@@ -1138,20 +1237,28 @@ class hafunctions(Ui_MainWindow, output_table):
         ### SAVE DATA TO TABLE
 
         fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','AREA','SUM']#,'SUM_ERR']
-        values = [self.e.xcenter, self.e.ycenter,self.e.eps, self.e.theta, self.e.gini,self.e.cat[self.e.objectID].area.value,self.e.cat[self.e.objectID].source_sum, self.e.cat[self.e.objectID].source_sum_err]
+        values = [self.e.xcenter, self.e.ycenter,self.e.eps, self.e.theta, self.e.gini,self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, self.e.cat[self.e.objectIndex].source_sum_err]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             self.table[colname][self.igal]=values[i]
         self.update_gui_table()
-    def fit_profiles(self):
+    
+        # fit profiles
+        self.fit_profiles()
+        # save results
+        self.write_profile_fits()
+        self.draw_ellipse_results(color='magenta')
+    def fit_profiles(self,prefix=None):
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
         #os.chdir(image_dir)
+        if prefix is None:
+            rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.fits'
+            haphot_table = self.cutout_name_ha.split('.fits')[0]+'_phot.fits'
+        else:
+            rphot_table = prefix+self.cutout_name_r.split('.fits')[0]+'_phot.fits'
+            haphot_table = prefix+self.cutout_name_ha.split('.fits')[0]+'_phot.fits'
 
-        rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.fits'
-
-        haphot_table = self.cutout_name_ha.split('.fits')[0]+'_phot.fits'
-        
         self.rfit = rprofile(self.cutout_name_r, rphot_table, label='R')
         self.rfit.becky_measurements()
         self.hafit = haprofile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
@@ -1159,45 +1266,26 @@ class hafunctions(Ui_MainWindow, output_table):
         self.hafit.get_r24_stuff(self.rfit.iso_radii[self.rfit.isophotes == 24.][0][0])
         both = dualprofile(self.rfit,self.hafit)
         both.make_3panel_plot()
-
-
-        ###############################################################3
-        ##### UPDATE DATA TABLE !!!
-        ###############################################################3
-        # in self.write_profile_fits() function
-        self.write_profile_fits()
-
         
-        '''
+    def draw_ellipse_results(self, color='cyan'):
+        # mark r24
+        markcolor=color#, 'yellow', 'cyan']
+        markwidth=1
+        print('inside draw_ellipse_results')
+        image_frames = [self.rcutout, self.hacutout]
+        objlist = []
+        for im in image_frames:
+            for r in self.rfit.iso_radii[:,0]:
+                #print('r = ',r)
+                r = r/self.pixel_scale
+                #print('r = ',r)
+                obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
+                objlist.append(obj)
+            self.markhltag = im.canvas.add(im.dc.CompoundObject(*objlist))
+            im.fitsimage.redraw()
 
-        I can get the plot to print to the frame,
-        but then the image cutouts disappear.  This is when profilesLayout
-        is a vertical layout.
-
-        going to try again for a gridlayout.
-        
-        
-        print('edit mask')
-        self.fig = Figure(figsize=(4,3))
-        self.mplcanvas = FigureCanvas(self.fig)
-        self.mplcanvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding,QtWidgets.QSizePolicy.Expanding)
-        #self.mplcanvas.updateGeometry(self)
-        #self.ui.profilesLayout.addWidget(self.mplcanvas)
-
-        self.ui.profilesLayout.addWidget(self.mplcanvas)
-
-        self.fig.clf()
-
-        ax = self.fig.add_subplot(111)
-        ax.autoscale(True, tight=True)
-        ax.plot(np.arange(10))
-
-        # force an update of the figure
-        self.fig.canvas.draw()
-        '''
-        #os.chdir(current_dir)
-    def write_profile_fits(self):
-        fields = ['R235','R24','R25','R_F25','R_F50','R_F75','M235','M24','M25', 'F_30R24','F_R24','C30']
+    def write_profile_fits(self,prefix=None):
+        fields = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30']
         d = self.rfit
         values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],\
                   d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
@@ -1205,19 +1293,26 @@ class hafunctions(Ui_MainWindow, output_table):
                   d.flux_30r24,d.flux_r24,d.c30
                   ]
         for i,f in enumerate(fields):
-            colname = f
+            if prefix is None:
+                colname = f
+            else:
+                colname = prefix+f
             self.table[colname][self.igal]=values[i][0]
             self.table[colname+'_ERR'][self.igal]=values[i][1]
             
-        fields = ['R165','R17','R175','R_F25','R_F50','R_F75','M165','M17','M175', 'F_30R24','F_R24','C30','R_F95R24','F_TOT']
+        fields = ['R16','R17','R_F25','R_F50','R_F75','M16','M17','F_30R24','F_R24','C30','R_F95R24','F_TOT']
         d = self.hafit
-        values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],\
+        values = [d.iso_radii[0],d.iso_radii[1],\
                   d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
-                  d.iso_mag[0],d.iso_mag[1],d.iso_mag[2],\
+                  d.iso_mag[0],d.iso_mag[1],\
                   d.flux_30r24,d.flux_r24,d.c30,d.flux_95r24, d.total_flux
                   ]
         for i,f in enumerate(fields):
-            colname = 'H'+f
+            if prefix is None:
+                colname = 'H'+f
+            else:
+                colname = prefix+'H'+f
+
             #print(colname,values[i])
             self.table[colname][self.igal]=float('{:.3e}'.format(values[i][0]))
             self.table[colname+'_ERR'][self.igal]=float('{:.3e}'.format(values[i][1]))
@@ -1228,7 +1323,10 @@ class hafunctions(Ui_MainWindow, output_table):
         L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.nsa.cat.ZDIST[self.igal]).cgs.value**2)
         print(L)
         self.sfr = np.log10(L) - logCx
-        colname='LOG_SFR_HA'
+        if prefix is None:
+            colname='LOG_SFR_HA'
+        else:
+            colname=prefix+'LOG_SFR_HA'
         print('sfr = ',self.sfr)
         print(self.sfr[0], self.sfr[1])
         self.table[colname][self.igal]=float('%.3e'%(self.sfr[0]))
@@ -1239,7 +1337,10 @@ class hafunctions(Ui_MainWindow, output_table):
         b = self.rfit.flux_30r24
         self.inner_ssfr = a[0]/b[0]
         self.inner_ssfr_err = ratio_error(a[0],b[0],a[1],b[1])
-        colname='SSFR_IN'
+        if prefix is None:
+            colname='SSFR_IN'
+        else:
+            colname = prefix+'SSFR_IN'
         self.table[colname][self.igal]=float('%.3e'%(self.inner_ssfr))
         self.table[colname+'_ERR'][self.igal]=float('%.3e'%(self.inner_ssfr_err))
         # outer ssfr
@@ -1247,7 +1348,10 @@ class hafunctions(Ui_MainWindow, output_table):
         d = self.rfit.flux_r24
         self.outer_ssfr = (c[0] - a[0])/(d[0] - b[0])
         self.outer_ssfr_err = ratio_error(c[0] - a[0],d[0] - b[0],np.sqrt(a[1]**2 + c[1]**2),np.sqrt(b[1]**2 + d[1]**2))
-        colname='SSFR_OUT'
+        if prefix is None:
+            colname='SSFR_OUT'
+        else:
+            colname=prefix+'SSFR_OUT'
         self.table[colname][self.igal]=float('%.3e'%(self.outer_ssfr))
         self.table[colname+'_ERR'][self.igal]=float('%.3e'%(self.outer_ssfr_err))
         

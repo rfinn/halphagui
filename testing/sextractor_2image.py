@@ -18,12 +18,9 @@ WRITTEN BY:
 Rose Finn, 04 Jan 2017
 
 '''
-import glob
 import os
 from astropy.io import fits
-from astropy.wcs import WCS
 import argparse
-import subprocess
 import numpy as np
 
 
@@ -100,6 +97,7 @@ def make_plot(image1, image2, return_flag = False, image_dir = './'):
     plt.title(t[0],fontsize=12)
     plt.show()
     plt.savefig(image_dir+t[0]+'-filter-ratio.png')
+
     if return_flag:
         return ave, std
 

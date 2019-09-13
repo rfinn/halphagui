@@ -38,6 +38,7 @@ NOTES:
 
 import os
 import sys
+import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.convolution import Tophat2DKernel, convolve
@@ -64,7 +65,7 @@ import matplotlib.pyplot as plt
 
 #from maskGui import Ui_maskWindow
 from maskWidget import Ui_Form as Ui_maskWindow
-from halphaCommon import cutout_image
+from halphaCommon import cutout_image, circle_pixels
 
 defaultcat='default.sex.HDI.mask'
 
@@ -348,7 +349,9 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             print('out of bounds, try again')
         #print('cursor value = ',self.cursor_value, key)
         if key == 'a':
-            self.add_object()
+            self.add_circ_object()
+        elif key == 'b':
+            self.add_box_object()
         elif key == 'r': 
             print('removing object')
             self.remove_object(int(self.cursor_value))
@@ -371,7 +374,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         
     def print_help_menu(self):
         print('Click on mask or r/ha image, then enter:\n \t r to remove object in mask at the cursor position;'
-              '\n \t a to mask additional pixels at cursor position;'
+              '\n \t a to add CIRCULAR mask at cursor position;'
+              '\n \t b to add BOX mask at cursor position;'
               '\n \t o if target is off center (and program is removing the wrong object);'
               #'\n \t s to change the size of the mask box;'
               #'\n \t t to adjust SE threshold (0=lots, 1=no deblend );'
@@ -386,7 +390,10 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
               'Click Red X to close window')
 
 
-    def add_object(self):
+    def add_box_object(self):
+        '''
+        this adds a square region
+        '''
         print('adding pixels to the mask')
         # mask out a rectangle around click
         # size is given by mask_size
@@ -410,6 +417,20 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         mask_value = np.max(self.maskdat) + 1
         #print(xmin,xmax,ymin,ymax,self.mask_size)
         self.usr_mask[ymin:ymax,xmin:xmax] = mask_value*np.ones([ymax-ymin,xmax-xmin])
+        self.maskdat = self.maskdat + self.usr_mask
+        self.save_mask()
+        print('added mask object '+str(mask_value))
+
+    def add_circ_object(self):
+        print('adding circular obj to the mask, with radius = ',self.mask_size)
+        # mask out a rectangle around click
+        # size is given by mask_size
+        pixel_mask = circle_pixels(float(self.xcursor),float(self.ycursor),float(self.mask_size/2.),self.xmax,self.ymax)
+
+        #print('xcursor, ycursor = ',self.xcursor, self.ycursor)
+        mask_value = np.max(self.maskdat) + 1
+        #print(xmin,xmax,ymin,ymax,self.mask_size)
+        self.usr_mask[pixel_mask] = mask_value*np.ones_like(self.usr_mask)[pixel_mask]
         self.maskdat = self.maskdat + self.usr_mask
         self.save_mask()
         print('added mask object '+str(mask_value))

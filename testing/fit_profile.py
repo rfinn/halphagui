@@ -34,7 +34,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from astropy.io import fits
 import argparse
-import scipy
+from scipy import interpolate
 import scipy.optimize
 import os
 
@@ -73,7 +73,53 @@ def ratio_error(a,b,erra,errb):
     '''
     sigma = np.sqrt((erra/b)**2 + (a*errb/b**2)**2)
     return sigma
-                    
+
+def interpxy(x,y,xnew,xerr=None,yerr=None):
+    '''
+    GOAL:
+    - get spline function of y vs x
+    - evaluate spline at new x values - xnew
+    - estimate error in ynew by evaluating spline at x+xerr and x-xerr
+    
+    INPUT:
+    - x
+    - y
+    - xerr
+    - xnew - where you want to evaluate the interpolated function
+    
+    OUTPUT:
+    - ynew
+    - ynew_err
+
+    '''
+
+    sfit = interpolate.splrep(x, y)
+    ynew = interpolate.splev(xnew,sfit)
+    # error estimate
+    ynew_err = np.zeros_like(ynew)
+    if (xerr is not None) and (yerr is None):
+        sfit = interpolate.splrep(x-xerr, y)
+        errm = interpolate.splev(xnew,sfit)
+        sfit = interpolate.splrep(x+xerr, y)
+        errp = interpolate.splev(xnew,sfit)
+    elif (yerr is not None) and (xerr in None):
+        sfit = interpolate.splrep(x, y-yerr)
+        errm = interpolate.splev(xnew,sfit)
+        sfit = interpolate.splrep(x, y+yerr)
+        errp = interpolate.splev(xnew,sfit)
+    elif (yerr is not None) and (xerr is not None):
+        sfit = interpolate.splrep(x+xnew, y-yerr)
+        errm = interpolate.splev(xnew,sfit)
+        sfit = interpolate.splrep(x-xnew, y+yerr)
+        errp = interpolate.splev(xnew,sfit)
+    if (yerr is not None) or (xerr is not None):
+        errm = abs(ynew - errm)
+        errp = abs(ynew - errp)
+        # save the max value of errm and errp as the error
+        for i in range(len(ynew)):
+            ynew_err[i] =  np.max([errm[i], errp[i]])
+    return ynew, ynew_err
+
 class profile():
     def __init__(self, image_name, phot_file, se_file = None,pixelscale = 0.43, label='R'):
         '''
@@ -136,12 +182,17 @@ class profile():
         plt.axvline(x=1./self.popt[1],ls='-.',label='exp fit R50=%5.1f'%(1./self.popt[1]))
         plt.axvline(x=self.flux_radii[1][0], ls='--',label='phot R50=%5.1f'%(self.flux_radii[1][0]))
     def fit_sersic_n1(self):
-        flag = (self.tab.sb_snr > 2)
+        flag = (self.tab.sb_snr > 2) & (self.tab.sb > 0.)
         self.popt, self.pcov = scipy.optimize.curve_fit(sersic_neq1,self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag])
         
     def linear_fit(self):
-        flag = (self.tab.sb_snr > 2)
-        self.cc = np.polyfit(self.tab.sma_arcsec[flag],np.log10(self.tab.sb_erg_sqarcsec[flag]),1)
+        flag = (self.tab.sb_snr > 2) & (self.tab.sb > 0.)
+        try:
+            self.cc = np.polyfit(self.tab.sma_arcsec[flag],np.log10(self.tab.sb_erg_sqarcsec[flag]),1)
+        except:
+            print('could not complete linear fit')
+            self.linear_fit_flag= False
+            self.cc = np.array([0,0])
         
     def plot_linear_fit(self):
         xl=np.linspace(0,np.max(self.tab.sma_arcsec),100)
@@ -149,13 +200,13 @@ class profile():
         plt.plot(xl, 10.**yl, 'k--', label='linear fit to log(I)')
         
     def plot_profiles(self):
-        flag = self.tab.sb_snr > 2.
+        flag =  (self.tab.sb > 0.)
         plt.errorbar(self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag],yerr=self.tab.sb_erg_sqarcsec_err[flag],fmt='b.', label=self.rootname,markersize=6)
         #plt.plot(self.tab.sma_arcsec, self.tab.sb_erg_sqarcsec, 'b.', label=self.rootname,markersize=6)
         plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
         self.plot_linear_fit()
         self.plot_lines()
-        y = self.tab.sb_erg_sqarcsec[flag]
+        y = self.tab.sb_erg_sqarcsec[flag & (self.tab.sb_snr > 2)]
         plt.ylim(.25*np.min(y), 2.*np.max(y))
 
         
@@ -171,28 +222,48 @@ class profile():
         OR, I can pass in sb to use.  Hmmm...
 
         Less thinking to pass in sb, so going with that for now.  :)
-        '''
 
+
+        '''
         if sb is None:
             sb = self.tab.sb_mag_sqarcsec
-            sberr =self.tab.sb_mag_sqarcsec_err
-            rad = self.tab.sma_arcsec
+            sberr = self.tab.sb_mag_sqarcsec_err
+            funca = np.min
+            funcb =  np.max
         else:
-            sb = np.flip(sb)
-            sberr = np.flip(sberr)
-            rad = np.flip(self.tab.sma_arcsec)
-        self.iso_radii = np.zeros([len(self.isophotes),2],'f') # store radius, lower and upper errors
+            funca = np.max
+            funcb = np.min
+        rad = self.tab.sma_arcsec
+        raderr = None
         # isophotal radius where sb = 24 mag/arcsec^2, for example
-        # need to flip arrays because sb is decreasing, and np.interp does not work with this        
-        self.iso_radii[:,0] = np.interp(self.isophotes,sb, rad)
-        errm = abs(self.iso_radii[:,0] - np.interp(self.isophotes,sb-sberr,rad))
-        errp = abs(self.iso_radii[:,0] - np.interp(self.isophotes,sb+sberr,rad))
-                    
-        # store errors as delta values rather than upper and lower limits
-        # use max of + and - error
-        for i in range(len(errm)):
-            #print(errm[i],errp[i])
-            self.iso_radii[i,1] = np.max([errm[i], errp[i]])
+        # need to flip arrays because sb is decreasing, and np.interp does not work with this
+        #self.iso_radii[:,0] = np.interp(self.isophotes,sb, rad)
+        #errm = abs(self.iso_radii[:,0] - np.interp(self.isophotes,sb-sberr,rad))
+        #errp = abs(self.iso_radii[:,0] - np.interp(self.isophotes,sb+sberr,rad))
+
+        # switching to spline interpolation b/c np.interp does not like DECREASING x data
+        # nor NON-MONOTONIC y data :(
+        
+
+
+        # self.iso_radii[:,0], self.iso_radii[:,1] = interpxy(sb, rad, self.isophotes, xerr=sberr,yerr=raderr)
+
+        # take 3 - just finding out where surface brightness crosses desired thresold
+        self.iso_radii = np.zeros([len(self.isophotes),2],'f')
+        for i,iphot in enumerate(self.isophotes):
+            if sum(sb > iphot) == 0:
+                print('profile does not reach sb = ',iphot)
+                continue
+            elif sum(sb < iphot) == 0:
+                print('profile does not reach sb = ',iphot)
+                continue
+            a = funca(np.where(sb > iphot))
+            b = funcb(np.where(sb < iphot))
+            if abs(a-b) > 2:
+                print('isophotal radius uncertain for isophote = ',iphot)
+                print(rad[a],rad[b])
+            self.iso_radii[i,0] = np.average([rad[a],rad[b]])
+            self.iso_radii[i,1] = np.abs((rad[a]-rad[b])/2)
 
     def get_fluxradii(self):
         # measure the radii that enclose 25, 50 and 75% of total flux
@@ -201,34 +272,44 @@ class profile():
         # set the total flux to the max of this array
         total_flux = np.max(self.tab.flux)
         self.flux_radii = np.zeros([len(self.fluxfrac),2],'f')
+        x = self.tab.flux
+        xerr = self.tab.flux_err
+        y = self.tab.sma_arcsec
+        yerr = None
 
-        # use linear interpolation to find radius that encloses XX% of total flux
-        self.flux_radii[:,0] = np.interp(self.fluxfrac*total_flux,self.tab.flux,self.tab.sma_arcsec)
-        errm = abs(self.flux_radii[:,0] - np.interp(self.fluxfrac*total_flux,self.tab.flux-self.tab.flux_err,self.tab.sma_arcsec))
-        errp = abs(self.flux_radii[:,0] - np.interp(self.fluxfrac*total_flux,self.tab.flux+self.tab.flux_err,self.tab.sma_arcsec))
-        # store errors as delta values rather than upper and lower limits
-        for i in range(len(errm)):
-            self.flux_radii[i,1] = np.max([errm[i], errp[i]])
+        self.flux_radii[:,0], self.flux_radii[:,1] = interpxy(x, y,self.fluxfrac*total_flux, xerr= xerr, yerr=yerr)
 
+        #for i,ffrac in enumerate(
     def get_isophote_mag(self, sb=None, sberr=None):
         if sb is None:
             sb = self.tab.sb_mag_sqarcsec
             sberr =self.tab.sb_mag_sqarcsec_err
-            mag = self.tab.mag
-            magerr = self.tab.mag_err
-        else:    
-            sb = np.flip(sb)
-            sberr = np.flip(sberr)
-            mag = np.flip(self.tab.mag)
-            magerr = np.flip(self.tab.mag_err)
+        mag = self.tab.mag
+        magerr = self.tab.mag_err
         
         self.iso_mag = np.zeros([len(self.isophotes),2],'f')
-        self.iso_mag[:,0] = np.interp(self.isophotes ,sb, mag)
-        errm = abs(self.iso_mag[:,0] - np.interp(self.isophotes,sb, mag-magerr))
-        errp = abs(self.iso_mag[:,0] - np.interp(self.isophotes,sb, mag+magerr))
 
-        for i in range(len(errm)):
-            self.iso_mag[i,1] = np.max([errm[i], errp[i]])
+        #self.iso_mag[:,0], self.iso_mag[:,1] = interpxy(sb, mag, xerr, self.fluxfrac*total_flux)
+        for i,iphot in enumerate(self.isophotes):
+            #print(i,iphot)
+            if sum(sb > iphot) == 0:
+                print('profile does not reach sb = ',iphot)
+                continue
+            elif sum(sb < iphot) == 0:
+                print('profile does not reach sb = ',iphot)
+                continue
+            #print(np.where(sb > iphot))
+            #print(np.where(sb < iphot))
+            a = np.min(np.where(sb > iphot))
+            b = np.max(np.where(sb < iphot))
+            if abs(a-b) > 2:
+                print('isophotal radius uncertain for isophote = ',iphot)
+            # calculate mean of magnitudes
+            m1 = mag[a]
+            m2 = mag[b]
+            self.iso_mag[i,0] = 2.5*np.log10(2) - 2.5*np.log10(10.**(-1*m1/2.5) + 10**(-1*m2/2.5))
+            self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,1] - m1), abs(self.iso_mag[i,1] - m2)]) 
+        #print('finished getting isophot mags')
 
 
 class rprofile(profile): # functions specific to r-band data
@@ -237,7 +318,7 @@ class rprofile(profile): # functions specific to r-band data
     '''
     def set_isophotes(self):
         # surface brightness isophotes for measuring radii and fluxes
-        self.isophotes = np.array([23.5, 24, 25, 26])
+        self.isophotes = np.array([24, 25, 25.5])
 
     def becky_measurements(self):
         self.set_isophotes()
@@ -272,8 +353,8 @@ class haprofile(profile): # functions specific to r-band data
     '''
     def set_isophotes(self):
         # surface brightness isophotes for measuring radii and fluxes
-        self.isophotes = np.array([-16.5, -17, -17.5]) # these are in erg/s/cm^2/arcsec^2
-        self.isophotes = 10.**self.isophotes
+        self.isophotes = np.array([5.e-17, 17.e-18]) # these are in erg/s/cm^2/arcsec^2
+        #self.isophotes = 10.**self.isophotes
     def becky_measurements(self):
         self.set_isophotes()
         self.get_isophote_rad(sb=self.tab.sb_erg_sqarcsec, sberr=self.tab.sb_erg_sqarcsec_err)
@@ -350,11 +431,15 @@ class dualprofile():
 
     def plot_both_profiles(self):
         #plt.plot(self.r.tab.sma_arcsec, self.r.sb_normalized, 'b.', label='R',markersize=6)
-        plt.errorbar(self.r.tab.sma_arcsec, self.r.sb_normalized, yerr=self.r.sb_normalized_err,fmt='b.', label='R',markersize=6)
+        plt.errorbar(self.r.tab.sma_arcsec, self.r.tab.sb_erg_sqarcsec, yerr=self.r.tab.sb_erg_sqarcsec_err,fmt='b.', label='R',markersize=6)
         #plt.plot(self.ha.tab.sma_arcsec, self.ha.sb_normalized, 'c.', label=r'$H\alpha$',markersize=6)
-        flag = self.ha.tab.sb_snr > 2
-        plt.errorbar(self.ha.tab.sma_arcsec[flag], self.ha.sb_normalized[flag], yerr=self.ha.sb_normalized_err[flag],fmt='c.', label=r'$H\alpha$',markersize=6)
+        flag = self.ha.tab.sb_erg_sqarcsec > 0.
+        # scale ha flux by 100
+        plt.errorbar(self.ha.tab.sma_arcsec[flag], 100.*self.ha.tab.sb_erg_sqarcsec[flag], yerr=100.*self.ha.tab.sb_erg_sqarcsec_err[flag],fmt='c.', label=r'$H\alpha$',markersize=6)
         plt.ylabel(r'$\rm I(r) \ / \ max(I(r))$',fontsize=12)
+        y = 100.*self.ha.tab.sb_erg_sqarcsec[flag & (self.ha.tab.sb_snr > 2)]
+        #plt.ylim(.25*np.min(y), 2.*np.max(y))
+
     def make_3panel_plot(self):
         plt.figure(figsize=(5,8))
         plt.subplots_adjust(top=.925)
@@ -392,11 +477,13 @@ if __name__ == '__main__':
     '''
     setting up for testing
     '''
-    nsaid = '18215'
-    rimage = 'MKW8-'+nsaid+'-R.fits'
-    rphot_table = 'MKW8-'+nsaid+'-R_phot.fits'
-    haimage = 'MKW8-'+nsaid+'-CS.fits'
-    haphot_table = 'MKW8-'+nsaid+'-CS_phot.fits'
+    nsaid = '18045'
+    prefix = 'NRGs27-'
+    nsaid = '110430'
+    rimage = prefix+nsaid+'-R.fits'
+    rphot_table = prefix+nsaid+'-R_phot.fits'
+    haimage = prefix+nsaid+'-CS.fits'
+    haphot_table = prefix+nsaid+'-CS_phot.fits'
     r = rprofile(rimage, rphot_table, label='R')
     r.becky_measurements()
     ha = haprofile(haimage, haphot_table, label=r"$H\alpha$")
