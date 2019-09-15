@@ -158,6 +158,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         wdrawtype.activated.connect(self.set_drawparams)
         self.wdrawtype = wdrawtype
         ui.wclear.clicked.connect(self.clear_canvas)
+        ui.clearCutoutsButton.clicked.connect(self.clear_cutouts)
         #ui.wopen.clicked.connect(self.open_file)
 
         '''
@@ -209,6 +210,10 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         self.canvas.set_drawtype(kind, **params)
     def clear_canvas(self):
         self.canvas.delete_all_objects()
+        
+    def clear_canvas(self):
+        self.rcutout.delete_all_objects()
+        self.hacutout.delete_all_objects()
         
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)
@@ -513,8 +518,8 @@ class output_table():
         f='LOG_SFR_HA'
         c1 = Column(np.zeros(len(r),'f'),name=f, unit=u.M_sun/u.yr)
         c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
-        self.table.add_column(c1)
-        self.table.add_column(c2)
+        self.table.add_columns([c1,c2])
+
         ######################################################################
         ### LAST TWO QUANTITIES, I SWEAR!
         ######################################################################        
@@ -522,17 +527,27 @@ class output_table():
         f='SSFR_IN'
         c1 = Column(np.zeros(len(r),'f'),name=f)
         c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
-        self.table.add_column(c1)
-        self.table.add_column(c2)
+        self.table.add_columns([c1,c2])
+
         f='SSFR_OUT'
         c1 = Column(np.zeros(len(r),'f'),name=f)
         c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
-        self.table.add_column(c1)
-        self.table.add_column(c2)
+        self.table.add_columns([c1,c2])
 
-        
+
+        self.add_flags()
+        self.table.add_column(Column(np.zeros(len(r),dtype='U50'), name='COMMENT'))
         print(self.table)
         self.update_gui_table()
+
+    def add_flags(self):
+        '''
+        these will come from user comments
+        '''
+        names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG']
+        for n in names:
+            c = Column(np.zeros(len(self.galid),'bool'),name=n)
+            
     def update_gui_table(self):
         self.ui.tableWidget.setColumnCount(len(self.table.columns))
         self.ui.tableWidget.setRowCount(len(self.table))
@@ -557,8 +572,10 @@ class output_table():
             for row in range(len(self.table[c])):
                 item = self.table[row][col]
                 self.ui.tableWidget.setItem(row,col,QtWidgets.QTableWidgetItem(str(item)))
-        
-        
+        try:
+            self.table['COMMENT'][self.igal] = self.commentLineEdit.text()
+        except AttributeError:
+            print('no galaxy defined yet?')
         #item = self.tableWidget.horizontalHeaderItem(0)
         #item.setText(_translate("MainWindow", "ID"))
         self.write_fits_table()
@@ -615,6 +632,7 @@ class hafunctions(Ui_MainWindow, output_table):
         self.connect_setup_menu()
         self.connect_ha_menu()
         self.connect_halpha_type_menu()
+        self.connect_comment_menu()
         #self.connect_buttons()
         #self.add_image(self.ui.gridLayout_2)
         #self.add_image(self.ui.gridLayout_2)
@@ -630,7 +648,7 @@ class hafunctions(Ui_MainWindow, output_table):
         self.ui.wmark.clicked.connect(self.find_galaxies)
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
         self.ui.makeMaskButton.clicked.connect(self.make_mask)
-        self.ui.saveCutoutsButton.clicked.connect(self.write_cutouts)
+        #self.ui.saveCutoutsButton.clicked.connect(self.write_cutouts)
         self.ui.fitEllipseGalfitButton.clicked.connect(self.galfit_ellip_phot)
         self.ui.fitEllipsePhotutilsButton.clicked.connect(self.photutils_ellip_phot)
         self.ui.wfratio.clicked.connect(self.get_filter_ratio)
@@ -759,15 +777,30 @@ class hafunctions(Ui_MainWindow, output_table):
         self.zmax=(((lmax[self.hafilter])/6563.)-1)
         self.zmin=(((lmin[self.hafilter])/6563.)-1)
     def connect_halpha_type_menu(self):
-        ha_types = ['Ha Emission','No Ha','Cont Sub Problem']
+        ha_types = ['Ha Emission','No Ha']
         for name in ha_types:
             self.ui.haTypeComboBox.addItem(str(name))
         self.ui.haTypeComboBox.activated.connect(self.set_halpha_type)
     def set_halpha_type(self,hatype):
         self.halpha_type = hatype
-        if hatype == 'Ha Emission':
-            self.haflag[self.igal]=True
-        self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
+        try:
+            if hatype == 'Ha Emission':
+                self.haflag[self.igal]=True
+                self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
+        except AttributeError:
+            print('make sure you selected a galaxy')
+    def connect_comment_menu(self):
+        comment_types = ['Cont Sub Prob','merger/tidal','scat light','asym R', 'asym Ha','fore. star', 'fore. gal','edge-on','part cov']
+        for name in comment_types:
+            self.ui.commentComboBox.addItem(str(name))
+        self.ui.commentComboBox.activated.connect(self.set_comment)
+    def set_comment(self,comment):
+        comment_types = ['Cont Sub Prob','merger/tidal','scat light','asym R', 'asym Ha','fore. star', 'fore. gal','edge-on','part cov']
+        col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG']
+        for i,c in enumerate(comment_types):
+            if comment == c:
+                self.table[col_names[i]] = True
+                self.update_gui_table_cell(self.igal,col_names[i],str(True))
 
     def set_prefix(self,prefix):
         self.prefix = prefix

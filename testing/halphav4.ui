@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1189</width>
-    <height>627</height>
+    <width>1253</width>
+    <height>711</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -90,7 +90,7 @@
              <item>
               <widget class="QPushButton" name="wfratio">
                <property name="text">
-                <string>Get Filter Ratio</string>
+                <string>Get Filt Ratio</string>
                </property>
               </widget>
              </item>
@@ -119,114 +119,9 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="1" rowspan="3">
-        <widget class="QWidget" name="cutouts" native="true">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>172</height>
-          </size>
-         </property>
-         <layout class="QGridLayout" name="cutoutsLayout">
-          <item row="0" column="0">
-           <widget class="QWidget" name="tempWidget" native="true"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QWidget" name="widget_7" native="true"/>
-       </item>
-       <item row="0" column="0">
-        <widget class="QWidget" name="widget_6" native="true"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QWidget" name="widget" native="true"/>
-       </item>
-       <item row="4" column="0" colspan="2">
-        <widget class="QTableWidget" name="tableWidget"/>
-       </item>
        <item row="3" column="1">
         <widget class="QWidget" name="rightButtons" native="true">
          <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="1">
-           <widget class="QFrame" name="frame">
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_2">
-             <item alignment="Qt::AlignHCenter">
-              <widget class="QLabel" name="ratioSliderLabel">
-               <property name="text">
-                <string>filter ratio</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSlider" name="ratioSlider">
-               <property name="mouseTracking">
-                <bool>true</bool>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="resetRatioButton">
-               <property name="text">
-                <string>Reset Filter Ratio</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QFrame" name="frame_2">
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout">
-             <item alignment="Qt::AlignHCenter">
-              <widget class="QLabel" name="cutoutSliderLabel">
-               <property name="text">
-                <string>cutout size</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSlider" name="cutoutSlider">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="resetSizeButton">
-               <property name="text">
-                <string>Reset Cutout Size</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
           <item row="1" column="1">
            <widget class="QFrame" name="frame_3">
             <property name="frameShape">
@@ -311,13 +206,6 @@
             </layout>
            </widget>
           </item>
-          <item row="5" column="2">
-           <widget class="QPushButton" name="saveButton">
-            <property name="text">
-             <string>Save Galaxy</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="2">
            <widget class="QWidget" name="widget_2" native="true">
             <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -329,16 +217,94 @@
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="saveCutoutsButton">
+              <widget class="QPushButton" name="saveButton">
                <property name="text">
-                <string>Save Cutouts</string>
+                <string>Save Galaxy</string>
                </property>
               </widget>
              </item>
             </layout>
            </widget>
           </item>
-          <item row="5" column="0" colspan="2">
+          <item row="0" column="1">
+           <widget class="QFrame" name="frame">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+             <item alignment="Qt::AlignHCenter">
+              <widget class="QLabel" name="ratioSliderLabel">
+               <property name="text">
+                <string>filter ratio</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="ratioSlider">
+               <property name="mouseTracking">
+                <bool>true</bool>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::NoFocus</enum>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="tickPosition">
+                <enum>QSlider::TicksBelow</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="resetRatioButton">
+               <property name="text">
+                <string>Reset Filter Ratio</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QFrame" name="frame_2">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout">
+             <item alignment="Qt::AlignHCenter">
+              <widget class="QLabel" name="cutoutSliderLabel">
+               <property name="text">
+                <string>cutout size</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSlider" name="cutoutSlider">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="tickPosition">
+                <enum>QSlider::TicksBelow</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="resetSizeButton">
+               <property name="text">
+                <string>Reset Cutout Size</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="3">
            <widget class="QFrame" name="frame_6">
             <property name="frameShape">
              <enum>QFrame::StyledPanel</enum>
@@ -346,10 +312,52 @@
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>COMMENTS</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="commentLineEdit"/>
+             </item>
+             <item>
+              <widget class="QComboBox" name="commentComboBox"/>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
         </widget>
+       </item>
+       <item row="0" column="1" rowspan="3">
+        <widget class="QWidget" name="cutouts" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>172</height>
+          </size>
+         </property>
+         <layout class="QGridLayout" name="cutoutsLayout">
+          <item row="0" column="0">
+           <widget class="QWidget" name="tempWidget" native="true"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QWidget" name="widget_7" native="true"/>
+       </item>
+       <item row="0" column="0">
+        <widget class="QWidget" name="widget_6" native="true"/>
+       </item>
+       <item row="2" column="0">
+        <widget class="QWidget" name="widget" native="true"/>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="QTableWidget" name="tableWidget"/>
        </item>
       </layout>
      </widget>
@@ -362,7 +370,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1189</width>
+     <width>1253</width>
      <height>22</height>
     </rect>
    </property>
