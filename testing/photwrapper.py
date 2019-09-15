@@ -90,19 +90,19 @@ class ellipse():
         # these will be ignored when defining the shape of the ellipse and when measuring the photometry
         #
         # self.mask_flag is True if a mask is provided
-        if mask != None:
+        if mask is not None:
             self.mask_image, self.mask_header = fits.getdata(mask,header=True)
             self.mask_flag = True
             self.boolmask = np.array(self.mask_image,'bool')
-            #self.masked_image = np.ma.array(self.image, mask = self.boolmask)
-            #if self.image2_flag:
-            #    self.masked_image2 = np.ma.array(self.image2, mask = self.boolmask)
+            self.masked_image = np.ma.array(self.image, mask = self.boolmask)
+            if self.image2_flag:
+                self.masked_image2 = np.ma.array(self.image2, mask = self.boolmask)
         else:
             print('not using a mask')
             self.mask_flag = False
-            #self.masked_image = self.image
-            #if self.image2_flag:
-            #    self.masked_image2 = self.image2
+            self.masked_image = self.image
+            if self.image2_flag:
+                self.masked_image2 = self.image2
         # image frame for plotting inside a gui
         # like if this is called from halphamain.py
         self.image_frame = image_frame
@@ -125,6 +125,7 @@ class ellipse():
         self.calc_sb()
         self.convert_units()
         self.get_image2_gini()
+        self.get_asymmetry()
         self.write_phot_tables()
         self.write_phot_fits_tables()
         #if self.use_mpl:
@@ -175,6 +176,7 @@ class ellipse():
         self.convert_units()
         #print('writing table')
         self.get_image2_gini()
+        self.get_asymmetry()
         self.write_phot_fits_tables(prefix='GAL_')
         #if self.use_mpl:
         #    self.draw_phot_results_mpl()
@@ -203,11 +205,13 @@ class ellipse():
         
     def get_image2_gini(self, snrcut=2):
         if self.mask_flag:
-            self.threshold2 = detect_threshold(self.image2, nsigma=snrcut, mask=self.boolmask)
+            self.threshold2 = detect_threshold(self.image2, nsigma=1.5, mask=self.boolmask)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10,mask=self.boolmask)
+            self.cat2 = source_properties(self.image2, self.segmentation2, mask=self.boolmask)
         else:
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10)
+            self.cat2 = source_properties(self.image, self.segmentation2)
 
         '''
         select pixels associated with rband image in the segmentation
@@ -218,6 +222,76 @@ class ellipse():
 
         #self.tbl = self.cat.to_table()
         self.gini2 = gini(self.image2[self.gini_pixels])
+
+    def get_asymmetry(self):
+        '''
+        goal is to measure the assymetry of the galaxy about its center
+
+
+        going to measure asymmetry from pixels in the segmentation image only, so
+
+        '''
+
+        # for pixels in segmentation image of central object
+        # (can't figure out a way to do this without looping
+        # calculate delta_x and delta_y from centroid
+
+        self.object_pixels = self.segmentation.data == self.cat.id[self.objectIndex]
+
+        xc = self.cat.xcentroid[self.objectIndex].value
+        yc = self.cat.ycentroid[self.objectIndex].value
+        row,col = np.where(self.object_pixels)
+
+        drow = np.array((row-yc),'i')
+        dcol = np.array((col-xc),'i')
+        row2 = np.array((yc -1*drow),'i')
+        col2 = np.array((xc -1*dcol),'i')
+        sum_diff = np.sum(np.abs(self.masked_image[row,col] - self.masked_image[row2,col2]))
+        # divide by the sum of the original pixel values for object
+        source_sum = np.sum(self.image[self.object_pixels])
+        
+        
+        self.asym = sum_diff/source_sum
+        print('asymmetry = ',self.asym)
+        
+        if self.image2_flag:
+            self.object_pixels2 = (self.segmentation.data == self.cat.id[self.objectIndex]) & (self.segmentation2.data > 0.)
+
+            xc = self.cat.xcentroid[self.objectIndex].value
+            yc = self.cat.ycentroid[self.objectIndex].value
+            row,col = np.where(self.object_pixels2)
+
+            drow = np.array((row-yc),'i')
+            dcol = np.array((col-xc),'i')
+            row2 = np.array((yc -1*drow),'i')
+            col2 = np.array((xc -1*dcol),'i')
+            sum_diff = np.sum(np.abs(self.masked_image2[row,col] - self.masked_image2[row2,col2]))
+            # divide by the sum of the original pixel values for object
+            source_sum = np.sum(self.image2[self.object_pixels2])
+        
+        
+            self.asym2 = sum_diff/source_sum
+            print('asymmetry2 = ',self.asym2)
+            '''
+            # use all the same images as for r-band measurement
+            self.object_pixels2 = (self.segmentation.data == self.cat.id[self.objectIndex])# & (self.segmentation2.data > 0.)
+
+            xc = self.cat.xcentroid[self.objectIndex].value
+            yc = self.cat.ycentroid[self.objectIndex].value
+            row,col = np.where(self.object_pixels2)
+
+            drow = np.array((row-yc),'i')
+            dcol = np.array((col-xc),'i')
+            row2 = np.array((yc -1*drow),'i')
+            col2 = np.array((xc -1*dcol),'i')
+            sum_diff = np.sum(np.abs(self.masked_image2[row,col] - self.masked_image2[row2,col2]))
+            # divide by the sum of the original pixel values for object
+            source_sum = np.sum(self.image2[self.object_pixels2])
+        
+        
+            self.asym2b = sum_diff/source_sum
+            print('asymmetry2 = ',self.asym2b)
+            '''
         
     def get_ellipse_guess(self, r=2.5):
         obj = self.cat[self.objectIndex]
@@ -233,7 +307,7 @@ class ellipse():
         self.sky_centroid = obj.sky_centroid
         t = obj.orientation.value
         if t < 0:
-            self.theta = np.radians(180. - t)
+            self.theta = np.radians(90. - np.degrees(obj.orientation.to(u.deg).value))
         else:
             self.theta = obj.orientation.to(u.rad).value # orientation in radians
         # EllipticalAperture gives rotation angle in radians from +x axis, CCW
@@ -294,7 +368,31 @@ class ellipse():
             for aperture in apertures:
                 aperture.plot(color='white',lw=1.5)
         plt.show()
-
+    def show_seg_aperture(self):
+        tbl1 = self.cat.to_table()
+        cat = self.cat
+        r=3.
+        apertures = []
+        for obj in cat:
+            position = np.transpose((obj.xcentroid.value, obj.ycentroid.value))
+            a = obj.semimajor_axis_sigma.value * r
+            b = obj.semiminor_axis_sigma.value * r
+            theta = obj.orientation.to(u.rad).value
+            print(theta)
+            apertures.append(EllipticalAperture(position, a, b, theta=theta))
+    
+        norm = ImageNormalize(stretch=SqrtStretch())
+        plt.figure()
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 8))
+        ax1.imshow(self.image, origin='lower', cmap='Greys_r', norm=norm)
+        ax1.set_title('Data')
+        #cmap = segm_deblend.make_cmap(random_state=12345)
+        ax2.imshow(self.segmentation.data, origin='lower')
+        ax2.set_title('Segmentation Image')
+        for aperture in apertures:
+            aperture.plot(axes=ax1, color='white', lw=1.5)
+            aperture.plot(axes=ax2, color='white', lw=1.5)
+        plt.show()
     def measure_phot(self):
         # alternative is to use ellipse from detect
         # then create apertures and measure flux
@@ -385,7 +483,7 @@ class ellipse():
             except:
                 # use 25 as default ZP if none is provided in header
                 self.uconversion2 = 3631.*10**(25/-2.5)*1.e-23*bandwidth2
-        if self.filter_ratio != None:
+        if self.filter_ratio is not None:
             if self.image2_flag:
                 self.uconversion2b = self.filter_ratio*self.uconversion1
         else:

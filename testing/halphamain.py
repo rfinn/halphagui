@@ -361,10 +361,10 @@ class output_table():
         # R-band scale factor for making continuum-subtracted image
         c11 = Column(np.zeros(len(r),'f'), name='FILTER_RATIO')
         # galfit sersic parameters from 1 comp fit
-        #c12 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC')
-        #c13 = Column(np.zeros((len(r),8),'f'), name='GALFIT_SERSIC_ERR')
-        #c14 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_SKY')
-        #c15 = Column(np.zeros(len(r)), name='GALFIT_SERSIC_CHISQ')
+        #c12 = Column(np.zeros((len(r),8),'f'), name='GAL_SERSIC')
+        #c13 = Column(np.zeros((len(r),8),'f'), name='GAL_SERSIC_ERR')
+        #c14 = Column(np.zeros(len(r)), name='GAL_SERSIC_SKY')
+        #c15 = Column(np.zeros(len(r)), name='GAL_SERSIC_CHISQ')
 
         self.table = Table([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11])
 
@@ -375,25 +375,29 @@ class output_table():
         units = ['pixel','pixel','mag','pixel',None,'deg',None]
         for f,unit in zip(fields,units):
             if unit == None:
-                c1 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f)
-                c2 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f+'_ERR')
+                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f)
+                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f, unit=unit)
-                c2 = Column(np.zeros(len(r),'f'),name='GALFIT_'+f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f, unit=unit)
+                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
 
-        c1 = Column(np.zeros(len(r),'f'),name='GALFIT_SKY')
-        c2 = Column(np.zeros(len(r),'f'),name='GALFIT_CHISQ')
-        self.table.add_column(c1)
-        self.table.add_column(c2)
+        c1 = Column(np.zeros(len(r),'f'),name='GAL_SKY')
+        c2 = Column(np.zeros(len(r),'f'),name='GAL_CHISQ')
+        c3 = Column(np.zeros(len(r),'f'), name='GAL_GINI')
+        c4 = Column(np.zeros(len(r)), name='GAL_GINI2')
+        c5 = Column(np.zeros(len(r),'f'), name='GAL_ASYM')
+        c6 = Column(np.zeros(len(r),'f'), name='GAL_ASYM2')
+
+        self.table.add_columns([c1,c2,c3,c4,c5,c6])
 
         # galfit sersic parameters from 2 comp fit
-        c16 = Column(np.zeros((len(r),15),'f'), name='GALFIT_2SERSIC')
-        c17 = Column(np.zeros((len(r),15),'f'), name='GALFIT_2SERSIC_ERR')
-        c18 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_ERROR')
-        c19 = Column(np.zeros(len(r)), name='GALFIT_2SERSIC_CHISQ')
+        c16 = Column(np.zeros((len(r),15),'f'), name='GAL_2SERSIC')
+        c17 = Column(np.zeros((len(r),15),'f'), name='GAL_2SERSIC_ERR')
+        c18 = Column(np.zeros(len(r)), name='GAL_2SERSIC_ERROR')
+        c19 = Column(np.zeros(len(r)), name='GAL_2SERSIC_CHISQ')
         self.table.add_columns([c16,c17,c18,c19])
 
 
@@ -406,11 +410,12 @@ class output_table():
         e3 = Column(np.zeros(len(r),'f'), name='ELLIP_EPS')
         e4 = Column(np.zeros(len(r),'f'), name='ELLIP_THETA', unit=u.degree)
         e5 = Column(np.zeros(len(r),'f'), name='ELLIP_GINI')
-        #e6 = Column(np.zeros(len(r)), name='ELLIP_SKYCENTROID', dtype='object')
+        e6 = Column(np.zeros(len(r)), name='ELLIP_GINI2')
         e7 = Column(np.zeros(len(r),'f'), name='ELLIP_AREA')
         e8 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM')
-        #e9 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM_ERR')
-        self.table.add_columns([e1,e2,e3,e4,e5,e7,e8])
+        e9 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM')
+        e10 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2')
+        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10])
 
         #####################################################################
         # profile fitting using galfit geometry
@@ -1141,10 +1146,10 @@ class hafunctions(Ui_MainWindow, output_table):
             elif ncomp == 2:
                 # use results from 1 component fit as input
                 try:
-                    mag = self.table['GALFIT_MAG'][self.igal]
-                    re = self.table['GALFIT_RE'][self.igal]
-                    BA = self.table['GALFIT_BA'][self.igal]
-                    PA = self.table['GALFIT_BA'][self.igal]
+                    mag = self.table['GAL_MAG'][self.igal]
+                    re = self.table['GAL_RE'][self.igal]
+                    BA = self.table['GAL_BA'][self.igal]
+                    PA = self.table['GAL_BA'][self.igal]
                 except KeyError:
                     print('WARNING!!!!')
                     print('trouble reading galfit results from data table')
@@ -1192,35 +1197,35 @@ class hafunctions(Ui_MainWindow, output_table):
             fields = ['XC','YC','MAG','RE','N','BA','PA']
             values = np.array(self.galfit.galfit_results[:-2])[:,0].tolist()
             for i,f in enumerate(fields):
-                colname = 'GALFIT_'+f
+                colname = 'GAL_'+f
                 self.table[colname][self.igal]=values[i]
             fields = ['XC','YC','MAG','RE','N','BA','PA']
             values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
             for i,f in enumerate(fields):
-                colname = 'GALFIT_'+f+'_ERR'
+                colname = 'GAL_'+f+'_ERR'
                 self.table[colname][self.igal]=values[i]
             fields = ['SKY','CHISQ']
             values = [self.galfit.galfit_results[-2],self.galfit.galfit_results[-1]]
             for i,f in enumerate(fields):
-                colname = 'GALFIT_'+f
+                colname = 'GAL_'+f
                 self.table[colname][self.igal]=values[i]
 
             self.update_gui_table()
 
             # save results to output table
-            #self.table['GALFIT_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
-            #self.table['GALFIT_SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
-            #self.table['GALFIT_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
-            #self.table['GALFIT_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
+            #self.table['GAL_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
+            #self.table['GAL_SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
+            #self.table['GAL_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
+            #self.table['GAL_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
             #print(self.table[self.igal])
 
         elif self.ncomp == 2:
             self.galfit_results2 = self.galfit.galfit_results
             #print(self.galfit_results2)
-            self.table['GALFIT_2SERSIC'][self.igal] = np.array(self.galfit_results2[:-2])[:,0]
-            self.table['GALFIT_2SERSIC_ERR'][self.igal] = np.array(self.galfit_results2[:-2])[:,1]
-            self.table['GALFIT_2SERSIC_ERROR'][self.igal] = (self.galfit_results2[-2])
-            self.table['GALFIT_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
+            self.table['GAL_2SERSIC'][self.igal] = np.array(self.galfit_results2[:-2])[:,0]
+            self.table['GAL_2SERSIC_ERR'][self.igal] = np.array(self.galfit_results2[:-2])[:,1]
+            self.table['GAL_2SERSIC_ERROR'][self.igal] = (self.galfit_results2[-2])
+            self.table['GAL_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
             #print(self.table[self.igal])
         self.update_gui_table()
         
@@ -1258,6 +1263,13 @@ class hafunctions(Ui_MainWindow, output_table):
         self.e.plot_profiles()
         #os.chdir(current_dir)
 
+        fields = ['GINI','GINI2','ASYM','ASYM2']
+        values = [self.e.gini,self.e.gini2, self.e.asym, self.e.asym2]
+        for i,f in enumerate(fields):
+            colname = 'GAL_'+f
+            self.table[colname][self.igal]=values[i]
+        self.update_gui_table()
+
 
         # fit profiles
         self.fit_profiles(prefix='GAL_')
@@ -1282,13 +1294,15 @@ class hafunctions(Ui_MainWindow, output_table):
 
         ### SAVE DATA TO TABLE
 
-        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','AREA','SUM']#,'SUM_ERR']
-        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, self.e.cat[self.e.objectIndex].source_sum_err]
+        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2','AREA','SUM','ASYM','ASYM2']#,'SUM_ERR']
+        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.gini2,self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, self.e.cat[self.e.objectIndex].source_sum_err,self.e.asym, self.e.asym2]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             self.table[colname][self.igal]=values[i]
         self.update_gui_table()
-    
+
+        # convert theta to degrees, and subtract 90 to get angle relative to y axis
+        #self.e.theta = np.degrees(self.e.theta) - 90
         # fit profiles
         self.fit_profiles()
         # save results
@@ -1317,7 +1331,7 @@ class hafunctions(Ui_MainWindow, output_table):
         # mark r24
         markcolor=color#, 'yellow', 'cyan']
         markwidth=1
-        print('inside draw_ellipse_results')
+        #print('inside draw_ellipse_results')
         image_frames = [self.rcutout, self.hacutout]
         radii = self.rfit.iso_radii[:,0][0:2]
         objlist = []
