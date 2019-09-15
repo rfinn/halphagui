@@ -386,12 +386,12 @@ class output_table():
 
         c1 = Column(np.zeros(len(r),'f'),name='GAL_SKY')
         c2 = Column(np.zeros(len(r),'f'),name='GAL_CHISQ')
-        c3 = Column(np.zeros(len(r),'f'), name='GAL_GINI')
-        c4 = Column(np.zeros(len(r)), name='GAL_GINI2')
-        c5 = Column(np.zeros(len(r),'f'), name='GAL_ASYM')
-        c6 = Column(np.zeros(len(r),'f'), name='GAL_ASYM2')
+        #c3 = Column(np.zeros(len(r),'f'), name='GAL_GINI')
+        #c4 = Column(np.zeros(len(r)), name='GAL_GINI2')
+        #c5 = Column(np.zeros(len(r),'f'), name='GAL_ASYM')
+        #c6 = Column(np.zeros(len(r),'f'), name='GAL_ASYM2')
 
-        self.table.add_columns([c1,c2,c3,c4,c5,c6])
+        self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
         # galfit sersic parameters from 2 comp fit
         c16 = Column(np.zeros((len(r),15),'f'), name='GAL_2SERSIC')
@@ -1263,13 +1263,14 @@ class hafunctions(Ui_MainWindow, output_table):
         self.e.plot_profiles()
         #os.chdir(current_dir)
 
+        '''
         fields = ['GINI','GINI2','ASYM','ASYM2']
         values = [self.e.gini,self.e.gini2, self.e.asym, self.e.asym2]
         for i,f in enumerate(fields):
             colname = 'GAL_'+f
             self.table[colname][self.igal]=values[i]
         self.update_gui_table()
-
+        '''
 
         # fit profiles
         self.fit_profiles(prefix='GAL_')
