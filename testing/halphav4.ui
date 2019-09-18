@@ -223,6 +223,13 @@
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="QPushButton" name="clearCutoutsButton">
+               <property name="text">
+                <string>Clear Cutouts</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>

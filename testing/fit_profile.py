@@ -151,9 +151,39 @@ class profile():
         else:
             self.se_flag = False
 
-        self.fit_sersic_n1()
-        self.linear_fit()
-           
+        # get petrosian quantities: petro radius, flux, R50, R90, concentration, mag
+        self.get_petro()
+        # check to see if max flux > ~10
+        # if not, skip fitting
+        if sum(self.tab.sb_snr > 2) < 4:
+
+            print('flux too low to fit profiles for image ',self.image_name)
+            self.fit_flag = False
+
+        else:
+            try:
+                self.fit_sersic_n1()
+            except TypeError:
+                print('trouble fitting exponential')
+                self.fit_flag = False
+            self.linear_fit()
+            self.fit_flag = True
+        # setting all fitted parameters to zero initially in case halpha fit fails
+    def check_fit_flag(self):
+        if not(self.fit_flag):
+            self.iso_radii = np.zeros((3,2),'f')
+            self.flux_radii = np.zeros((3,2),'f')
+            self.iso_mag = np.zeros((3,2),'f')
+            self.flux_30r24 = np.zeros(2,'f')
+            self.flux_r24 = np.zeros(2,'f')
+            self.c30 = np.zeros(2,'f')
+            self.flux_95r24 = np.zeros(2,'f')
+            if np.sum(self.tab.sb_snr > 2.) > 2 :
+                index = np.max(np.where(self.tab.sb_snr>2))
+                self.total_flux = np.array([self.tab.flux_erg[index],self.tab.flux_erg_err[index]])
+            else:
+                self.total_flux = np.array([0,0])
+
     def read_phot_file(self):
         self.radius, self.enc_flux, self.enc_flux_err, self.intensity, self.intensity_err = read_phot_file(self.phot_file)
         self.radius_arcsec = self.radius*self.pixelscale
@@ -203,11 +233,15 @@ class profile():
         flag =  (self.tab.sb > 0.)
         plt.errorbar(self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag],yerr=self.tab.sb_erg_sqarcsec_err[flag],fmt='b.', label=self.rootname,markersize=6)
         #plt.plot(self.tab.sma_arcsec, self.tab.sb_erg_sqarcsec, 'b.', label=self.rootname,markersize=6)
-        plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
-        self.plot_linear_fit()
-        self.plot_lines()
+        if self.fit_flag:
+            plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
+            self.plot_linear_fit()
+            self.plot_lines()
         y = self.tab.sb_erg_sqarcsec[flag & (self.tab.sb_snr > 2)]
-        plt.ylim(.25*np.min(y), 2.*np.max(y))
+        if len(y) < 2:
+            return
+        else:
+            plt.ylim(.25*np.min(y), 2.*np.max(y))
 
         
     def get_isophote_rad(self,sb=None, sberr=None):
@@ -326,6 +360,75 @@ class profile():
             self.iso_mag[i,0] = 2.5*np.log10(2) - 2.5*np.log10(10.**(-1*m1/2.5) + 10**(-1*m2/2.5))
             self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,1] - m1), abs(self.iso_mag[i,1] - m2)]) 
         #print('finished getting isophot mags')
+    def get_petro(self):
+        # going to work with flux in ADU so we can calculate mag from ZP that is in image header
+        mean_sb_to_radius = self.tab.flux/(np.pi*self.tab.sma_arcsec**2)
+        petro_ratio = self.tab.sb_erg_sqarcsec/mean_sb_to_radius
+        ### RAF rewrite
+        
+        totfluxl = np.interp(0.8*self.tab.sma_arcsec,self.tab.sma_arcsec,self.tab.flux)
+        totfluxu = np.interp(1.25*self.tab.sma_arcsec,self.tab.sma_arcsec,self.tab.flux)
+
+        # using np.interp could cause a problem from profiles that are noisy
+        # also b/c sb will decrease with radius - interp doesn't like that!
+        #ergsbl = np.interp(0.8*radiusarcsec,radiusarcsec,ergsb)
+        # ergsbu = np.interp(1.25*radiusarcsec,radiusarcsec,ergsb)
+
+        #ergsbl, yerr = interpxy(self.tab.sma_arcsec,self.tab.sb_erg_sqarcsec,0.8*self.tab.sma_arcsec,xerr=None,yerr=None)
+        #ergsbu, yerr = interpxy(self.tab.sma_arcsec,self.tab.sb_erg_sqarcsec,1.25*self.tab.sma_arcsec,xerr=None,yerr=None)
+
+        sb_in_annulus=(totfluxu-totfluxl)/(np.pi*(1.25**2-0.8**2)*self.tab.sma_arcsec**2)
+            
+        petro_ratio2 = sb_in_annulus/mean_sb_to_radius
+        # Petrosian Radius
+        petrorat_int=interpolate.interp1d(petro_ratio2,self.tab.sma_arcsec)
+        if (0.2 > np.max(petro_ratio2)):
+            print('WARNING: not able to measure petrosian radius')
+            print('\t probably because halpha flux is too low')
+            # no errors yet, so putting in zeros for now
+            self.petromag = np.zeros(2,'f')
+            self.petrorad = np.zeros(2,'f')
+            self.petror50 = np.zeros(2,'f')
+            self.petror90 = np.zeros(2,'f')
+            self.petrocon = np.zeros(2,'f')
+            self.petroflux_erg = np.zeros(2,'f')
+            return
+        else:
+            self.petrorad= petrorat_int(0.2)
+        print('petrosian radius = %.2f arcsec (max = %.2f)'%(self.petrorad,np.max(self.tab.sma_arcsec)))
+        twopetrorad=2*self.petrorad
+        # Petrosian Flux
+        petroflux_int=interpolate.interp1d(self.tab.sma_arcsec,self.tab.flux)
+        if twopetrorad > max(self.tab.sma_arcsec):
+            self.petroflux = np.max(self.tab.flux)
+            self.petroflux_erg = np.max(self.tab.flux_erg)
+            print('WARNING: cutout size does not extend to 2xR_petro')
+            print('\t Petro flux is unreliable for ',self.image_name)
+            self.petroflux_erg = np.array([self.petroflux_erg,self.petroflux_erg],'f')
+        else:
+            self.petroflux=petroflux_int(twopetrorad)
+            petroflux_int=interpolate.interp1d(self.tab.sma_arcsec,self.tab.flux_erg)
+            self.petroflux_erg=petroflux_int(twopetrorad)
+            self.petroflux_erg = np.array([self.petroflux_erg,0.],'f')
+        # save flux in erg/s/cm^2 for Halpha
+
+
+
+        # Petro_R90, R50
+        totalflux_petro=self.tab.flux/self.petroflux
+        
+        petr = np.array([0.5,0.9])
+        self.petroradn = np.interp(petr,totalflux_petro,self.tab.sma_arcsec)
+        self.petrocon=self.petroradn[1]/self.petroradn[0]
+        self.petromag= float(self.image_header['PHOTZP'])-2.5*np.log10(self.petroflux)
+
+        # no errors yet, so putting in zeros for now
+
+        self.petromag = np.array([self.petromag,0.],'f')
+        self.petrorad = np.array([self.petrorad,0.],'f')
+        self.petror50 = np.array([self.petroradn[0],0.],'f')
+        self.petror90 = np.array([self.petroradn[1],0.],'f')
+        self.petrocon = np.array([self.petrocon,0.],'f')
 
 
 class rprofile(profile): # functions specific to r-band data
@@ -377,16 +480,18 @@ class haprofile(profile): # functions specific to r-band data
         self.get_fluxradii()
         self.get_isophote_mag(sb=self.tab.sb_erg_sqarcsec, sberr=self.tab.sb_erg_sqarcsec_err)
         self.get_isophote_flux()
-        self.total_flux()
-    def total_flux(self):
+        self.get_total_flux()
+    def get_total_flux(self):
         '''
         sum flux for regions where sb_snr > 2
         '''
 
         # find radius where snr drops to 2
-        index = np.max(np.where(self.tab.sb_snr>2))
-        self.total_flux = np.array([self.tab.flux_erg[index],self.tab.flux_erg_err[index]])
-        
+        if sum(self.tab.sb_snr > 2) > 2:
+            index = np.max(np.where(self.tab.sb_snr>2))
+            self.total_flux = np.array([self.tab.flux_erg[index],self.tab.flux_erg_err[index]])
+        else:
+            self.total_flux = np.array([0,0])
     def get_isophote_flux(self):
         sb = self.tab.sb_erg_sqarcsec
 
@@ -497,6 +602,7 @@ if __name__ == '__main__':
     nsaid = '18045'
     prefix = 'NRGs27-'
     nsaid = '110430'
+    nsaid = '110276'
     rimage = prefix+nsaid+'-R.fits'
     rphot_table = prefix+nsaid+'-R_phot.fits'
     haimage = prefix+nsaid+'-CS.fits'

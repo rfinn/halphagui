@@ -182,7 +182,7 @@ class ellipse():
         #    self.draw_phot_results_mpl()
         #else:
         #    self.draw_phot_results()
-    def detect_objects(self, snrcut=2):
+    def detect_objects(self, snrcut=1.5):
         if self.mask_flag:
             self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=10, mask=self.boolmask)
@@ -203,9 +203,9 @@ class ellipse():
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
         #print(self.objectIndex)
         
-    def get_image2_gini(self, snrcut=2):
+    def get_image2_gini(self, snrcut=1.5):
         if self.mask_flag:
-            self.threshold2 = detect_threshold(self.image2, nsigma=1.5, mask=self.boolmask)
+            self.threshold2 = detect_threshold(self.image2, nsigma=snrcut, mask=self.boolmask)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10,mask=self.boolmask)
             self.cat2 = source_properties(self.image2, self.segmentation2, mask=self.boolmask)
         else:
@@ -242,17 +242,26 @@ class ellipse():
         yc = self.cat.ycentroid[self.objectIndex].value
         row,col = np.where(self.object_pixels)
 
-        drow = np.array((row-yc),'i')
-        dcol = np.array((col-xc),'i')
-        row2 = np.array((yc -1*drow),'i')
-        col2 = np.array((xc -1*dcol),'i')
-        sum_diff = np.sum(np.abs(self.masked_image[row,col] - self.masked_image[row2,col2]))
-        # divide by the sum of the original pixel values for object
-        source_sum = np.sum(self.image[self.object_pixels])
-        
-        
-        self.asym = sum_diff/source_sum
-        print('asymmetry = ',self.asym)
+        grid_size = 3
+        sum_diff = np.zeros((grid_size,grid_size),'f')
+        source_sum = np.zeros((grid_size,grid_size),'f')
+        for dxc in np.arange(int(-1*(grid_size/2)),int(grid_size/2)+1):
+            for dyc in np.arange(int(-1*(grid_size/2)),int(grid_size/2)+1):
+                drow = np.array((row-(yc+dyc)),'i')
+                dcol = np.array((col-(xc+dxc)),'i')
+                row2 = np.array(((yc+dyc) -1*drow),'i')
+                col2 = np.array(((xc+dxc) -1*dcol),'i')
+                sum_diff[dyc,dxc] = np.sum(np.abs(self.masked_image[row,col] - self.masked_image[row2,col2]))
+                # divide by the sum of the original pixel values for object
+                source_sum[dyc,dxc] = np.sum(self.image[self.object_pixels])
+        asym = sum_diff/source_sum
+        #print(asym)
+        self.asym = np.min(asym)
+        self.asym_err = np.std(asym)
+        r,c = np.where(asym == np.min(asym))
+        self.asym_center = np.array([r+yc,c+xc])
+
+        print('asymmetry = {:.3f}+/-{:.3f}'.format(self.asym,self.asym_err))
         
         if self.image2_flag:
             self.object_pixels2 = (self.segmentation.data == self.cat.id[self.objectIndex]) & (self.segmentation2.data > 0.)
@@ -260,18 +269,29 @@ class ellipse():
             xc = self.cat.xcentroid[self.objectIndex].value
             yc = self.cat.ycentroid[self.objectIndex].value
             row,col = np.where(self.object_pixels2)
+            sum_diff = np.zeros((grid_size,grid_size),'f')
+            source_sum = np.zeros((grid_size,grid_size),'f')
 
-            drow = np.array((row-yc),'i')
-            dcol = np.array((col-xc),'i')
-            row2 = np.array((yc -1*drow),'i')
-            col2 = np.array((xc -1*dcol),'i')
-            sum_diff = np.sum(np.abs(self.masked_image2[row,col] - self.masked_image2[row2,col2]))
-            # divide by the sum of the original pixel values for object
-            source_sum = np.sum(self.image2[self.object_pixels2])
-        
-        
-            self.asym2 = sum_diff/source_sum
-            print('asymmetry2 = ',self.asym2)
+            for dxc in np.arange(int(-1*(grid_size/2)),int(grid_size/2)+1):
+                for dyc in np.arange(int(-1*(grid_size/2)),int(grid_size/2)+1):
+                    drow = np.array((row-(yc+dyc)),'i')
+                    dcol = np.array((col-(xc+dxc)),'i')
+                    row2 = np.array(((yc+dyc) -1*drow),'i')
+                    col2 = np.array(((xc+dxc) -1*dcol),'i')
+                    sum_diff[dyc,dxc] = np.sum(np.abs(self.masked_image2[row,col] - self.masked_image2[row2,col2]))
+                    # divide by the sum of the original pixel values for object
+                    source_sum[dyc,dxc] = np.sum(self.image2[self.object_pixels2])
+            asym2 = sum_diff/source_sum
+            
+            #print(asym2)
+            # measure halpha asymmetry at pixel where R-band asymmetry is minimum
+            self.asym2 = asym2[r,c][0]
+            print(self.asym2)
+            self.asym2_err = np.std(asym2)
+            r,c = np.where(asym == np.min(asym2))
+            self.asym2_center = np.array([r+yc,c+xc])
+            #print('asymmetry2 = ',self.asym2)
+            print('asymmetry = {:.3f}+/-{:.3f}'.format(self.asym2,self.asym2_err))
             '''
             # use all the same images as for r-band measurement
             self.object_pixels2 = (self.segmentation.data == self.cat.id[self.objectIndex])# & (self.segmentation2.data > 0.)
@@ -724,6 +744,7 @@ if __name__ == '__main__':
     nsaid='18045'
     prefix = 'MKW8-'
     nsaid='110430'
+    nsaid='110276'
     prefix = 'NRGs27-'
     image = prefix+nsaid+'-R.fits'
     mask = prefix+nsaid+'-R-mask.fits'

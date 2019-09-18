@@ -158,7 +158,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         wdrawtype.activated.connect(self.set_drawparams)
         self.wdrawtype = wdrawtype
         ui.wclear.clicked.connect(self.clear_canvas)
-        ui.clearCutoutsButton.clicked.connect(self.clear_cutouts)
+
         #ui.wopen.clicked.connect(self.open_file)
 
         '''
@@ -188,7 +188,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
     def add_channel(self):
         print('adding a channel')
     def key_press_cb(self, canvas, keyname):
-        print('key pressed! ',keyname)
+        #print('key pressed! ',keyname)
         self.key_pressed.emit(keyname)
         #return self.imexam_cmd(self.canvas, keyname, data_x, data_y, func)
         
@@ -211,9 +211,6 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
     def clear_canvas(self):
         self.canvas.delete_all_objects()
         
-    def clear_canvas(self):
-        self.rcutout.delete_all_objects()
-        self.hacutout.delete_all_objects()
         
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)
@@ -349,6 +346,23 @@ class output_table():
         - becky C30
         - becky C70
         '''
+        ## define fits table output name
+        # get directory after Users - this should be username for 
+        user = os.getenv('USER')
+        today = date.today()
+        str_date_today = today.strftime('%Y-%b-%d')
+        self.output_table = 'halpha-data-'+user+'-'+str_date_today+'.fits'
+
+        ## check for existing table
+        ##
+        ## load if it exists
+        if os.path.exists(self.output_table):
+            self.table = Table(fits.getdata(self.output_table))
+        ## if not, create table
+        else:
+            self.create_table()
+        self.update_gui_table()
+    def create_table(self):
         c1 = Column(self.galid, name='NSAID',dtype=np.int32, description='NSAID')
         c2 = Column(self.gra, name='NSA_RA',dtype='f', unit=u.deg)
         c3 = Column(self.gdec, name='NSA_DEC',dtype='f', unit=u.deg)
@@ -395,9 +409,15 @@ class output_table():
         #c4 = Column(np.zeros(len(r)), name='GAL_GINI2')
         #c5 = Column(np.zeros(len(r),'f'), name='GAL_ASYM')
         #c6 = Column(np.zeros(len(r),'f'), name='GAL_ASYM2')
-
         self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
+        '''
 
+        c11 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM')
+        c12 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM_ERR')
+        c13 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM2')
+        c14 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM2_ERR')
+        self.table.add_columns([c11,c12,c13,c14])
+        '''
         # galfit sersic parameters from 2 comp fit
         c16 = Column(np.zeros((len(r),15),'f'), name='GAL_2SERSIC')
         c17 = Column(np.zeros((len(r),15),'f'), name='GAL_2SERSIC_ERR')
@@ -419,8 +439,10 @@ class output_table():
         e7 = Column(np.zeros(len(r),'f'), name='ELLIP_AREA')
         e8 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM')
         e9 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM')
-        e10 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10])
+        e10 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM_ERR')
+        e11 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2')
+        e12 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2_ERR')
+        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12])
 
         #####################################################################
         # profile fitting using galfit geometry
@@ -428,11 +450,13 @@ class output_table():
         #
         # r-band parameters
         # 
-        fields_r = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30']
+        fields_r = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
+                    'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
         units_r = [u.arcsec,u.arcsec,u.arcsec,\
                    u.arcsec,u.arcsec,u.arcsec,\
                    u.mag, u.mag, u.mag, \
-                   u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,''
+                   u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,'',\
+                   u.arcsec,u.erg/u.s/u.cm**2,u.arcsec, u.arcsec,'',u.mag
                    ]
         for f,unit in zip(fields_r,units_r):
             if unit == None:
@@ -451,12 +475,15 @@ class output_table():
                   'R_F25','R_F50','R_F75',\
                   'M16','M17', \
                   'F_30R24','F_R24','C30',\
-                  'R_F95R24','F_TOT']
+                  'R_F95R24','F_TOT',\
+                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG'
+                  ]
         units_ha = [u.arcsec,u.arcsec,\
                  u.arcsec,u.arcsec, u.arcsec, \
                  u.mag, u.mag, \
                  u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2, '',\
-                 u.arcsec,u.erg/u.s/u.cm**2]
+                 u.arcsec,u.erg/u.s/u.cm**2,\
+                 u.arcsec,u.erg/u.s/u.cm**2,u.arcsec, u.arcsec,'',u.mag]
         for f,unit in zip(fields_ha,units_ha):
             if unit == None:
                 c1 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f)
@@ -536,17 +563,20 @@ class output_table():
 
 
         self.add_flags()
+        
         self.table.add_column(Column(np.zeros(len(r),dtype='U50'), name='COMMENT'))
-        print(self.table)
-        self.update_gui_table()
+        #print(self.table)
+        
 
     def add_flags(self):
         '''
-        these will come from user comments
+        these are common comments that the user will be able to select
         '''
         names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG']
         for n in names:
+            #print(n)
             c = Column(np.zeros(len(self.galid),'bool'),name=n)
+            self.table.add_column(c)
             
     def update_gui_table(self):
         self.ui.tableWidget.setColumnCount(len(self.table.columns))
@@ -566,16 +596,16 @@ class output_table():
         item = QtWidgets.QTableWidgetItem()
         self.tableWidget.setHorizontalHeaderItem(4, item)
         '''
+        if self.igal is not None:
+            #print(self.ui.commentLineEdit.text())
+            self.table['COMMENT'][self.igal] = str(self.ui.commentLineEdit.text())
+            
         for col, c in enumerate(self.table.columns):
             #item = self.ui.tableWidget.horizontalHeaderItem(col)
             #item.setText(_translate("MainWindow", self.table.columns[col].name))
             for row in range(len(self.table[c])):
                 item = self.table[row][col]
                 self.ui.tableWidget.setItem(row,col,QtWidgets.QTableWidgetItem(str(item)))
-        try:
-            self.table['COMMENT'][self.igal] = self.commentLineEdit.text()
-        except AttributeError:
-            print('no galaxy defined yet?')
         #item = self.tableWidget.horizontalHeaderItem(0)
         #item.setText(_translate("MainWindow", "ID"))
         self.write_fits_table()
@@ -607,14 +637,9 @@ class output_table():
             print('could not match column name ',col)
         self.write_fits_table()
     def write_fits_table(self):
-        # get directory after Users - this should be username for 
-        user = os.getenv('USER')
-        today = date.today()
-        str_date_today = today.strftime('%Y-%b-%d')
-        output_table = 'halpha-data-'+user+'-'+str_date_today+'.fits'
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
-        self.table.write(output_table, format='fits', overwrite=True)
-        
+        self.table.write(self.output_table, format='fits', overwrite=True)
+
 class hafunctions(Ui_MainWindow, output_table):
 
     def __init__(self,MainWindow, logger, sepath=None, testing=False):
@@ -642,6 +667,7 @@ class hafunctions(Ui_MainWindow, output_table):
             self.sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
         else:
             self.sepath = sepath
+        self.igal = None
 
 
     def connect_buttons(self):
@@ -660,7 +686,7 @@ class hafunctions(Ui_MainWindow, output_table):
         self.ui.galfit2Button.clicked.connect(lambda: self.run_galfit(ncomp=2))
         self.ui.psfButton.clicked.connect(self.build_psf)
         self.ui.saveButton.clicked.connect(self.write_fits_table)
-
+        self.ui.clearCutoutsButton.clicked.connect(self.clear_cutouts)
         if self.testing:
             self.setup_testing()
     def setup_testing(self):
@@ -739,6 +765,9 @@ class hafunctions(Ui_MainWindow, output_table):
         self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1)
         self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1)
 
+    def clear_cutouts(self):
+        self.rcutout.canvas.delete_all_objects()
+        self.hacutout.canvas.delete_all_objects()
     def connect_setup_menu(self):
         self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
         self.ui.actionHa_coadd_2.triggered.connect(self.get_hacoadd_file)
@@ -746,13 +775,13 @@ class hafunctions(Ui_MainWindow, output_table):
     def get_rcoadd_file(self):
         fname = QtGui.QFileDialog.getOpenFileName()
         self.rcoadd_fname = fname[0]
-        print(self.rcoadd_fname)
+        #print(self.rcoadd_fname)
         self.load_rcoadd()
         #self.le.setPixmap(QPixmap(fname))
     def get_hacoadd_file(self):
         fname = QtGui.QFileDialog.getOpenFileName()
         self.hacoadd_fname = fname[0]
-        print(self.hacoadd_fname)
+        #print(self.hacoadd_fname)
         self.load_hacoadd()
         #self.le.setPixmap(QPixmap(fname))
     def getnsafile(self):
@@ -783,8 +812,9 @@ class hafunctions(Ui_MainWindow, output_table):
         self.ui.haTypeComboBox.activated.connect(self.set_halpha_type)
     def set_halpha_type(self,hatype):
         self.halpha_type = hatype
+        #print(hatype)
         try:
-            if hatype == 'Ha Emission':
+            if int(hatype) == 0:
                 self.haflag[self.igal]=True
                 self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
         except AttributeError:
@@ -795,12 +825,9 @@ class hafunctions(Ui_MainWindow, output_table):
             self.ui.commentComboBox.addItem(str(name))
         self.ui.commentComboBox.activated.connect(self.set_comment)
     def set_comment(self,comment):
-        comment_types = ['Cont Sub Prob','merger/tidal','scat light','asym R', 'asym Ha','fore. star', 'fore. gal','edge-on','part cov']
         col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG']
-        for i,c in enumerate(comment_types):
-            if comment == c:
-                self.table[col_names[i]] = True
-                self.update_gui_table_cell(self.igal,col_names[i],str(True))
+        self.table[col_names[int(comment)]][self.igal] = not(self.table[col_names[int(comment)]][self.igal])
+        self.update_gui_table_cell(self.igal,col_names[int(comment)],str(True))
 
     def set_prefix(self,prefix):
         self.prefix = prefix
@@ -860,7 +887,7 @@ class hafunctions(Ui_MainWindow, output_table):
         self.gyimage = py[keepflag]
 
         # cut down NSA catalog to keep information only for galaxies within FOV
-        self.nsa.cull_catalog(keepflag)
+        self.nsa.cull_catalog(keepflag,self.prefix)
         self.gra=self.nsa.cat.RA
         self.gdec=self.nsa.cat.DEC
         self.gradius=self.nsa.cat.SERSIC_TH50
@@ -880,11 +907,11 @@ class hafunctions(Ui_MainWindow, output_table):
             self.ui.wgalid.addItem(str(name))
         print(len(self.galid),' galaxies in FOV')
         self.ui.wgalid.activated.connect(self.select_galaxy)
-        print(len(self.nsa.cat.RA))
+        #print(len(self.nsa.cat.RA))
         
         # plot location of galaxies in the coadd image
         self.mark_galaxies()
-        self.initialize_output_arrays()
+        #self.initialize_output_arrays()
         # set up the output table that will store results from various fits
         self.initialize_results_table()
     def mark_galaxies(self):
@@ -953,6 +980,7 @@ class hafunctions(Ui_MainWindow, output_table):
         self.subtract_images()
         self.setup_ratio_slider()
         self.clean_links()
+        self.table['FILTER_RATIO'] = self.filter_ratio*np.ones(len(self.galid),'f')
     def subtract_images(self):
         self.halpha_cs = self.ha - self.filter_ratio*self.r
         # display continuum subtracted Halpha image in the large frame        
@@ -1013,7 +1041,8 @@ class hafunctions(Ui_MainWindow, output_table):
         # when galaxy is selected from list, trigger
         # cutout imaages
 
-        size = 18*self.gradius[self.igal]
+        # scale cutout size according to NSA Re
+        size = 16*self.gradius[self.igal]/self.pixel_scale
         # set the min size to 100x100 pixels (43"x43")
         size = max(100,size)
         print('new cutout size = ',size, self.igal, self.gradius[self.igal])
@@ -1275,7 +1304,7 @@ class hafunctions(Ui_MainWindow, output_table):
 
         try:
             xc,yc,mag,re,n,BA,pa = np.array(self.galfit.galfit_results[:-3])[:,0].tolist()
-            print('GALFIT PA = ',xc,yc,mag,re,n,BA,pa )
+            #print('GALFIT PA = ',xc,yc,mag,re,n,BA,pa )
         except AttributeError:
             print('Warning - galfit 1 comp fit results not found!')
             print('Make sure you run galfit, then try again.')
@@ -1297,8 +1326,8 @@ class hafunctions(Ui_MainWindow, output_table):
         #os.chdir(current_dir)
 
         '''
-        fields = ['GINI','GINI2','ASYM','ASYM2']
-        values = [self.e.gini,self.e.gini2, self.e.asym, self.e.asym2]
+        fields = ['ASYM','ASYM_ERR','ASYM2','ASYM2_ERR']
+        values = [self.e.asym, self.e.asym_err, self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
             colname = 'GAL_'+f
             self.table[colname][self.igal]=values[i]
@@ -1328,11 +1357,15 @@ class hafunctions(Ui_MainWindow, output_table):
 
         ### SAVE DATA TO TABLE
 
-        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2','AREA','SUM','ASYM','ASYM2']#,'SUM_ERR']
-        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.gini2,self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, self.e.cat[self.e.objectIndex].source_sum_err,self.e.asym, self.e.asym2]
+        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
+                  'AREA','SUM',\
+                  'ASYM','ASYM_ERR','ASYM2','ASYM2_ERR']#,'SUM_ERR']
+        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.gini2,\
+                  self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, \
+                  self.e.asym, self.e.asym_err, self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
-            self.table[colname][self.igal]=values[i]
+            self.table[colname][self.igal]=float('%.2e'%(values[i]))
         self.update_gui_table()
 
         # convert theta to degrees, and subtract 90 to get angle relative to y axis
@@ -1356,8 +1389,9 @@ class hafunctions(Ui_MainWindow, output_table):
         self.rfit = rprofile(self.cutout_name_r, rphot_table, label='R')
         self.rfit.becky_measurements()
         self.hafit = haprofile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
-        self.hafit.becky_measurements()
-        self.hafit.get_r24_stuff(self.rfit.iso_radii[self.rfit.isophotes == 24.][0][0])
+        if self.hafit.fit_flag:
+            self.hafit.becky_measurements()
+            self.hafit.get_r24_stuff(self.rfit.iso_radii[self.rfit.isophotes == 24.][0][0])
         both = dualprofile(self.rfit,self.hafit)
         both.make_3panel_plot()
         
@@ -1386,27 +1420,32 @@ class hafunctions(Ui_MainWindow, output_table):
         
         
     def write_profile_fits(self,prefix=None):
-        fields = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30']
+        fields = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
+                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
         d = self.rfit
         values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],\
                   d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
                   d.iso_mag[0],d.iso_mag[1],d.iso_mag[2],\
-                  d.flux_30r24,d.flux_r24,d.c30
+                  d.flux_30r24,d.flux_r24,d.c30,\
+                  d.petrorad,d.petroflux_erg,d.petror50,d.petror90,d.petrocon,d.petromag
                   ]
         for i,f in enumerate(fields):
             if prefix is None:
                 colname = f
             else:
                 colname = prefix+f
-            self.table[colname][self.igal]=values[i][0]
-            self.table[colname+'_ERR'][self.igal]=values[i][1]
+            #print(colname, values[i])
+            self.table[colname][self.igal]=float('%.2e'%(values[i][0]))
+            self.table[colname+'_ERR'][self.igal]=float('%.2e'%(values[i][1]))
             
-        fields = ['R16','R17','R_F25','R_F50','R_F75','M16','M17','F_30R24','F_R24','C30','R_F95R24','F_TOT']
+        fields = ['R16','R17','R_F25','R_F50','R_F75','M16','M17','F_30R24','F_R24','C30','R_F95R24','F_TOT',\
+                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
         d = self.hafit
         values = [d.iso_radii[0],d.iso_radii[1],\
                   d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
                   d.iso_mag[0],d.iso_mag[1],\
-                  d.flux_30r24,d.flux_r24,d.c30,d.flux_95r24, d.total_flux
+                  d.flux_30r24,d.flux_r24,d.c30,d.flux_95r24, d.total_flux,\
+                  d.petrorad,d.petroflux_erg,d.petror50,d.petror90,d.petrocon,d.petromag
                   ]
         for i,f in enumerate(fields):
             if prefix is None:
@@ -1415,14 +1454,14 @@ class hafunctions(Ui_MainWindow, output_table):
                 colname = prefix+'H'+f
 
             #print(colname,values[i])
-            self.table[colname][self.igal]=float('{:.3e}'.format(values[i][0]))
-            self.table[colname+'_ERR'][self.igal]=float('{:.3e}'.format(values[i][1]))
+            self.table[colname][self.igal]=float('{:.2e}'.format(values[i][0]))
+            self.table[colname+'_ERR'][self.igal]=float('{:.2e}'.format(values[i][1]))
 
         # SFR conversion from Kennicutt and Evans (2012)
         # log (dM/dt/Msun/yr) = log(Lx) - logCx
         logCx = 41.27
         L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.nsa.cat.ZDIST[self.igal]).cgs.value**2)
-        print(L)
+        #print(L)
         self.sfr = np.log10(L) - logCx
         if prefix is None:
             colname='LOG_SFR_HA'
@@ -1430,8 +1469,8 @@ class hafunctions(Ui_MainWindow, output_table):
             colname=prefix+'LOG_SFR_HA'
         print('sfr = ',self.sfr)
         print(self.sfr[0], self.sfr[1])
-        self.table[colname][self.igal]=float('%.3e'%(self.sfr[0]))
-        self.table[colname+'_ERR'][self.igal]=float('%.3e'%(self.sfr[1]))
+        self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
+        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
 
         # inner ssfr
         a = self.hafit.flux_30r24
@@ -1442,8 +1481,8 @@ class hafunctions(Ui_MainWindow, output_table):
             colname='SSFR_IN'
         else:
             colname = prefix+'SSFR_IN'
-        self.table[colname][self.igal]=float('%.3e'%(self.inner_ssfr))
-        self.table[colname+'_ERR'][self.igal]=float('%.3e'%(self.inner_ssfr_err))
+        self.table[colname][self.igal]=float('%.2e'%(self.inner_ssfr))
+        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.inner_ssfr_err))
         # outer ssfr
         c = self.hafit.flux_r24
         d = self.rfit.flux_r24
@@ -1453,8 +1492,8 @@ class hafunctions(Ui_MainWindow, output_table):
             colname='SSFR_OUT'
         else:
             colname=prefix+'SSFR_OUT'
-        self.table[colname][self.igal]=float('%.3e'%(self.outer_ssfr))
-        self.table[colname+'_ERR'][self.igal]=float('%.3e'%(self.outer_ssfr_err))
+        self.table[colname][self.igal]=float('%.2e'%(self.outer_ssfr))
+        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.outer_ssfr_err))
         
         
         self.update_gui_table()
@@ -1472,10 +1511,11 @@ class galaxy_catalog():
     def __init__(self,catalog):
         self.cat = fits.getdata(catalog)
 
-    def cull_catalog(self, keepflag):
+    def cull_catalog(self, keepflag,prefix):
         self.cat = self.cat[keepflag]
         self.rmag = 22.5 - 2.5*np.log10(self.cat.NMGY[:,4])
-
+        outfile = prefix+'_nsa.fits'
+        fits.writeto(outfile,self.cat, overwrite=True)
         
 if __name__ == "__main__":
     catalog = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
