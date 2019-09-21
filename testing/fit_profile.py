@@ -437,7 +437,8 @@ class rprofile(profile): # functions specific to r-band data
     '''
     def set_isophotes(self):
         # surface brightness isophotes for measuring radii and fluxes
-        self.isophotes = np.array([24, 25, 25.5])
+        # add two additional apertures to get r24_vega and r25_vega
+        self.isophotes = np.array([24, 25, 25.5, 24.16, 25.16])
 
     def becky_measurements(self):
         self.set_isophotes()

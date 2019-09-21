@@ -109,6 +109,7 @@ def sfr():
             plt.plot(x[xvars[i]],np.log10(y[yvars2[i]]),'cs', label='GALFIT')
         plt.xlabel(xvars[i])
         plt.ylabel(yvars[i])
+        plt.legend()
         x1,x2 = plt.xlim()
         xl = np.linspace(x1,x2,100)
         plt.legend()
@@ -132,6 +133,7 @@ def morphology():
             plt.plot(x[xvars[i]],y[yvars[i]],'bo')
         plt.xlabel(xvars[i])
         plt.ylabel(yvars[i])
+        #plt.legend()
         x1,x2 = plt.xlim()
         xl = np.linspace(x1,x2,100)
         #plt.plot(xl,xl,'k--')
@@ -143,7 +145,7 @@ def size():
     xvars = ['r24','r25','r26','halfr_1','rad17','halfr_2']
     x = mdat
     y = sdat
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10,8))
     plt.subplots_adjust(hspace=.5,wspace=.35)
     for i in range(len(xvars)):
         plt.subplot(2,3,i+1)
@@ -157,6 +159,7 @@ def size():
         plt.xlabel(xvars[i])
         plt.ylabel(yvars[i])
         x1,x2 = plt.xlim()
+        plt.legend()
         xl = np.linspace(x1,x2,100)
 
         plt.plot(xl,xl,'k--')
@@ -176,7 +179,7 @@ def oldsize():
 def mag():
     ####  SIZE
     yvars = ['M24','M25','HM17','HF_30R24']
-    yvars2 = ['GAL_M24','GAL_M25','GAL_HM17','GAL_F_30R24']    
+    yvars2 = ['GAL_M24','GAL_M25','GAL_HM17','GAL_HF_30R24']    
 
     xvars = ['mag24','mag25','tot17flux','tot30r24flux,']
     x = mdat
@@ -185,18 +188,24 @@ def mag():
     plt.subplots_adjust(hspace=.5,wspace=.35)
     for i in range(len(xvars)):
         plt.subplot(2,2,i+1)
-        if (i == 3) or (i == 5):
+        if (i == 5):
             plt.plot(x[xvars[i]],y[yvars[i]]/y[yvars[0]],'bo',label='PHOTUTILS')
             plt.plot(x[xvars[i]],y[yvars2[i]]/y[yvars2[0]],'cs',label='GALFIT')
+        elif i == 3:
+            plt.plot(x[xvars[i]]*1.e-18,y[yvars[i]],'bo',label='PHOTUTILS')
+            plt.plot(x[xvars[i]]*1.e-18,y[yvars2[i]],'cs',label='GALFIT')
+            plt.gca().set_xscale('log')
+            plt.gca().set_yscale('log')
+
         else:
             plt.plot(x[xvars[i]],y[yvars[i]],'bo',label='PHOTUTILS')
             plt.plot(x[xvars[i]],y[yvars2[i]],'cs',label='GALFIT')
-            
         plt.xlabel(xvars[i])
         plt.ylabel(yvars[i])
         x1,x2 = plt.xlim()
+        plt.legend()
         xl = np.linspace(x1,x2,100)
-        if i < 2:
+        if (i < 2) | (i==3):
             plt.plot(xl,xl,'k--')
         
             plt.ylim(x1,x2)
@@ -204,12 +213,12 @@ def mag():
             plt.gca().set_xscale('log')
         #else:
         #    plt.ylim(x1,1.3*x2)
-def shape():
+def concentration():
     # this is a mess
-    yvars = ['C30','M25','HM17','HF_30R24']
-    yvars2 = ['GAL_M24','GAL_M25','GAL_HM17','GAL_F_30R24']    
+    yvars = ['C30','HC30']
+    yvars2 = ['GAL_C30','GAL_HC30']
 
-    xvars = ['c30']
+    xvars = ['c30','conc30,']
     x = mdat
     y = sdat
     plt.figure(figsize=(8,6))
@@ -226,11 +235,12 @@ def shape():
         plt.xlabel(xvars[i])
         plt.ylabel(yvars[i])
         x1,x2 = plt.xlim()
+        plt.legend()
         xl = np.linspace(x1,x2,100)
         if i < 2:
             plt.plot(xl,xl,'k--')
         
-            plt.ylim(x1,x2)
+            #plt.ylim(x1,x2)
         elif i == 2:
             plt.gca().set_xscale('log')
         #else:

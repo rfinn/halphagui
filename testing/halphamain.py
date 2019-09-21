@@ -71,6 +71,8 @@ if len(macos_ver) > 0:
     matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 
+# default size for cutouts, multiple of NSA PETROTH90
+cutout_scale = 16
 
 class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
     key_pressed = QtCore.pyqtSignal(str)
@@ -190,7 +192,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
     def key_press_cb(self, canvas, keyname):
         #print('key pressed! ',keyname)
         self.key_pressed.emit(keyname)
-        #return self.imexam_cmd(self.canvas, keyname, data_x, data_y, func)
+        
         
     def set_drawparams(self, kind):
         index = self.wdrawtype.currentIndex()
@@ -224,7 +226,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         self.coadd_filename = filepath
 
     def open_file(self):
-        res = QtGui.QFileDialog.getOpenFileName(self, "Open FITS file",
+        res = QtWidgets.QFileDialog.getOpenFileName(self, "Open FITS file",
                                                 ".", "FITS files (*.fits)")
         if isinstance(res, tuple):
             fileName = res[0]
@@ -310,6 +312,8 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
                       fill=False)
         ax.add_patch(r)
 
+
+        
 class output_table():
     def initialize_results_table(self):
         '''
@@ -405,11 +409,14 @@ class output_table():
 
         c1 = Column(np.zeros(len(r),'f'),name='GAL_SKY')
         c2 = Column(np.zeros(len(r),'f'),name='GAL_CHISQ')
+        c3 = Column(np.zeros(len(r),'f'),name='GAL_RA', unit=u.deg)
+        c4 = Column(np.zeros(len(r),'f'),name='GAL_DEC', unit=u.deg)
         #c3 = Column(np.zeros(len(r),'f'), name='GAL_GINI')
         #c4 = Column(np.zeros(len(r)), name='GAL_GINI2')
         #c5 = Column(np.zeros(len(r),'f'), name='GAL_ASYM')
         #c6 = Column(np.zeros(len(r),'f'), name='GAL_ASYM2')
-        self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
+        self.table.add_columns([c1,c2,c3,c4])#,c3,c4,c5,c6])
+
         '''
 
         c11 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM')
@@ -442,7 +449,9 @@ class output_table():
         e10 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM_ERR')
         e11 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2')
         e12 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2_ERR')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12])
+        e13 = Column(np.zeros(len(r),'f'), name='ELLIP_RA', unit=u.degree)
+        e14 = Column(np.zeros(len(r),'f'), name='ELLIP_DEC', unit=u.degree)
+        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13, e14])
 
         #####################################################################
         # profile fitting using galfit geometry
@@ -450,9 +459,9 @@ class output_table():
         #
         # r-band parameters
         # 
-        fields_r = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
+        fields_r = ['R24','R25','R26','R_F25','R24V','R25V','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
                     'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
-        units_r = [u.arcsec,u.arcsec,u.arcsec,\
+        units_r = [u.arcsec,u.arcsec,u.arcsec,u.arcsec,u.arcsec,\
                    u.arcsec,u.arcsec,u.arcsec,\
                    u.mag, u.mag, u.mag, \
                    u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,'',\
@@ -637,17 +646,61 @@ class output_table():
             print('could not match column name ',col)
         self.write_fits_table()
     def write_fits_table(self):
+        if self.igal is not None:
+            #print(self.ui.commentLineEdit.text())
+            t = str(self.ui.commentLineEdit.text())
+            if len(t) > 1:
+                self.table['COMMENT'][self.igal] = t
+                self.update_gui_table_cell(self.igal, 'COMMENT',t)
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
         self.table.write(self.output_table, format='fits', overwrite=True)
 
-class hafunctions(Ui_MainWindow, output_table):
+class uco_table():
+    '''
+    table for collecting positions of objects that are not in NSA or AGC catalogs
+    '''
+    def initialize_uco_arrays(self):
+        # columns: id, x, y, ra, dec
+        user = os.getenv('USER')
+        today = date.today()
+        str_date_today = today.strftime('%Y-%b-%d')
+        self.uco_output_table = 'halpha-uco-data-'+user+'-'+str_date_today+'.fits'
+        if os.path.exists(self.uco_output_table):
+            self.uco_table = Table(fits.getdata(self.uco_output_table))
+            self.uco_id = self.uco_table['ID'].tolist()
+            self.uco_ra = self.uco_table['RA'].tolist()
+            self.uco_dec = self.uco_table['DEC'].tolist()
+            self.uco_x = self.uco_table['X'].tolist()
+            self.uco_y = self.uco_table['Y'].tolist()
+
+        ## if not, create table
+        else:
+            
+            self.uco_id = []
+            self.uco_ra = []
+            self.uco_dec = []
+            self.uco_x = []
+            self.uco_y = []
+    def create_uco_table(self):
+        c1 = Column(np.array(self.uco_id), name='ID',dtype=np.int32, description='ID')
+        c2 = Column(np.array(self.uco_ra), name='RA',dtype='f', unit=u.deg)
+        c3 = Column(np.array(self.uco_dec), name='DEC',dtype='f', unit=u.deg)
+        c4 = Column(np.array(self.uco_x), name='X',dtype='f', unit=u.pixel)
+        c5 = Column(np.array(self.uco_y), name='Y',dtype='f', unit=u.pixel)
+        self.uco_table = Table([c1,c2,c3,c4,c5])
+    def write_uco_table(self):
+        self.create_uco_table()
+
+        self.uco_table.write(self.uco_output_table, format='fits',overwrite=True)
+
+class hafunctions(Ui_MainWindow, output_table, uco_table):
 
     def __init__(self,MainWindow, logger, sepath=None, testing=False):
         super(hafunctions, self).__init__()
         #print(MainWindow)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(MainWindow)
-        self.prefix='none'
+        self.prefix= None
         self.testing = testing
         self.logger = logger
         self.drawcolors = colors.get_colors()
@@ -668,8 +721,7 @@ class hafunctions(Ui_MainWindow, output_table):
         else:
             self.sepath = sepath
         self.igal = None
-
-
+        self.initialize_uco_arrays()
     def connect_buttons(self):
         self.ui.wmark.clicked.connect(self.find_galaxies)
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
@@ -694,25 +746,28 @@ class hafunctions(Ui_MainWindow, output_table):
         
         
         self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
-        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
-        self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
-        self.haweight_flag = True
+        self.load_hacoadd()
+        #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
+        #self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        #self.haweight_flag = True
         self.rcoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_R.coadd.fits'
         self.rcoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
-        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
-        self.rweight_flag = True
-        self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        #self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        self.load_rcoadd()
+        #self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        #self.rweight_flag = True
+        #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         self.nsa_fname = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname)
-        self.coadd.load_file(self.rcoadd_fname)
+        #self.coadd.load_file(self.rcoadd_fname)
         self.filter_ratio = 0.0416
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
         self.subtract_images()
         self.setup_ratio_slider()
-        self.cutout_size = 100
+        self.global_min_cutout_size = 100
+        self.global_max_cutout_size = 250
         self.setup_cutout_slider()
 
     def load_rcoadd(self):
@@ -732,7 +787,8 @@ class hafunctions(Ui_MainWindow, output_table):
             self.rweight_flag = True
         else:
             self.rweight_flag = False
-                                                        
+
+        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
     def load_hacoadd(self):
         self.coadd.load_file(self.hacoadd_fname)
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
@@ -753,8 +809,8 @@ class hafunctions(Ui_MainWindow, output_table):
 
     def add_cutout_frames(self):
         # r-band cutout
-        a = QtWidgets.QLabel('r-band')
-        self.ui.cutoutsLayout.addWidget(a, 0, 0, 1, 1)
+        self.rcutout_label = QtWidgets.QLabel('r-band')
+        self.ui.cutoutsLayout.addWidget(self.rcutout_label, 0, 0, 1, 1)
         a = QtWidgets.QLabel('CS Halpha')
         self.ui.cutoutsLayout.addWidget(a, 0, 1, 1, 1)
         a = QtWidgets.QLabel('Mask')
@@ -773,21 +829,31 @@ class hafunctions(Ui_MainWindow, output_table):
         self.ui.actionHa_coadd_2.triggered.connect(self.get_hacoadd_file)
         self.ui.actionNSA_catalog_path.triggered.connect(self.getnsafile)
     def get_rcoadd_file(self):
-        fname = QtGui.QFileDialog.getOpenFileName()
-        self.rcoadd_fname = fname[0]
-        #print(self.rcoadd_fname)
-        self.load_rcoadd()
-        #self.le.setPixmap(QPixmap(fname))
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            self.rcoadd_fname = fname[0]
+            #print(self.rcoadd_fname)
+            self.load_rcoadd()
+            #self.le.setPixmap(QPixmap(fname))
     def get_hacoadd_file(self):
-        fname = QtGui.QFileDialog.getOpenFileName()
-        self.hacoadd_fname = fname[0]
-        #print(self.hacoadd_fname)
-        self.load_hacoadd()
-        #self.le.setPixmap(QPixmap(fname))
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            
+            self.hacoadd_fname = fname[0]
+            #print(self.hacoadd_fname)
+            self.load_hacoadd()
+            #self.le.setPixmap(QPixmap(fname))
     def getnsafile(self):
-        fname = QtGui.QFileDialog.getOpenFileName()
-        self.nsa_fname = fname[0]
-        self.nsa = galaxy_catalog(self.nsa_fname)
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            self.nsa_fname = fname[0]
+            self.nsa = galaxy_catalog(self.nsa_fname)
         #self.le.setPixmap(QPixmap(fname))
 		
     def connect_ha_menu(self):
@@ -852,8 +918,8 @@ class hafunctions(Ui_MainWindow, output_table):
         n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
         n4,n3 = self.ha.data.shape 
     
-        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
-        px,py = self.coadd_wcs.wcs_world2pix(self.nsa.cat.RA,self.nsa.cat.DEC,1)
+
+        px,py = self.coadd_wcs.wcs_world2pix(self.nsa.cat.RA,self.nsa.cat.DEC,0)
         onimageflag=(px < n1) & (px >0) & (py < n2) & (py > 0)
         try:
             zFlag = (self.nsa.cat.Z > self.zmin) & (self.nsa.cat.Z < self.zmax)
@@ -923,11 +989,16 @@ class hafunctions(Ui_MainWindow, output_table):
         objlist = []
         markcolor='cyan'
         markwidth=1
+        size = cutout_scale*self.nsa.cat.PETROTH50
+        size[size > self.global_max_cutout_size] = self.global_max_cutout_size
+        size[size < self.global_min_cutout_size] = self.global_min_cutout_size
+        
         for i,x in enumerate(self.gximage):
             obj = self.coadd.dc.Box(
-                x=x, y=self.gyimage[i], xradius=8*self.gradius[i], yradius=8*self.gradius[i], color=markcolor,
-                linewidth=markwidth)
-            glabel = self.coadd.dc.Text(x-4*self.gradius[i],self.gyimage[i]+8.5*self.gradius[i],str(self.galid[i]), color=markcolor)
+                x=x, y=self.gyimage[i], xradius=size[i],\
+                yradius=size[i], color=markcolor, linewidth=markwidth)
+            glabel = self.coadd.dc.Text(x-4*self.gradius[i],self.gyimage[i]+8.5*self.gradius[i],\
+                                        str(self.galid[i]), color=markcolor)
             objlist.append(obj)
             objlist.append(glabel)
         self.markhltag = self.coadd.canvas.add(self.coadd.dc.CompoundObject(*objlist))
@@ -986,6 +1057,7 @@ class hafunctions(Ui_MainWindow, output_table):
         # display continuum subtracted Halpha image in the large frame        
         self.coadd.fitsimage.set_data(self.halpha_cs)
     def key_press_func(self,key):
+        print(key)
         if key == 'r':
             z = self.coadd.fitsimage.settings.get_setting('zoomlevel')
             print('zoom = ',z)
@@ -997,7 +1069,48 @@ class hafunctions(Ui_MainWindow, output_table):
             self.coadd.fitsimage.panset_xy(p.value[0],p.value[1])
             self.coadd.canvas.redraw()
         elif key == 'h':
-            self.coadd.fitsimage.set_data(self.halpha_cs)
+            try:
+                self.coadd.fitsimage.set_data(self.halpha_cs)
+            except AttributeError:
+                print('no continuum subtracted image yet - get filter ratio')
+                self.coadd.fitsimage.set_data(self.ha)
+        elif key == 'u': # unidentified object!
+            x,y = self.coadd.fitsimage.get_last_data_xy()
+            x = float(x)
+            y = float(y)
+            self.uco_x.append(x)
+            self.uco_y.append(y)
+            ra,dec = self.coadd_wcs.wcs_pix2world(x,y,0)
+            self.uco_ra.append(ra)
+            self.uco_dec.append(dec)
+            if len(self.uco_id) == 0:
+                self.uco_id.append(1)
+            else:
+                self.uco_id.append(np.max(self.uco_id)+1)
+            self.write_uco_table()
+        elif key == 'down':
+            '''
+            up arrow will go to previous galaxy in the list
+            '''
+            print(self.igal)
+            if self.igal == (len(self.gra)-1):
+                self.igal = 0
+            else:
+                self.igal += 1
+                self.ui.wgalid.setCurrentIndex(self.igal)
+                self.select_galaxy(self.igal)
+            print(self.igal)
+        elif key == 'up':
+            '''
+            down arrow will go to previous galaxy in the list
+            '''
+            if self.igal == 0: 
+                self.igal = len(self.gra)-1
+            else:
+                self.igal -= 1
+                self.ui.wgalid.setCurrentIndex(self.igal)
+                self.select_galaxy(self.igal)
+
     def setup_ratio_slider(self):
         self.ui.ratioSlider.setRange(0,100)
         self.ui.ratioSlider.setValue(50)
@@ -1033,18 +1146,26 @@ class hafunctions(Ui_MainWindow, output_table):
         except:
             print('Trouble plotting cutouts')
             print('make sure galaxy is selected')
-            
+    def clear_comment_field(self):
+        self.ui.commentLineEdit.clear()
     def select_galaxy(self,id):
+
         print('selecting a galaxy')
         self.igal = self.ui.wgalid.currentIndex()
+        self.rcutout_label.setText('r-band '+str(self.nsa.cat.NSAID[self.igal]))
+        self.rcutout_label.show()
+                                   
+                                   
         print('active galaxy = ',self.igal)
         # when galaxy is selected from list, trigger
         # cutout imaages
 
         # scale cutout size according to NSA Re
-        size = 16*self.gradius[self.igal]/self.pixel_scale
+        size = cutout_scale*self.nsa.cat.PETROTH50[self.igal]/self.pixel_scale
         # set the min size to 100x100 pixels (43"x43")
-        size = max(100,size)
+        size = max(self.global_min_cutout_size,size)
+        if size > self.global_max_cutout_size:
+            size = self.global_max_cutout_size
         print('new cutout size = ',size, self.igal, self.gradius[self.igal])
         self.reset_size = size
         self.cutout_size = u.Quantity((size, size), u.arcsec)
@@ -1057,12 +1178,13 @@ class hafunctions(Ui_MainWindow, output_table):
         # first pass of mask
         # radial profiles
         # save latest of mask
-        try:
-            self.cutout_name_r = self.prefix+'-'+str(self.galid[self.igal])+'-R.fits'
-            self.cutout_name_ha = self.prefix+'-'+str(self.galid[self.igal])+'-CS.fits'
-        except:
+        if self.prefix is None:
             self.cutout_name_r = str(self.galid[self.igal])+'-R.fits'
             self.cutout_name_ha =str(self.galid[self.igal])+'-CS.fits'
+        else:
+            self.cutout_name_r = self.prefix+'-'+str(self.galid[self.igal])+'-R.fits'
+            self.cutout_name_ha = self.prefix+'-'+str(self.galid[self.igal])+'-CS.fits'
+
         self.rcutout.canvas.delete_all_objects()
         self.hacutout.canvas.delete_all_objects()
 
@@ -1073,7 +1195,7 @@ class hafunctions(Ui_MainWindow, output_table):
         else:
             # clear mask frame
             self.maskcutout.fitsimage.clear()
-            
+        self.clear_comment_field()            
     def display_cutouts(self):
         position = SkyCoord(ra=self.gra[self.igal],dec=self.gdec[self.igal],unit='deg')
         
@@ -1271,7 +1393,10 @@ class hafunctions(Ui_MainWindow, output_table):
             for i,f in enumerate(fields):
                 colname = 'GAL_'+f
                 self.table[colname][self.igal]=values[i]
-
+            wcs = WCS(self.cutout_name_r)
+            ra,dec = wcs.wcs_pix2world(self.galfit.galfit_results[0][0],self.galfit.galfit_results[1][0],0)
+            self.table['GAL_RA'][self.igal]=ra
+            self.table['GAL_DEC'][self.igal]=dec
             self.update_gui_table()
 
             # save results to output table
@@ -1366,6 +1491,10 @@ class hafunctions(Ui_MainWindow, output_table):
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             self.table[colname][self.igal]=float('%.2e'%(values[i]))
+        wcs = WCS(self.cutout_name_r)
+        ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
+        self.table['ELLIP_RA'][self.igal]=ra
+        self.table['ELLIP_DEC'][self.igal]=dec
         self.update_gui_table()
 
         # convert theta to degrees, and subtract 90 to get angle relative to y axis
@@ -1420,10 +1549,10 @@ class hafunctions(Ui_MainWindow, output_table):
         
         
     def write_profile_fits(self,prefix=None):
-        fields = ['R24','R25','R26','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
+        fields = ['R24','R25','R26','R24V','R25V','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
                   'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
         d = self.rfit
-        values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],\
+        values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],d.iso_radii[3],d.iso_radii[4],\
                   d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
                   d.iso_mag[0],d.iso_mag[1],d.iso_mag[2],\
                   d.flux_30r24,d.flux_r24,d.c30,\
@@ -1520,11 +1649,15 @@ class galaxy_catalog():
 if __name__ == "__main__":
     catalog = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
     #gcat = galaxy_catalog(catalog)
+    print(sys.argv)
     logger = log.get_logger("example1", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
-    ui = hafunctions(MainWindow, logger, sepath = sepath, testing=True)
+    if int(sys.argv[1]) == 0:
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=False)
+    else:
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=True)
     #ui.setupUi(MainWindow)
     #ui.test()
 

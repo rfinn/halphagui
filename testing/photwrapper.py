@@ -111,7 +111,8 @@ class ellipse():
         # use this if running this code as the main program
         self.use_mpl = use_mpl
         self.napertures = napertures
-        
+        # assuming a typical fwhm 
+        self.fwhm = 3.5
     def get_noise_in_aper(self, flux, area):
         noise_e = np.sqrt(flux*self.gain + area*self.sky_noise*self.gain)
         noise_adu = noise_e/self.gain
@@ -423,8 +424,32 @@ class ellipse():
         # or could cut off based on image dimension, and do the cutting afterward
         
         #rmax = 2.5*self.sma
+
+        '''
+        this is how becky set the apertures
+        a = [0]
+        for i in range(1,500):
+        a.append(a[i-1] + hwhm + (hwhm*i*.1))
+        
+        '''
+        # rmax is set according to the image dimensions
+        print('xcenter, ycenter, theta = ',self.xcenter, self.ycenter,self.theta)
         rmax = (self.ximage_max - self.xcenter)/abs(np.cos(self.theta))
-        self.apertures_a = np.linspace(3,rmax,40)
+        print('print rmax, ximage_max, image.shape = ',rmax,self.ximage_max,self.image.shape)
+        '''
+        this is how becky set the apertures
+        a = [0]
+        for i in range(1,500):
+        a.append(a[i-1] + hwhm + (hwhm*i*.1))
+        
+        '''
+
+        index = np.arange(80)
+        apertures = (index+1)*.5*self.fwhm*(1+(index+1)*.1)
+        # cut off apertures at edge of image
+        self.apertures_a = apertures[apertures < rmax]
+        print('number of apertures = ',len(self.apertures_a))
+        #self.apertures_a = np.linspace(3,rmax,40)
         self.apertures_b = (1.-self.eps)*self.apertures_a
         self.area = np.pi*self.apertures_a*self.apertures_b # area of each ellipse
 
@@ -744,7 +769,7 @@ if __name__ == '__main__':
     nsaid='18045'
     prefix = 'MKW8-'
     nsaid='110430'
-    nsaid='110276'
+    nsaid='157146'
     prefix = 'NRGs27-'
     image = prefix+nsaid+'-R.fits'
     mask = prefix+nsaid+'-R-mask.fits'
