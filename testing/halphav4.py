@@ -266,9 +266,12 @@ class Ui_MainWindow(object):
         self.actionhalpha16 = QtWidgets.QAction(MainWindow)
         self.actionhalpha16.setCheckable(True)
         self.actionhalpha16.setObjectName("actionhalpha16")
+        self.actionAGC_catalog_path = QtWidgets.QAction(MainWindow)
+        self.actionAGC_catalog_path.setObjectName("actionAGC_catalog_path")
         self.menuSetup.addAction(self.actionR_coadd)
         self.menuSetup.addAction(self.actionHa_coadd_2)
         self.menuSetup.addAction(self.actionNSA_catalog_path)
+        self.menuSetup.addAction(self.actionAGC_catalog_path)
         self.menuSetup.addSeparator()
         self.menuSetup.addAction(self.actionQuit_2)
         self.menuHalpha_Filter.addAction(self.actionhalpha4)
@@ -326,6 +329,7 @@ class Ui_MainWindow(object):
         self.actionhalpha8.setText(_translate("MainWindow", "halpha8"))
         self.actionhalpha12.setText(_translate("MainWindow", "halpha12"))
         self.actionhalpha16.setText(_translate("MainWindow", "halpha16"))
+        self.actionAGC_catalog_path.setText(_translate("MainWindow", "AGC catalog path"))
 
 
 if __name__ == "__main__":

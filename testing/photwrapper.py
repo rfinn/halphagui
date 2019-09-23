@@ -149,15 +149,15 @@ class ellipse():
         # leave sma as it is defined in get_ellipse_guess
         # so that we measure photometry over the same approximate region
         # in practice this could be different areas if the ellipticity is very different
-        # self.sma = re
+        # self.sma = r
 
         # need to reset b to be consistent with galfit ellipticity
         BA = float(BA)
         THETA = float(THETA)
-        print('THETA inside phot wrapper',THETA, BA)
+        #print('THETA inside phot wrapper',THETA, BA)
         self.b = BA*self.sma
         self.eps = 1 - BA
-        print(self.b,self.eps,self.sma,BA)
+        #print(self.b,self.eps,self.sma,BA)
         t = THETA
         if t < 0:
             self.theta = np.radians(180. + t)
@@ -326,9 +326,11 @@ class ellipse():
         self.eps = 1 - self.b/self.sma
         self.gini = obj.gini
         self.sky_centroid = obj.sky_centroid
+        # orientation is angle in radians, CCW relative to +x axis
         t = obj.orientation.value
-        if t < 0:
-            self.theta = np.radians(90. - np.degrees(obj.orientation.to(u.deg).value))
+        #print('inside get_ellipse_guess, orientation = ',obj.orientation)
+        if t < 0: # convert to positive angle
+            self.theta = np.pi/2-obj.orientation.to(u.rad).value
         else:
             self.theta = obj.orientation.to(u.rad).value # orientation in radians
         # EllipticalAperture gives rotation angle in radians from +x axis, CCW
@@ -433,9 +435,13 @@ class ellipse():
         
         '''
         # rmax is set according to the image dimensions
-        print('xcenter, ycenter, theta = ',self.xcenter, self.ycenter,self.theta)
-        rmax = (self.ximage_max - self.xcenter)/abs(np.cos(self.theta))
-        print('print rmax, ximage_max, image.shape = ',rmax,self.ximage_max,self.image.shape)
+        # look for where the semi-major axis hits the edge of the image
+        # could by on side (limited by x range) or on top/bottom (limited by y range)
+        # 
+        #print('xcenter, ycenter, theta = ',self.xcenter, self.ycenter,self.theta)
+        rmax = np.min([(self.ximage_max - self.xcenter)/abs(np.cos(self.theta)),\
+                       (self.yimage_max - self.ycenter)/abs(np.sin(self.theta))])
+        #print('print rmax, ximage_max, image.shape = ',rmax,self.ximage_max,self.image.shape)
         '''
         this is how becky set the apertures
         a = [0]
@@ -462,6 +468,7 @@ class ellipse():
         for i in range(len(self.apertures_a)):
             #print('measure phot: ',self.xcenter, self.ycenter,self.apertures_a[i],self.apertures_b[i],self.theta)
             #,ai,bi,theta) for ai,bi in zip(a,b)]
+            # EllipticalAperture takes rotation angle in radians, CCW from +x axis
             ap = EllipticalAperture((self.xcenter, self.ycenter),self.apertures_a[i],self.apertures_b[i],self.theta)#,ai,bi,theta) for ai,bi in zip(a,b)]
 
             if self.mask_flag:
@@ -793,3 +800,4 @@ if __name__ == '__main__':
     ## e.draw_fit_results_mpl()
 
     print("--- %s seconds ---" % (time.time() - start_time))
+

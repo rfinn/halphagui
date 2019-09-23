@@ -388,6 +388,7 @@
     <addaction name="actionR_coadd"/>
     <addaction name="actionHa_coadd_2"/>
     <addaction name="actionNSA_catalog_path"/>
+    <addaction name="actionAGC_catalog_path"/>
     <addaction name="separator"/>
     <addaction name="actionQuit_2"/>
    </widget>
@@ -515,6 +516,11 @@
    </property>
    <property name="text">
     <string>halpha16</string>
+   </property>
+  </action>
+  <action name="actionAGC_catalog_path">
+   <property name="text">
+    <string>AGC catalog path</string>
    </property>
   </action>
  </widget>

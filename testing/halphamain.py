@@ -1,7 +1,7 @@
 import sys, os
 sys.path.append(os.getcwd())
-#sys.path.append('/Users/rfinn/github/HalphaImaging/')
-sys.path.append('/Users/rfinn/github/HalphaImaging/python3/')
+#sys.path.append(os.getenv('HOME')+'github/HalphaImaging/')
+sys.path.append(os.getenv('HOME')+'/github/HalphaImaging/python3/')
 
 import numpy as np
 import platform
@@ -57,6 +57,12 @@ from halphaCommon import cutout_image
 from fit_profile import profile, dualprofile, rprofile, haprofile, ratio_error
 # code from HalphaImaging repository
 import sextractor_2image as runse
+
+# code for calculating redshift cutoffs of filter
+# and for calculating the transmission correction for each galaxy
+# based on where it falls ini the filter bandpass
+from filter_transmission import filter_trace
+
 #from uat_mask import mask_image
 # filter information
 lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
@@ -315,7 +321,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
 
         
 class output_table():
-    def initialize_results_table(self):
+    def initialize_results_table(self, prefix=None):
         '''
         Data to store:
         - NSAID
@@ -355,8 +361,10 @@ class output_table():
         user = os.getenv('USER')
         today = date.today()
         str_date_today = today.strftime('%Y-%b-%d')
-        self.output_table = 'halpha-data-'+user+'-'+str_date_today+'.fits'
-
+        if prefix is None:
+            self.output_table = 'halpha-data-'+user+'-'+str_date_today+'.fits'
+        else:
+            self.output_table = prefix+'-data-'+user+'-'+str_date_today+'.fits'
         ## check for existing table
         ##
         ## load if it exists
@@ -370,8 +378,13 @@ class output_table():
         c1 = Column(self.galid, name='NSAID',dtype=np.int32, description='NSAID')
         c2 = Column(self.gra, name='NSA_RA',dtype='f', unit=u.deg)
         c3 = Column(self.gdec, name='NSA_DEC',dtype='f', unit=u.deg)
+        g1 = Column(np.zeros(len(self.galid),'f'),name='GAL_RA', unit=u.deg,description='center from galfit')
+        g2 = Column(np.zeros(len(self.galid),'f'),name='GAL_DEC', unit=u.deg,description='center from galfit')
+        e1 = Column(np.zeros(len(self.galid),'f'), name='ELLIP_RA', unit=u.deg,description='center from photutil centroid')
+        e2 = Column(np.zeros(len(self.galid),'f'), name='ELLIP_DEC', unit=u.deg,description='center from photutil centroid')
 
         c4 = Column(self.haflag, name='HA_FLAG')
+        f1 = Column(np.ones(len(self.galid),'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
         r = 22.5 - 2.5*np.log10(self.nsa.cat.NMGY[:,4])
         c5 = Column(r,name='NSA_RMAG')
@@ -389,7 +402,7 @@ class output_table():
         #c14 = Column(np.zeros(len(r)), name='GAL_SERSIC_SKY')
         #c15 = Column(np.zeros(len(r)), name='GAL_SERSIC_CHISQ')
 
-        self.table = Table([c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11])
+        self.table = Table([c1,c2,c3,g1, g2, e1,e2,c4,f1,c5,c6,c7,c8,c9,c10,c11])
 
         #####################################################################
         # galfit output
@@ -409,13 +422,11 @@ class output_table():
 
         c1 = Column(np.zeros(len(r),'f'),name='GAL_SKY')
         c2 = Column(np.zeros(len(r),'f'),name='GAL_CHISQ')
-        c3 = Column(np.zeros(len(r),'f'),name='GAL_RA', unit=u.deg)
-        c4 = Column(np.zeros(len(r),'f'),name='GAL_DEC', unit=u.deg)
         #c3 = Column(np.zeros(len(r),'f'), name='GAL_GINI')
         #c4 = Column(np.zeros(len(r)), name='GAL_GINI2')
         #c5 = Column(np.zeros(len(r),'f'), name='GAL_ASYM')
         #c6 = Column(np.zeros(len(r),'f'), name='GAL_ASYM2')
-        self.table.add_columns([c1,c2,c3,c4])#,c3,c4,c5,c6])
+        self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
         '''
 
@@ -449,9 +460,7 @@ class output_table():
         e10 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM_ERR')
         e11 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2')
         e12 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2_ERR')
-        e13 = Column(np.zeros(len(r),'f'), name='ELLIP_RA', unit=u.degree)
-        e14 = Column(np.zeros(len(r),'f'), name='ELLIP_DEC', unit=u.degree)
-        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13, e14])
+        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12])
 
         #####################################################################
         # profile fitting using galfit geometry
@@ -742,22 +751,22 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         if self.testing:
             self.setup_testing()
     def setup_testing(self):
-        self.hacoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_ha16.coadd.fits'
+        self.hacoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_ha16.coadd.fits'
         
         
-        self.hacoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
+        self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
         self.load_hacoadd()
         #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         #self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.haweight_flag = True
-        self.rcoadd_fname = '/Users/rfinn/research/halphagui_test/MKW8_R.coadd.fits'
-        self.rcoadd_fname = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
+        self.rcoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_R.coadd.fits'
+        self.rcoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
         #self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         self.load_rcoadd()
         #self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.rweight_flag = True
         #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
-        self.nsa_fname = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
+        self.nsa_fname = os.getenv('HOME')+'/research/NSA/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname)
         #self.coadd.load_file(self.rcoadd_fname)
         self.filter_ratio = 0.0416
@@ -828,6 +837,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
         self.ui.actionHa_coadd_2.triggered.connect(self.get_hacoadd_file)
         self.ui.actionNSA_catalog_path.triggered.connect(self.getnsafile)
+        self.ui.actionAGC_catalog_path.triggered.connect(self.getagcfile)
     def get_rcoadd_file(self):
         fname = QtWidgets.QFileDialog.getOpenFileName()
         if len(fname[0]) < 1:
@@ -855,6 +865,14 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             self.nsa_fname = fname[0]
             self.nsa = galaxy_catalog(self.nsa_fname)
         #self.le.setPixmap(QPixmap(fname))
+    def getagcfile(self):
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            self.agc_fname = fname[0]
+            self.agc = galaxy_catalog(self.agc_fname)
+        #self.le.setPixmap(QPixmap(fname))
 		
     def connect_ha_menu(self):
         #print('working on this')
@@ -867,7 +885,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
     def set_hafilter(self,filterid):
         self.hafilter = filterid
         print('halpha filter = ',self.hafilter)
-        self.get_zcut()
+        self.filter_trace = filter_trace(self.hafilter)
+        self.zmin = self.filter_trace.minz_trans10
+        self.zmax = self.filter_trace.maxz_trans10
+        #self.get_zcut()
     def get_zcut(self):
         self.zmax=(((lmax[self.hafilter])/6563.)-1)
         self.zmin=(((lmin[self.hafilter])/6563.)-1)
@@ -962,7 +983,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 
         self.gredshift = self.nsa.cat.Z
         self.gzdist = self.nsa.cat.ZDIST
-        
+
         # set up a boolean array to track whether Halpha emission is present
         self.haflag = np.zeros(len(self.galid),'bool')
         
@@ -974,12 +995,19 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         print(len(self.galid),' galaxies in FOV')
         self.ui.wgalid.activated.connect(self.select_galaxy)
         #print(len(self.nsa.cat.RA))
+
+        # find agc galaxies
         
         # plot location of galaxies in the coadd image
         self.mark_galaxies()
         #self.initialize_output_arrays()
         # set up the output table that will store results from various fits
-        self.initialize_results_table()
+        self.initialize_results_table(prefix=self.prefix)
+
+        # get transmission correction for each galaxy
+        self.filter_correction= self.filter_trace.get_trans_correction(self.gredshift)
+        print(self.filter_correction)
+        self.table['FILT_COR'] = self.filter_correction
     def mark_galaxies(self):
         #
         # using code in TVMark.py as a guide for adding shapes to canvas
@@ -1440,7 +1468,6 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio)
         #fields = ['XC','YC','MAG','RE','N','BA','PA']
 
-
         # TRANSFORM THETA
         # GALFIT DEFINES THETA RELATIVE TO Y AXIS
         # PHOT UTILS DEFINES THETA RELATIVE TO X AXIS
@@ -1597,7 +1624,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         else:
             colname=prefix+'LOG_SFR_HA'
         print('sfr = ',self.sfr)
-        print(self.sfr[0], self.sfr[1])
+        #print(self.sfr[0], self.sfr[1])
         self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
         self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
 
@@ -1647,7 +1674,7 @@ class galaxy_catalog():
         fits.writeto(outfile,self.cat, overwrite=True)
         
 if __name__ == "__main__":
-    catalog = '/Users/rfinn/research/NSA/nsa_v0_1_2.fits'
+    catalog = os.getenv('HOME')+'/research/NSA/nsa_v0_1_2.fits'
     #gcat = galaxy_catalog(catalog)
     print(sys.argv)
     logger = log.get_logger("example1", log_stderr=True, level=40)
