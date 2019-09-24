@@ -375,13 +375,45 @@ class output_table():
             self.create_table()
         self.update_gui_table()
     def create_table(self):
-        c1 = Column(self.galid, name='NSAID',dtype=np.int32, description='NSAID')
+
+        # updating this part to make use of NSA and AGC catalogs
+        # not going to make this backward compatible, meaning you need to enter both catalogs
+        # probably just being lazy, but it's giving me a headache...
+
+        # much better approach would be to match entire NSA and AGC catalogs
+        # and then just use that,
+        # but forging ahead for now.
+
+
+        
+        nsaindex,nsaflag,agcindex,agcflag = join_catalogs(self.nsa.cat.RA,self.nsa.cat.DEC,self.agc.cat.RA,self.agc.cat.DEC)
+        self.ngalaxies = len(nsaindex)
+
+        # create arrays that we need for other parts of the programs, like ra, dec, size
+
+        self.ra = np.zeros(self.ngalaxies,'f')
+        self.ra = self.nsa.cat.RA[nsaindex]*nsaflag + self.agc.cat.RA[agcindex]*(~nsaflag)
+        self.dec = np.zeros(self.ngalaxies,'f')
+        self.dec = self.nsa.cat.DEC[nsaindex]*nsaflag + self.agc.cat.DEC[agcindex]*(~nsaflag)
+        self.size = np.zeros(self.ngalaxies,'f')
+        self.size = self.nsa.cat.SERSIC_TH50[nsaindex]*nsaflag/self.pixel_scale + 100.*np.ones(self.ngalaxies)[agcindex]*(~nsaflag)
+        temp = np.zeros(self.ngalaxies,'i')
+        temp[nsaflag] = self.nsa.cat.NSAID[nsaindex[nsaflag]]
+        c1 = Column(temp, name='NSAID',dtype=np.int32, description='NSAID')
+        c2 = Column(nsaflag, name='NSA_FLAG',dtype='bool', description='NSA_FLAG')
+        temp = np.zeros(self.ngalaxies,'i')
+        temp[nsaflag] = self.nsa.cat.NSAID[nsaindex[nsaflag]]
+        c1 = Column(temp, name='AGCNUMBER',dtype=np.int32, description='AGC ID NUMBER')
+        c2 = Column(agcflag, name='AGC_FLAG',dtype='bool', description='AGC_FLAG')
+
+        
         c2 = Column(self.gra, name='NSA_RA',dtype='f', unit=u.deg)
         c3 = Column(self.gdec, name='NSA_DEC',dtype='f', unit=u.deg)
-        g1 = Column(np.zeros(len(self.galid),'f'),name='GAL_RA', unit=u.deg,description='center from galfit')
-        g2 = Column(np.zeros(len(self.galid),'f'),name='GAL_DEC', unit=u.deg,description='center from galfit')
-        e1 = Column(np.zeros(len(self.galid),'f'), name='ELLIP_RA', unit=u.deg,description='center from photutil centroid')
-        e2 = Column(np.zeros(len(self.galid),'f'), name='ELLIP_DEC', unit=u.deg,description='center from photutil centroid')
+        
+        g1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_RA', unit=u.deg,description='center from galfit')
+        g2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_DEC', unit=u.deg,description='center from galfit')
+        e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_RA', unit=u.deg,description='center from photutil centroid')
+        e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='center from photutil centroid')
 
         c4 = Column(self.haflag, name='HA_FLAG')
         f1 = Column(np.ones(len(self.galid),'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
@@ -402,45 +434,42 @@ class output_table():
         #c14 = Column(np.zeros(len(r)), name='GAL_SERSIC_SKY')
         #c15 = Column(np.zeros(len(r)), name='GAL_SERSIC_CHISQ')
 
-        self.table = Table([c1,c2,c3,g1, g2, e1,e2,c4,f1,c5,c6,c7,c8,c9,c10,c11])
+        self.table = Table([c1,c1flag, c2,c3,g1, g2, e1,e2,c4,f1,c5,c6,c7,c8,c9,c10,c11])
 
-        #####################################################################
-        # galfit output
-        #####################################################################
         fields = ['XC','YC','MAG','RE','N','BA','PA']
         units = ['pixel','pixel','mag','pixel',None,'deg',None]
         for f,unit in zip(fields,units):
             if unit == None:
-                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f)
-                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR')
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f, unit=unit)
-                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f, unit=unit)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
 
-        c1 = Column(np.zeros(len(r),'f'),name='GAL_SKY')
-        c2 = Column(np.zeros(len(r),'f'),name='GAL_CHISQ')
-        #c3 = Column(np.zeros(len(r),'f'), name='GAL_GINI')
-        #c4 = Column(np.zeros(len(r)), name='GAL_GINI2')
-        #c5 = Column(np.zeros(len(r),'f'), name='GAL_ASYM')
-        #c6 = Column(np.zeros(len(r),'f'), name='GAL_ASYM2')
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_SKY')
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_CHISQ')
+        #c3 = Column(np.zeros(self.ngalaxies,'f'), name='GAL_GINI')
+        #c4 = Column(np.zeros(self.ngalaxies), name='GAL_GINI2')
+        #c5 = Column(np.zeros(self.ngalaxies,'f'), name='GAL_ASYM')
+        #c6 = Column(np.zeros(self.ngalaxies,'f'), name='GAL_ASYM2')
         self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
         '''
 
-        c11 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM')
-        c12 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM_ERR')
-        c13 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM2')
-        c14 = Column(np.zeros((len(r),2),'f'), name='GAL_ASYM2_ERR')
+        c11 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM')
+        c12 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM_ERR')
+        c13 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM2')
+        c14 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM2_ERR')
         self.table.add_columns([c11,c12,c13,c14])
         '''
         # galfit sersic parameters from 2 comp fit
-        c16 = Column(np.zeros((len(r),15),'f'), name='GAL_2SERSIC')
-        c17 = Column(np.zeros((len(r),15),'f'), name='GAL_2SERSIC_ERR')
-        c18 = Column(np.zeros(len(r)), name='GAL_2SERSIC_ERROR')
-        c19 = Column(np.zeros(len(r)), name='GAL_2SERSIC_CHISQ')
+        c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC')
+        c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC_ERR')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_ERROR')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_CHISQ')
         self.table.add_columns([c16,c17,c18,c19])
 
 
@@ -448,18 +477,18 @@ class output_table():
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
         #####################################################################
-        e1 = Column(np.zeros(len(r),'f'), name='ELLIP_XCENTROID', unit='pixel')
-        e2 = Column(np.zeros(len(r),'f'), name='ELLIP_YCENTROID', unit='pixel')
-        e3 = Column(np.zeros(len(r),'f'), name='ELLIP_EPS')
-        e4 = Column(np.zeros(len(r),'f'), name='ELLIP_THETA', unit=u.degree)
-        e5 = Column(np.zeros(len(r),'f'), name='ELLIP_GINI')
-        e6 = Column(np.zeros(len(r)), name='ELLIP_GINI2')
-        e7 = Column(np.zeros(len(r),'f'), name='ELLIP_AREA')
-        e8 = Column(np.zeros(len(r),'f'), name='ELLIP_SUM')
-        e9 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM')
-        e10 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM_ERR')
-        e11 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2')
-        e12 = Column(np.zeros(len(r),'f'), name='ELLIP_ASYM2_ERR')
+        e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel')
+        e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel')
+        e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS')
+        e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree)
+        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI')
+        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2')
+        e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA')
+        e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM')
+        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM')
+        e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM_ERR')
+        e11 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM2')
+        e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM2_ERR')
         self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12])
 
         #####################################################################
@@ -478,11 +507,11 @@ class output_table():
                    ]
         for f,unit in zip(fields_r,units_r):
             if unit == None:
-                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f)
-                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR')
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+f, unit=unit)
-                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f, unit=unit)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
@@ -504,29 +533,29 @@ class output_table():
                  u.arcsec,u.erg/u.s/u.cm**2,u.arcsec, u.arcsec,'',u.mag]
         for f,unit in zip(fields_ha,units_ha):
             if unit == None:
-                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f)
-                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f+'_ERR')
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f, unit=unit)
-                c2 = Column(np.zeros(len(r),'f'),name='GAL_'+'H'+f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f, unit=unit)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
 
         f='GAL_'+'LOG_SFR_HA'
-        c1 = Column(np.zeros(len(r),'f'),name=f, unit=u.M_sun/u.yr)
-        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr)
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
         self.table.add_column(c1)
         self.table.add_column(c2)
         
         f='GAL_'+'SSFR_IN'
-        c1 = Column(np.zeros(len(r),'f'),name=f)
-        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_column(c1)
         self.table.add_column(c2)
         f='GAL_'+'SSFR_OUT'
-        c1 = Column(np.zeros(len(r),'f'),name=f)
-        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_column(c1)
         self.table.add_column(c2)
 
@@ -538,11 +567,11 @@ class output_table():
         # 
         for f,unit in zip(fields_r,units_r):
             if unit == None:
-                c1 = Column(np.zeros(len(r),'f'),name=f)
-                c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
             else:
-                c1 = Column(np.zeros(len(r),'f'),name=f, unit=unit)
-                c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=unit)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
@@ -551,18 +580,18 @@ class output_table():
         # 
         for f,unit in zip(fields_ha,units_ha):
             if unit == None:
-                c1 = Column(np.zeros(len(r),'f'),name='H'+f)
-                c2 = Column(np.zeros(len(r),'f'),name='H'+f+'_ERR')
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(len(r),'f'),name='H'+f, unit=unit)
-                c2 = Column(np.zeros(len(r),'f'),name='H'+f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f, unit=unit)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
 
         f='LOG_SFR_HA'
-        c1 = Column(np.zeros(len(r),'f'),name=f, unit=u.M_sun/u.yr)
-        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr)
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
         self.table.add_columns([c1,c2])
 
         ######################################################################
@@ -570,19 +599,19 @@ class output_table():
         ######################################################################        
         
         f='SSFR_IN'
-        c1 = Column(np.zeros(len(r),'f'),name=f)
-        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_columns([c1,c2])
 
         f='SSFR_OUT'
-        c1 = Column(np.zeros(len(r),'f'),name=f)
-        c2 = Column(np.zeros(len(r),'f'),name=f+'_ERR')
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_columns([c1,c2])
 
 
         self.add_flags()
         
-        self.table.add_column(Column(np.zeros(len(r),dtype='U50'), name='COMMENT'))
+        self.table.add_column(Column(np.zeros(self.ngalaxies,dtype='U50'), name='COMMENT'))
         #print(self.table)
         
 
@@ -767,7 +796,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         #self.rweight_flag = True
         #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         self.nsa_fname = os.getenv('HOME')+'/research/NSA/nsa_v0_1_2.fits'
-        self.nsa = galaxy_catalog(self.nsa_fname)
+        self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
+        self.agc_fname = os.getenv('HOME')+'/research/AGC/agcnorthminus1.2019Sep24.fits'
+        self.agc = galaxy_catalog(self.agc_fname,agc=True)
+        self.agcflag = True
         #self.coadd.load_file(self.rcoadd_fname)
         self.filter_ratio = 0.0416
         self.reset_ratio = self.filter_ratio
@@ -863,7 +895,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             print('invalid filename')
         else:
             self.nsa_fname = fname[0]
-            self.nsa = galaxy_catalog(self.nsa_fname)
+            self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
         #self.le.setPixmap(QPixmap(fname))
     def getagcfile(self):
         fname = QtWidgets.QFileDialog.getOpenFileName()
@@ -871,8 +903,9 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             print('invalid filename')
         else:
             self.agc_fname = fname[0]
-            self.agc = galaxy_catalog(self.agc_fname)
-        #self.le.setPixmap(QPixmap(fname))
+            self.agc = galaxy_catalog(self.agc_fname,agc=True)
+            self.agcflag = True
+
 		
     def connect_ha_menu(self):
         #print('working on this')
@@ -937,28 +970,24 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         # self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
         #
         n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
-        n4,n3 = self.ha.data.shape 
-    
-
-        px,py = self.coadd_wcs.wcs_world2pix(self.nsa.cat.RA,self.nsa.cat.DEC,0)
-        onimageflag=(px < n1) & (px >0) & (py < n2) & (py > 0)
-        try:
-            zFlag = (self.nsa.cat.Z > self.zmin) & (self.nsa.cat.Z < self.zmax)
-        except AttributeError:
-            print('AttributeError')
-            print('make sure you selected the halpha filter')
-            return
-        keepflag=zFlag & onimageflag
         
+
+
+        try:
+            keepflag = self.nsa.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+        except AttributeError:
+            print('problem finding galaxies.')
+            print('make sure you selected a filter!')
+            return
         # check weight image to make sure the galaxy actually has data
         # reject galaxies who have zero in the weight image
+        px,py = self.coadd_wcs.wcs_world2pix(self.nsa.cat.RA,self.nsa.cat.DEC,0)
         if self.rweight_flag and self.haweight_flag:
             rweight = fits.getdata(self.rweight)
             haweight = fits.getdata(self.haweight)
             # multiply weights
             # result will equal zero if exposure is zero in either image
             weight = rweight * haweight
-
             # check location of pixels to make sure weight is not zero
             # this will have the length = # of galaxies that have keepflag True
             offimage = (weight[np.array(py[keepflag],'i'),np.array(px[keepflag],'i')] == 0)
@@ -969,23 +998,39 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             # change value of keepflag for galaxies that are off the image
             keepflag[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
             #print(offimage)
-
-        self.gximage = px[keepflag]
-        self.gyimage = py[keepflag]
-
         # cut down NSA catalog to keep information only for galaxies within FOV
         self.nsa.cull_catalog(keepflag,self.prefix)
         self.gra=self.nsa.cat.RA
         self.gdec=self.nsa.cat.DEC
         self.gradius=self.nsa.cat.SERSIC_TH50
-
         self.galid=self.nsa.cat.NSAID
-
         self.gredshift = self.nsa.cat.Z
         self.gzdist = self.nsa.cat.ZDIST
-
+        self.gximage,self.gyimage =self.coadd_wcs.wcs_world2pix(self.nsa.cat.RA,self.nsa.cat.DEC,0)
         # set up a boolean array to track whether Halpha emission is present
         self.haflag = np.zeros(len(self.galid),'bool')
+        
+
+        px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+        if self.agcflag:
+            keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,zmin=self.zmin,zmax=self.zmax)
+            print('number of AGC galaxies in FOV = ',sum(keepagc))
+            if self.rweight_flag and self.haweight_flag:
+                offimage = (weight[np.array(py[keepagc],'i'),np.array(px[keepagc],'i')] == 0)
+                # store another array that has the indices in original keepflag array
+                # where keepflag = True
+                # need to take [0] element because np.where is weird
+                keepindex = np.where(keepagc)[0]
+                # change value of keepagc for galaxies that are off the image
+                keepagc[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
+
+            print('number of AGC galaxies in FOV = ',sum(keepagc))
+            self.agc.cull_catalog(keepagc, self.prefix)
+            self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)        
+            print(self.agcximage)
+            print(self.agcyimage)
+        # plot location of galaxies in the coadd image
+        self.mark_galaxies()
         
         # populate a button that contains list
         # of galaxies in the field of view,
@@ -996,10 +1041,8 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.ui.wgalid.activated.connect(self.select_galaxy)
         #print(len(self.nsa.cat.RA))
 
-        # find agc galaxies
-        
-        # plot location of galaxies in the coadd image
-        self.mark_galaxies()
+
+    
         #self.initialize_output_arrays()
         # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix)
@@ -1029,6 +1072,17 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
                                         str(self.galid[i]), color=markcolor)
             objlist.append(obj)
             objlist.append(glabel)
+        if self.agcflag:
+            for i,x in enumerate(self.agcximage):
+                #print(x,self.agcyimage[i],self.agc.cat.AGCNUMBER[i])
+                obj = self.coadd.dc.Box(
+                    x=x, y=self.agcyimage[i], xradius=75,\
+                    yradius=75, color='purple', linewidth=markwidth)
+                glabel = self.coadd.dc.Text(x-20,self.agcyimage[i]+20,\
+                                        str(self.agc.cat.AGCnr[i]), color='purple')
+                objlist.append(obj)
+                objlist.append(glabel)
+            
         self.markhltag = self.coadd.canvas.add(self.coadd.dc.CompoundObject(*objlist))
         self.coadd.fitsimage.redraw()
     def initialize_output_arrays(self):
@@ -1121,7 +1175,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             up arrow will go to previous galaxy in the list
             '''
             print(self.igal)
-            if self.igal == (len(self.gra)-1):
+            if self.igal == (len(self.ra)-1):
                 self.igal = 0
             else:
                 self.igal += 1
@@ -1133,7 +1187,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             down arrow will go to previous galaxy in the list
             '''
             if self.igal == 0: 
-                self.igal = len(self.gra)-1
+                self.igal = len(self.ra)-1
             else:
                 self.igal -= 1
                 self.ui.wgalid.setCurrentIndex(self.igal)
@@ -1225,7 +1279,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             self.maskcutout.fitsimage.clear()
         self.clear_comment_field()            
     def display_cutouts(self):
-        position = SkyCoord(ra=self.gra[self.igal],dec=self.gdec[self.igal],unit='deg')
+        position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
         
         try:
             self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
@@ -1347,14 +1401,14 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             self.gwindow = QtWidgets.QWidget()
             #self.gwindow.aboutToQuit.connect(self.galfit_closed)
             if self.testing:
-                psf = 'MKW8_R.coadd-psf.fits'
+                psf = 'NRGs28_R.coadd-psf.fits'
                 psf_oversampling=2
             else:
                 psf = self.psf.psf_image_name
                 psf_oversampling = self.oversampling
             
             if ncomp == 1:
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal], convolution_size=80)
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
             elif ncomp == 2:
                 # use results from 1 component fit as input
                 try:
@@ -1362,6 +1416,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
                     re = self.table['GAL_RE'][self.igal]
                     BA = self.table['GAL_BA'][self.igal]
                     PA = self.table['GAL_BA'][self.igal]
+                
                 except KeyError:
                     print('WARNING!!!!')
                     print('trouble reading galfit results from data table')
@@ -1664,13 +1719,40 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 
         
 class galaxy_catalog():
-    def __init__(self,catalog):
+    def __init__(self,catalog,nsa=False,agc=False):
         self.cat = fits.getdata(catalog)
+        self.catalog_name = catalog
+        self.agcflag = agc
+        self.nsaflag = nsa
+    def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,weight_image=None, agcflag=False):
+        if (nrow is None) | (ncol is None):
+            print('need image dimensions')
+            return None
+        px,py =wcs.wcs_world2pix(self.cat.RA,self.cat.DEC,0)
+        onimageflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
+        try:
+            if not(agcflag):
+                zFlag = (self.cat.Z > zmin) & (self.cat.Z < zmax)
+            elif agcflag:
+                zFlag1 = (self.cat.vopt/3.e5 > zmin) & (self.cat.vopt/3.e5 < zmax)
+                zFlag2 = (self.cat.v21/3.e5 > zmin) & (self.cat.v21/3.e5 < zmax)
+                zFlag = zFlag1 | zFlag2
+        except AttributeError:
+            print('AttributeError')
+            print('make sure you selected the halpha filter')
+            return None
+            
+        return (zFlag & onimageflag)
 
     def cull_catalog(self, keepflag,prefix):
         self.cat = self.cat[keepflag]
-        self.rmag = 22.5 - 2.5*np.log10(self.cat.NMGY[:,4])
-        outfile = prefix+'_nsa.fits'
+        if self.nsaflag:
+            self.rmag = 22.5 - 2.5*np.log10(self.cat.NMGY[:,4])
+        
+        if self.nsaflag:
+            outfile = prefix+'_nsa.fits'
+        elif self.agcflag:
+            outfile = prefix+'_agc.fits'
         fits.writeto(outfile,self.cat, overwrite=True)
         
 if __name__ == "__main__":
