@@ -63,6 +63,7 @@ import sextractor_2image as runse
 # based on where it falls ini the filter bandpass
 from filter_transmission import filter_trace
 
+from join_catalogs import join_cats, make_new_cats
 #from uat_mask import mask_image
 # filter information
 lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
@@ -275,11 +276,12 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
             dec_txt = 'BAD WCS'
         try:
             text = "RA: %.6f  DEC: %.4f  X: %.2f  Y: %.2f  Value: %.3f" % ((1.*ra_txt), (1.*dec_txt), fits_x, fits_y, float(value))
+            self.readout.setText(text)
         except:
-            print('invalid value')
+            pass
         # WCS stuff is not working so deleting for now...
         #text = "X: %.2f  Y: %.2f  Value: %s" % (fits_x, fits_y, value)
-        self.readout.setText(text)
+
 
     def set_mode_cb(self, mode, tf):
         self.logger.info("canvas mode changed (%s) %s" % (mode, tf))
@@ -370,6 +372,20 @@ class output_table():
         ## load if it exists
         if os.path.exists(self.output_table):
             self.table = Table(fits.getdata(self.output_table))
+            self.gredshift = self.table['REDSHIFT']
+            self.ngalaxies = len(self.gredshift)
+            self.ra = self.table['NSA_RA']*self.table['NSA_FLAG']+ self.table['AGC_RA']*(~self.table['NSA_FLAG'])
+            self.dec = self.table['NSA_DEC']*self.table['NSA_FLAG']+ self.table['AGC_DEC']*(~self.table['NSA_FLAG'])
+            self.gradius = self.table['SERSIC_TH50']*self.table['NSA_FLAG']/self.pixel_scale + 100.*np.ones(self.ngalaxies)*(~self.table['NSA_FLAG'])
+            self.gzdist = self.table['ZDIST']
+            charar1 = np.chararray(self.ngalaxies)
+            charar1[:] = 'N'
+            charar2 = np.chararray(self.ngalaxies)
+            charar2[:] = '-A'
+            self.galid=np.zeros(self.ngalaxies, dtype='U15')
+            for i in np.arange(self.ngalaxies):
+                self.galid[i] = 'N'+str(self.table['NSAID'][i])+'-A'+str(self.tabe['AGCNUMBER'][i])
+                                                                                
         ## if not, create table
         else:
             self.create_table()
@@ -384,57 +400,83 @@ class output_table():
         # and then just use that,
         # but forging ahead for now.
 
+        # this returns new nsa and agc catalogs, that are row matched to the joined table
+        if self.agcflag:
+            self.nsa2, self.nsa_matchflag, self.agc2, self.agc_matchflag = make_new_cats(self.nsa.cat, self.agc.cat)
+            # write matched tables
+            self.nsa2.write(self.prefix+'-nsa-matched.fits', format='fits', overwrite=True)
+            self.agc2.write(self.prefix+'-agc-matched.fits', format='fits', overwrite=True)
 
+            self.ngalaxies = len(self.nsa_matchflag)        
+            # create arrays that we need for other parts of the programs, like ra, dec, size
+            self.ra = self.nsa2['RA']*self.nsa_matchflag + self.agc2['RA']*(~self.nsa_matchflag)
+
+            self.dec = self.nsa2['DEC']*self.nsa_matchflag + self.agc2['DEC']*(~self.nsa_matchflag)
+
+            self.gradius = self.nsa2['SERSIC_TH50']*self.nsa_matchflag/self.pixel_scale + 100.*np.ones(self.ngalaxies)*(~self.nsa_matchflag)
+            charar1 = np.chararray(self.ngalaxies)
+            charar1[:] = 'N'
+            charar2 = np.chararray(self.ngalaxies)
+            charar2[:] = '-A'
+            self.galid=np.zeros(self.ngalaxies, dtype='U15')
+            for i in np.arange(self.ngalaxies):
+                self.galid[i] = 'N'+str(self.nsa2['NSAID'][i])+'-A'+str(self.agc2['AGCnr'][i])
+            voptflag = self.agc2['vopt'] > 0.
+            agcredshift = self.agc2['vopt']/3.e5*voptflag + self.agc2['v21']/3.e5*(~voptflag)
+            self.gredshift = self.nsa2['Z']*self.nsa_matchflag + agcredshift*(~self.nsa_matchflag)
+        else:
+            self.nsa2 = self.nsa.cat
+            self.nsa_matchflag = np.ones(len(self.nsa2))
+            self.ra = self.nsa2['RA']
+
+            self.dec = self.nsa2['DEC']
+
+            self.gradius = self.nsa2['SERSIC_TH50']*self.nsa_matchflag/self.pixel_scale 
+            self.ngalaxies = len(self.nsa_matchflag)
+            self.galid = self.nsa2['NSAID']*self.nsa_matchflag
+            self.gredshift = self.nsa2['Z']*self.nsa_matchflag
+        # number of galaxies in the joined table
+        self.haflag = np.zeros(self.ngalaxies,'bool')
+        c0 = Column(self.galid,name='ID')
+        c1 = Column(self.gredshift,name='REDSHIFT')
+        c2 = Column(self.nsa2['NSAID'], name='NSAID',dtype=np.int32, description='NSAID')
+        c3 = Column(self.nsa_matchflag, name='NSA_FLAG',dtype='bool', description='NSA_FLAG')
+        c4 = Column(self.nsa2['RA'], name='NSA_RA',dtype='f', unit=u.deg)
+        c5 = Column(self.nsa2['DEC'], name='NSA_DEC',dtype='f', unit=u.deg)
+        self.table = Table([c0,c1,c2,c3,c4,c5])
+        if self.agcflag:
+            c5 = Column(self.agc2['AGCnr'], name='AGCNUMBER',dtype=np.int32, description='AGC ID NUMBER')
+            c6 = Column(self.agc_matchflag, name='AGC_FLAG',dtype='bool', description='AGC_FLAG')
+            c7 = Column(self.agc2['RA'], name='AGC_RA',dtype='f', unit=u.deg)
+            c8 = Column(self.agc2['DEC'], name='AGC_DEC',dtype='f', unit=u.deg)
+            self.table.add_columns([c5,c6,c7,c8])
         
-        nsaindex,nsaflag,agcindex,agcflag = join_catalogs(self.nsa.cat.RA,self.nsa.cat.DEC,self.agc.cat.RA,self.agc.cat.DEC)
-        self.ngalaxies = len(nsaindex)
-
-        # create arrays that we need for other parts of the programs, like ra, dec, size
-
-        self.ra = np.zeros(self.ngalaxies,'f')
-        self.ra = self.nsa.cat.RA[nsaindex]*nsaflag + self.agc.cat.RA[agcindex]*(~nsaflag)
-        self.dec = np.zeros(self.ngalaxies,'f')
-        self.dec = self.nsa.cat.DEC[nsaindex]*nsaflag + self.agc.cat.DEC[agcindex]*(~nsaflag)
-        self.size = np.zeros(self.ngalaxies,'f')
-        self.size = self.nsa.cat.SERSIC_TH50[nsaindex]*nsaflag/self.pixel_scale + 100.*np.ones(self.ngalaxies)[agcindex]*(~nsaflag)
-        temp = np.zeros(self.ngalaxies,'i')
-        temp[nsaflag] = self.nsa.cat.NSAID[nsaindex[nsaflag]]
-        c1 = Column(temp, name='NSAID',dtype=np.int32, description='NSAID')
-        c2 = Column(nsaflag, name='NSA_FLAG',dtype='bool', description='NSA_FLAG')
-        temp = np.zeros(self.ngalaxies,'i')
-        temp[nsaflag] = self.nsa.cat.NSAID[nsaindex[nsaflag]]
-        c1 = Column(temp, name='AGCNUMBER',dtype=np.int32, description='AGC ID NUMBER')
-        c2 = Column(agcflag, name='AGC_FLAG',dtype='bool', description='AGC_FLAG')
-
-        
-        c2 = Column(self.gra, name='NSA_RA',dtype='f', unit=u.deg)
-        c3 = Column(self.gdec, name='NSA_DEC',dtype='f', unit=u.deg)
         
         g1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_RA', unit=u.deg,description='center from galfit')
         g2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_DEC', unit=u.deg,description='center from galfit')
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_RA', unit=u.deg,description='center from photutil centroid')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='center from photutil centroid')
-
-        c4 = Column(self.haflag, name='HA_FLAG')
-        f1 = Column(np.ones(len(self.galid),'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
+        c9 = Column(self.haflag, name='HA_FLAG')
+        c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
+        self.table.add_columns([g1,g2,e1,e2,c9,c10])
+        
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
-        r = 22.5 - 2.5*np.log10(self.nsa.cat.NMGY[:,4])
-        c5 = Column(r,name='NSA_RMAG')
-        c6 = Column(self.nsa.cat.SERSIC_TH50,name='NSA_SERSIC_TH50', unit=u.arcsec)
-        c7 = Column(self.nsa.cat.SERSIC_N,name='NSA_SERSIC_N')
-        c8 = Column(self.nsa.cat.SERSIC_BA,name='NSA_SERSIC_BA')
-        c9 = Column(self.nsa.cat.SERSIC_PHI,name='NSA_SERSIC_PHI', unit=u.deg)
-        # cutout region in coadded images
-        c10 = Column(np.zeros(len(r),dtype='U22'), name='BBOX')
-        # R-band scale factor for making continuum-subtracted image
-        c11 = Column(np.zeros(len(r),'f'), name='FILTER_RATIO')
-        # galfit sersic parameters from 1 comp fit
-        #c12 = Column(np.zeros((len(r),8),'f'), name='GAL_SERSIC')
-        #c13 = Column(np.zeros((len(r),8),'f'), name='GAL_SERSIC_ERR')
-        #c14 = Column(np.zeros(len(r)), name='GAL_SERSIC_SKY')
-        #c15 = Column(np.zeros(len(r)), name='GAL_SERSIC_CHISQ')
+        r = 22.5 - 2.5*np.log10(self.nsa2['NMGY'][:,4])
+        c11 = Column(r,name='NSA_RMAG')
+        c12 = Column(self.nsa2['SERSIC_TH50'],name='SERSIC_TH50', unit=u.arcsec)
+        c13 = Column(self.nsa2['SERSIC_N'],name='SERSIC_N')
+        c14 = Column(self.nsa2['SERSIC_BA'],name='SERSIC_BA')
+        c15 = Column(self.nsa2['SERSIC_PHI'],name='SERSIC_PHI', unit=u.deg)
+        self.gzdist = self.nsa2['ZDIST']*self.nsa_matchflag + self.gredshift*~self.nsa_matchflag
+        c16 = Column(self.gzdist,name='ZDIST')
 
-        self.table = Table([c1,c1flag, c2,c3,g1, g2, e1,e2,c4,f1,c5,c6,c7,c8,c9,c10,c11])
+        
+        # cutout region in coadded images
+        c17 = Column(np.zeros(len(r),dtype='U22'), name='BBOX')
+        # R-band scale factor for making continuum-subtracted image
+        c18 = Column(np.zeros(len(r),'f'), name='FILTER_RATIO')
+        self.table.add_columns([c11,c12,c13,c14,c15,c16, c17,c18])
+
 
         fields = ['XC','YC','MAG','RE','N','BA','PA']
         units = ['pixel','pixel','mag','pixel',None,'deg',None]
@@ -622,7 +664,7 @@ class output_table():
         names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG']
         for n in names:
             #print(n)
-            c = Column(np.zeros(len(self.galid),'bool'),name=n)
+            c = Column(np.zeros(self.ngalaxies,'bool'),name=n)
             self.table.add_column(c)
             
     def update_gui_table(self):
@@ -678,6 +720,7 @@ class output_table():
             if c == col:
                 ncol = i
                 colmatch = True
+                break
         if colmatch:    
             self.ui.tableWidget.setItem(row,ncol,QtWidgets.QTableWidgetItem(str(item)))
         else:
@@ -1000,21 +1043,21 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             #print(offimage)
         # cut down NSA catalog to keep information only for galaxies within FOV
         self.nsa.cull_catalog(keepflag,self.prefix)
-        self.gra=self.nsa.cat.RA
-        self.gdec=self.nsa.cat.DEC
-        self.gradius=self.nsa.cat.SERSIC_TH50
-        self.galid=self.nsa.cat.NSAID
-        self.gredshift = self.nsa.cat.Z
-        self.gzdist = self.nsa.cat.ZDIST
+        #self.gra=self.nsa.cat.RA
+        #self.gdec=self.nsa.cat.DEC
+        #self.gradius=self.nsa.cat.SERSIC_TH50
+        #self.galid=self.nsa.cat.NSAID
+        #self.gredshift = self.nsa.cat.Z
+        #self.gzdist= self.nsa.cat.ZDIST
         self.gximage,self.gyimage =self.coadd_wcs.wcs_world2pix(self.nsa.cat.RA,self.nsa.cat.DEC,0)
         # set up a boolean array to track whether Halpha emission is present
-        self.haflag = np.zeros(len(self.galid),'bool')
+
         
 
         px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
         if self.agcflag:
             keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,zmin=self.zmin,zmax=self.zmax)
-            print('number of AGC galaxies in FOV = ',sum(keepagc))
+            #print('number of AGC galaxies in FOV = ',sum(keepagc))
             if self.rweight_flag and self.haweight_flag:
                 offimage = (weight[np.array(py[keepagc],'i'),np.array(px[keepagc],'i')] == 0)
                 # store another array that has the indices in original keepflag array
@@ -1027,11 +1070,17 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             print('number of AGC galaxies in FOV = ',sum(keepagc))
             self.agc.cull_catalog(keepagc, self.prefix)
             self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)        
-            print(self.agcximage)
-            print(self.agcyimage)
+            #print(self.agcximage)
+            #print(self.agcyimage)
+
+        #self.initialize_output_arrays()
+        # set up the output table that will store results from various fits
+        self.initialize_results_table(prefix=self.prefix)
+
+
         # plot location of galaxies in the coadd image
         self.mark_galaxies()
-        
+
         # populate a button that contains list
         # of galaxies in the field of view,
         # user can select from list to set the active galaxy
@@ -1043,13 +1092,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 
 
     
-        #self.initialize_output_arrays()
-        # set up the output table that will store results from various fits
-        self.initialize_results_table(prefix=self.prefix)
 
         # get transmission correction for each galaxy
-        self.filter_correction= self.filter_trace.get_trans_correction(self.gredshift)
-        print(self.filter_correction)
+        self.filter_correction= self.filter_trace.get_trans_correction(self.table['REDSHIFT'])
+        #print(self.filter_correction)
         self.table['FILT_COR'] = self.filter_correction
     def mark_galaxies(self):
         #
@@ -1234,7 +1280,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 
         print('selecting a galaxy')
         self.igal = self.ui.wgalid.currentIndex()
-        self.rcutout_label.setText('r-band '+str(self.nsa.cat.NSAID[self.igal]))
+        self.rcutout_label.setText('r-band '+str(self.nsa2['NSAID'][self.igal]))
         self.rcutout_label.show()
                                    
                                    
@@ -1243,7 +1289,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         # cutout imaages
 
         # scale cutout size according to NSA Re
-        size = cutout_scale*self.nsa.cat.PETROTH50[self.igal]/self.pixel_scale
+        size = cutout_scale*self.gradius[self.igal]
         # set the min size to 100x100 pixels (43"x43")
         size = max(self.global_min_cutout_size,size)
         if size > self.global_max_cutout_size:
@@ -1323,7 +1369,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
         newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile.header.set('NSAID',float('{:d}'.format(self.galid[self.igal])))
+        newfile.header.set('ID',str(self.galid[self.igal]))
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
         # set the exposure time to 1 sec
         # for some reason, in the coadded images produced by swarp, the gain has been corrected
@@ -1340,7 +1386,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
         newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile.header.set('NSAID',float('{:d}'.format(self.galid[self.igal])))
+        newfile.header.set('ID',str(self.galid[self.igal]))
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
         newfile.header['EXPTIME']=1.0 
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
@@ -1671,7 +1717,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         # SFR conversion from Kennicutt and Evans (2012)
         # log (dM/dt/Msun/yr) = log(Lx) - logCx
         logCx = 41.27
-        L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.nsa.cat.ZDIST[self.igal]).cgs.value**2)
+        L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.nsa2['ZDIST'][self.igal]).cgs.value**2)
         #print(L)
         self.sfr = np.log10(L) - logCx
         if prefix is None:
