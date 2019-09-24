@@ -1,6 +1,6 @@
 # halphagui
-development of gui interface for H-alpha narrowband imaging
-
+- development of gui interface for the analysis of H-alpha narrowband imaging of nearby galaxies
+- the gui was developed using HDI imaging data from the KPNO 0.9m.  Will also test on KPNO Mosaic data and INT WFC data.
 
 # Workflow #
 
@@ -10,8 +10,10 @@ python halphamain.py
 ```
 
 # Requirements ##
-
+see wiki for more detailed instructions
 ## Python Modules (need to add versions) ##
+
+
 * ginga
 * astropy
 * pyqt5
