@@ -179,7 +179,8 @@ def oldsize():
 def mag():
     ####  SIZE
     yvars = ['M24','M25','HM17','HF_30R24']
-    yvars2 = ['GAL_M24','GAL_M25','GAL_HM17','GAL_HF_30R24']    
+    yvars2 = ['GAL_M24','GAL_M25','GAL_HM17','GAL_H
+        F_30R24']    
 
     xvars = ['mag24','mag25','tot17flux','tot30r24flux,']
     x = mdat

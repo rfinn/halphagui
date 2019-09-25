@@ -169,6 +169,7 @@ class profile():
             self.linear_fit()
             self.fit_flag = True
         # setting all fitted parameters to zero initially in case halpha fit fails
+        self.check_fit_flag()
     def check_fit_flag(self):
         if not(self.fit_flag):
             self.iso_radii = np.zeros((3,2),'f')

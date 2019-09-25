@@ -62,6 +62,26 @@
            </widget>
           </item>
           <item>
+           <widget class="QWidget" name="widget_3" native="true">
+            <layout class="QVBoxLayout" name="leftButtonLayout">
+             <item>
+              <widget class="QPushButton" name="wfratio">
+               <property name="text">
+                <string>Get Filt Ratio</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="psfButton">
+               <property name="text">
+                <string>Build PSF</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
            <widget class="QWidget" name="widget_4" native="true">
             <layout class="QVBoxLayout" name="verticalLayout_7">
              <item>
@@ -83,26 +103,6 @@
           </item>
           <item>
            <widget class="QComboBox" name="wgalid"/>
-          </item>
-          <item>
-           <widget class="QWidget" name="widget_3" native="true">
-            <layout class="QVBoxLayout" name="leftButtonLayout">
-             <item>
-              <widget class="QPushButton" name="wfratio">
-               <property name="text">
-                <string>Get Filt Ratio</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="psfButton">
-               <property name="text">
-                <string>Build PSF</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
           </item>
          </layout>
         </widget>

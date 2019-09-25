@@ -4,7 +4,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.io import fits
 import numpy as np
-
+from astropy.table import Table
 def join_cats(ra1,dec1,ra2,dec2,maxoffset=30.):
     '''
     INPUT:
@@ -43,7 +43,7 @@ def join_cats(ra1,dec1,ra2,dec2,maxoffset=30.):
     # joined catalog will contain all objects in cat1
     # plus any in cat2 that weren't matched to cat1
     join_index = np.arange(len(ra1) + sum(~matchflag1to2))
-    print(len(join_index))
+    #print(len(join_index))
     cat1_index = np.zeros(len(join_index),'i')
     
     # flag for objects in cat 1 that are in the joined catalog
@@ -64,16 +64,23 @@ def join_cats(ra1,dec1,ra2,dec2,maxoffset=30.):
 
 
     # fill in details for objects in cat2 that weren't matched to cat1
-    print('number in cat2 that are not in cat1 = ',sum(~matchflag1to2))
+    #print('number in cat2 that are not in cat1 = ',sum(~matchflag1to2))
     c2row = np.arange(len(ra2))
     cat2_index[~cat1_flag] = np.arange(len(ra2))[~matchflag1to2]
     cat2_flag[~cat1_flag] = np.ones(sum(~cat1_flag),'bool')
     return cat1_index,cat1_flag, cat2_index, cat2_flag
 
+def make_new_cats(cat1, cat2):
+    cat1_index,cat1_flag, cat2_index, cat2_flag = join_cats(cat1.RA,cat1.DEC,cat2.RA,cat2.DEC)
+    newcat1 = np.zeros(len(cat1_index),dtype=cat1.dtype)
+    newcat1[cat1_flag] = cat1[cat1_index[cat1_flag]]
+    newcat2 = np.zeros(len(cat1_index),dtype=cat2.dtype)
+    newcat2[cat2_flag] = cat2[cat2_index[cat2_flag]]
+    return Table(newcat1), cat1_flag, Table(newcat2), cat2_flag
 if __name__ == '__main__':
     nsa = fits.getdata('NRGs27_nsa.fits')
     agc = fits.getdata('NRGs27_agc.fits')
     t = join_cats(nsa.RA,nsa.DEC,agc.RA,agc.DEC)
-
+    j = make_new_cats(nsa,agc)
     
     
