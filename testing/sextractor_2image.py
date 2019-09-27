@@ -53,15 +53,15 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
     froot2 = os.path.splitext(base)[0]
 
     if zp1flag:
-        os.system('sex ' + image1+','+image1 + ' -c default.sex.hdi -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
+        os.system('sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
     else:
-        os.system('sex ' + image1+','+image1 + ' -c default.sex.hdi -CATALOG_NAME ' + froot1 + '.cat')
+        os.system('sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat')
     #os.rename('check.fits', froot1 + 'check.fits')
     # run on second image
     if zp2flag:
-        os.system('sex ' + image1+','+image2 + ' -c default.sex.hdi -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
+        os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
     else:
-        os.system('sex ' + image1+','+image2 + ' -c default.sex.hdi -CATALOG_NAME ' + froot2 + '.cat')
+        os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat')
     #os.rename('check.fits', froot2 + 'check.fits')
 
 def make_plot(image1, image2, return_flag = False, image_dir = './'):
