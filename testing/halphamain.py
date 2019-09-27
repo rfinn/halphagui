@@ -384,7 +384,7 @@ class output_table():
             charar2[:] = '-A'
             self.galid=np.zeros(self.ngalaxies, dtype='U15')
             for i in np.arange(self.ngalaxies):
-                self.galid[i] = 'N'+str(self.table['NSAID'][i])+'-A'+str(self.tabe['AGCNUMBER'][i])
+                self.galid[i] = 'N'+str(self.table['NSAID'][i])+'-A'+str(self.table['AGCNUMBER'][i])
                                                                                 
         ## if not, create table
         else:
@@ -802,6 +802,9 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         else:
             self.sepath = sepath
         self.igal = None
+        self.global_min_cutout_size = 100
+        self.global_max_cutout_size = 250
+
         self.initialize_uco_arrays()
     def connect_buttons(self):
         self.ui.wmark.clicked.connect(self.find_galaxies)
@@ -850,8 +853,6 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
         self.subtract_images()
         self.setup_ratio_slider()
-        self.global_min_cutout_size = 100
-        self.global_max_cutout_size = 250
         self.setup_cutout_slider()
 
     def load_rcoadd(self):
@@ -1112,9 +1113,11 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         
         for i,x in enumerate(self.gximage):
             obj = self.coadd.dc.Box(
-                x=x, y=self.gyimage[i], xradius=size[i],\
-                yradius=size[i], color=markcolor, linewidth=markwidth)
-            glabel = self.coadd.dc.Text(x-4*self.gradius[i],self.gyimage[i]+8.5*self.gradius[i],\
+                x=x, y=self.gyimage[i], \
+                #xradius=size[i],yradius=size[i], \
+                xradius=100,yradius=100, \
+                color=markcolor, linewidth=markwidth)
+            glabel = self.coadd.dc.Text(x-50,self.gyimage[i]+60,\
                                         str(self.galid[i]), color=markcolor)
             objlist.append(obj)
             objlist.append(glabel)
@@ -1124,7 +1127,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
                 obj = self.coadd.dc.Box(
                     x=x, y=self.agcyimage[i], xradius=75,\
                     yradius=75, color='purple', linewidth=markwidth)
-                glabel = self.coadd.dc.Text(x-20,self.agcyimage[i]+20,\
+                glabel = self.coadd.dc.Text(x-40,self.agcyimage[i]+40,\
                                         str(self.agc.cat.AGCnr[i]), color='purple')
                 objlist.append(obj)
                 objlist.append(glabel)
@@ -1179,7 +1182,6 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.subtract_images()
         self.setup_ratio_slider()
         self.clean_links()
-        self.table['FILTER_RATIO'] = self.filter_ratio*np.ones(len(self.galid),'f')
     def subtract_images(self):
         self.halpha_cs = self.ha - self.filter_ratio*self.r
         # display continuum subtracted Halpha image in the large frame        
@@ -1357,6 +1359,12 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         
     def write_cutouts(self):
         #print(ymin,ymax,xmin,xmax)
+        try:
+            self.table['FILTER_RATIO'][self.igal] = self.filter_ratio
+        except AttributeError:
+            print('Warning - could not set filter ratio in table')
+            print('I think something is wrong')
+
         w = WCS(self.rcoadd_fname)
         try:
             ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original

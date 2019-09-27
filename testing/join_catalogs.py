@@ -71,6 +71,10 @@ def join_cats(ra1,dec1,ra2,dec2,maxoffset=30.):
     return cat1_index,cat1_flag, cat2_index, cat2_flag
 
 def make_new_cats(cat1, cat2):
+    # returns tables with one line for each unique galaxy
+    # tables contain contents of original two catalogs, but now line matched.
+    # For example, table1 may have a row of zeros for a galaxy
+    # that is not in tab1 but it is in tab2.
     cat1_index,cat1_flag, cat2_index, cat2_flag = join_cats(cat1.RA,cat1.DEC,cat2.RA,cat2.DEC)
     newcat1 = np.zeros(len(cat1_index),dtype=cat1.dtype)
     newcat1[cat1_flag] = cat1[cat1_index[cat1_flag]]
