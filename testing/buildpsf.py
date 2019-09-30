@@ -194,7 +194,11 @@ class psf_parent_image():
     def save_psf_image(self):
         # save the psf file
         # outfile = append '-psf' to the input image name
-        self.psf_image_name = self.image_name.split('.fits')[0]+'-psf.fits'
+        # just use the basename (filename), and drop any path information
+        # this will have the effect of saving the psf image in the current directory,
+        # rather than the directory where the image is
+        basename = os.path.basename(self.image_name)
+        self.psf_image_name = basename.split('.fits')[0]+'-psf.fits'
         fits.writeto(self.psf_image_name,self.epsf.data, overwrite=True)
 
         # update image header
