@@ -858,7 +858,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.setup_ratio_slider()
         self.setup_cutout_slider()
 
-    def setup_testing(self):
+    def setup_nebula(self):
         self.hacoadd_fname = '/mnt/qnap_home/share/20150418/MKW8_ha16.coadd.fits'
         
         
