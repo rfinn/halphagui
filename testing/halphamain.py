@@ -93,7 +93,8 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         #self.figure = plt.figure()
         fi = CanvasView(self.logger, render='widget')
         fi.enable_autocuts('on')
-        fi.set_autocut_params('histogram')
+        #fi.set_autocut_params('histogram')
+        fi.set_autocut_params('zscale')
         fi.enable_autozoom('once')
         fi.set_callback('drag-drop', self.drop_file)
         fi.set_callback('none-move',self.cursor_cb)
@@ -835,7 +836,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
         self.load_hacoadd()
         #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
-        #self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.haweight_flag = True
         self.rcoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_R.coadd.fits'
         self.rcoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
@@ -1218,8 +1219,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.clean_links()
     def subtract_images(self):
         self.halpha_cs = self.ha - self.filter_ratio*self.r
-        # display continuum subtracted Halpha image in the large frame        
+        # display continuum subtracted Halpha image in the large frame
+        self.coadd.fitsimage.set_autocut_params('zscale')
         self.coadd.fitsimage.set_data(self.halpha_cs)
+
     def key_press_func(self,key):
         print(key)
         if key == 'r':
@@ -1471,6 +1474,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=50, oversampling=self.oversampling)
         self.hapsf.run_all()
     def run_galfit(self, ncomp=1):
+        self.ncomp = ncomp
         print('running galfit with ',ncomp,' components')
         self.gwindow = QtWidgets.QWidget()
         '''

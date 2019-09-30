@@ -57,7 +57,7 @@ class cutout_image():
         fi = CanvasView(self.logger, render='widget')
         fi.enable_autocuts('on')
         fi.set_autocut_params(autocut_params)
-        #fi.set_autocut_params('zscale')
+        fi.set_autocut_params('histogram')
         fi.enable_autozoom('on')
         #fi.set_callback('drag-drop', self.drop_file)
         #fi.set_callback('none-move',self.cursor_cb)
