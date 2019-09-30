@@ -776,13 +776,14 @@ class uco_table():
 
 class hafunctions(Ui_MainWindow, output_table, uco_table):
 
-    def __init__(self,MainWindow, logger, sepath=None, testing=False):
+    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False):
         super(hafunctions, self).__init__()
         #print(MainWindow)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(MainWindow)
         self.prefix= None
         self.testing = testing
+        self.nebula = nebula
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
@@ -825,6 +826,8 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.ui.clearCutoutsButton.clicked.connect(self.clear_cutouts)
         if self.testing:
             self.setup_testing()
+        if self.nebula:
+            self.setup_nebula()
     def setup_testing(self):
         self.hacoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_ha16.coadd.fits'
         
@@ -848,6 +851,37 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.agcflag = True
         #self.coadd.load_file(self.rcoadd_fname)
         self.filter_ratio = 0.0416
+        self.reset_ratio = self.filter_ratio
+        self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
+        self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
+        self.subtract_images()
+        self.setup_ratio_slider()
+        self.setup_cutout_slider()
+
+    def setup_testing(self):
+        self.hacoadd_fname = '/mnt/qnap_home/share/20150418/MKW8_ha16.coadd.fits'
+        
+        
+        #self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
+        self.load_hacoadd()
+        #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
+        #self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        #self.haweight_flag = True
+        self.rcoadd_fname ='/mnt/qnap_home/share/20150418/MKW8_R.coadd.fits'
+        #self.rcoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
+        #self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        self.load_rcoadd()
+        #self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        #self.rweight_flag = True
+        #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        self.nsa_fname = '/mnt/qnap_home/share/catalogs/nsa_v0_1_2.fits'
+        self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
+        self.agc_fname = '/mnt/qnap_home/share/catalogs/agcnorthminus1.2019Sep24.fits'
+        self.agc = galaxy_catalog(self.agc_fname,agc=True)
+        self.agcflag = True
+        #self.coadd.load_file(self.rcoadd_fname)
+        #self.filter_ratio = 0.0416
+        self.filter_ratio = 0.0422
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
@@ -1819,8 +1853,11 @@ if __name__ == "__main__":
     sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
     if int(sys.argv[1]) == 0:
         ui = hafunctions(MainWindow, logger, sepath = sepath, testing=False)
-    else:
+    elif int(sys.argv[1]) == 1:
         ui = hafunctions(MainWindow, logger, sepath = sepath, testing=True)
+    elif int(sys.argv[1]) == 2:
+        # load default directories for virgo machine on open nebula
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=False,nebula=True)
     #ui.setupUi(MainWindow)
     #ui.test()
 
