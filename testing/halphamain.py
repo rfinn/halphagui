@@ -413,7 +413,7 @@ class output_table():
             self.ra = self.nsa2['RA']*self.nsa_matchflag + self.agc2['RA']*(~self.nsa_matchflag)
 
             self.dec = self.nsa2['DEC']*self.nsa_matchflag + self.agc2['DEC']*(~self.nsa_matchflag)
-
+ 
             self.gradius = self.nsa2['SERSIC_TH50']*self.nsa_matchflag/self.pixel_scale + 100.*np.ones(self.ngalaxies)*(~self.nsa_matchflag)
             charar1 = np.chararray(self.ngalaxies)
             charar1[:] = 'N'

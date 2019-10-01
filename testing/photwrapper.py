@@ -329,8 +329,8 @@ class ellipse():
         # orientation is angle in radians, CCW relative to +x axis
         t = obj.orientation.value
         #print('inside get_ellipse_guess, orientation = ',obj.orientation)
-        if t < 0: # convert to positive angle
-            self.theta = np.pi/2-obj.orientation.to(u.rad).value
+        if t < 0: # convert to positive angle wrt +x axis
+            self.theta = np.pi+obj.orientation.to(u.rad).value
         else:
             self.theta = obj.orientation.to(u.rad).value # orientation in radians
         # EllipticalAperture gives rotation angle in radians from +x axis, CCW
