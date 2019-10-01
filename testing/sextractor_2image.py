@@ -96,7 +96,7 @@ def make_plot(image1, image2, return_flag = False, image_dir = './'):
     t = filename.split('.coadd')
     plt.title(t[0],fontsize=12)
     plt.show()
-    plt.savefig(image_dir+t[0]+'-filter-ratio.png')
+    plt.savefig(image_dir+'/'+t[0]+'-filter-ratio.png')
 
     if return_flag:
         return ave, std
