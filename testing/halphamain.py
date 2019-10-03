@@ -1078,6 +1078,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             keepflag[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
             #print(offimage)
         # cut down NSA catalog to keep information only for galaxies within FOV
+        print('number of NSA galaxies in FOV = ',sum(keepflag))
         self.nsa.cull_catalog(keepflag,self.prefix)
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
@@ -1105,7 +1106,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 
             print('number of AGC galaxies in FOV = ',sum(keepagc))
             self.agc.cull_catalog(keepagc, self.prefix)
-            self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)        
+            if sum(keepagc) == 0:
+                self.agcflag = False
+            else:
+                self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)        
             #print(self.agcximage)
             #print(self.agcyimage)
 
@@ -1468,10 +1472,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
     def build_psf(self):
         print('oversampling = ',self.oversampling)
         print('PSF RESULTS FOR R-BAND COADDED IMAGE')
-        self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=50, oversampling=self.oversampling)
+        self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
         self.psf.run_all()
         print('PSF RESULTS FOR COADDED IMAGE')
-        self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=50, oversampling=self.oversampling)
+        self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
         self.hapsf.run_all()
     def run_galfit(self, ncomp=1):
         self.ncomp = ncomp
