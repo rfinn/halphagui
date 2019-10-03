@@ -47,7 +47,7 @@ from astropy.stats import gaussian_sigma_to_fwhm
 from matplotlib import pyplot as plt
 
 class psf_parent_image():
-    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=25, pixelscale=0.43,oversampling=None):
+    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=100, pixelscale=0.43,oversampling=None):
         self.image_name = image
         self.data, self.header = fits.getdata(self.image_name, header=True)
         self.sat_level = max_good
@@ -149,7 +149,8 @@ class psf_parent_image():
         self.data -= median_val
         nddata = NDData(data=self.data)  
         self.stars = extract_stars(nddata, self.stars_tbl, size=self.size)  
-
+        if len(self.stars) < self.nstars:
+            self.nstars = len(self.stars)
     def show_stars(self):
         # round up to integer
         nrows = int(np.ceil(np.sqrt(len(self.stars))))
