@@ -95,7 +95,24 @@ class psf_parent_image():
         s = 'sex %s -c %s  -SATUR_LEVEL 40000.0'%(self.image_name,self.config)
         #print(s)
         os.system(s)
-        self.clean_links()
+        ###################################
+        # Read in Source Extractor catalog
+        ###################################
+
+        secat = fits.getdata('test_cat.fits',2)
+        ###################################
+        # get median fwhm of image
+        ###################################
+        fwhm = np.median(secat['FWHM_IMAGE'])*self.pixelscale
+
+        #############################################################
+        # rerun Source Extractor catalog with updated SEEING_FWHM
+        #############################################################
+        s = 'sex %s -c %s  -SATUR_LEVEL 40000.0 --SEEING_FWHM %s'%(self.image_name,self.config,str(fwhm))
+
+        os.system(s)
+
+
     def read_se_table(self):
         self.secat = fits.getdata('test_cat.fits',2)
         pass
