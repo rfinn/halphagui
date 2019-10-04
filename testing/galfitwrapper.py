@@ -386,8 +386,10 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         '\n \t ALT-right_click = adjust contrast \n \n'+
         'Click Red X to close window')
     def quit_program(self):
-        self.close_window()
-
+        #self.close_window()
+        print('click red x in top left corner to quit')
+        print('lame...I know... but at least the program did not crash!')
+        
 #class galfit_galaxy():
 
 
