@@ -108,7 +108,7 @@ class psf_parent_image():
         #############################################################
         # rerun Source Extractor catalog with updated SEEING_FWHM
         #############################################################
-        s = 'sex %s -c %s  -SATUR_LEVEL 40000.0 --SEEING_FWHM %s'%(self.image_name,self.config,str(fwhm))
+        s = 'sex %s -c %s  -SATUR_LEVEL 40000.0 -SEEING_FWHM %s'%(self.image_name,self.config,str(fwhm))
 
         os.system(s)
 
