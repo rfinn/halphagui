@@ -11,7 +11,7 @@ import platform
 #from PyQt5.Qtcore import  Qt
 from PyQt5 import QtCore,QtWidgets, QtGui
 #from ginga.qtw.QtHelp import QtGui #, QtCore
-from halphav4 import Ui_MainWindow
+from halphav5 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga import colors
@@ -931,7 +931,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.coadd.key_pressed.connect(self.key_press_func)
         #self.coadd.add_cutouts()
 
-    def add_cutout_frames(self):
+    def add_cutout_framesv4(self):# with halphav4
         # r-band cutout
         self.rcutout_label = QtWidgets.QLabel('r-band')
         self.ui.cutoutsLayout.addWidget(self.rcutout_label, 0, 0, 1, 1)
@@ -944,6 +944,30 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 8, 1,autocut_params='histogram')
         self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1)
         self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1)
+    def add_cutout_frames(self):
+        # r-band cutout
+        self.rcutout_label = QtWidgets.QLabel('r-band')
+        drow = 20
+        self.ui.cutoutsLayout.addWidget(self.rcutout_label, 0, 0, 1, 2)
+        temp_label = QtWidgets.QLabel('')
+        self.ui.cutoutsLayout.addWidget(temp_label, 0, 2, 1, 2)
+        self.nsa_label = QtWidgets.QLabel('NSA ID')
+        self.ui.cutoutsLayout.addWidget(self.nsa_label, 0, 4, 1, 2)
+        temp_label = QtWidgets.QLabel('')
+        self.ui.cutoutsLayout.addWidget(temp_label, 0, 6, 1, 2)
+        self.agc_label = QtWidgets.QLabel('AGC Number')
+        self.ui.cutoutsLayout.addWidget(self.agc_label, 0, 8, 1, 2)
+        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, drow, 10,autocut_params='histogram')
+        a = QtWidgets.QLabel('CS Halpha')
+        self.ui.cutoutsLayout.addWidget(a, drow+1, 0, 1, 2)
+        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, drow+2, 0, drow, 10,autocut_params='histogram')
+
+        a = QtWidgets.QLabel('Mask')
+        self.ui.cutoutsLayout.addWidget(a, 2*drow+2, 0, 1, 2)
+        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,2*drow+3, 0, drow, 10)
+        #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
+
+
 
     def clear_cutouts(self):
         self.rcutout.canvas.delete_all_objects()
