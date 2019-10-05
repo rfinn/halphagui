@@ -860,8 +860,8 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.setup_cutout_slider()
 
     def setup_nebula(self):
-        #self.hacoadd_fname = '/mnt/qnap_home/share/20150418/MKW8_ha16.coadd.fits'
-        self.hacoadd_fname = '/mnt/qnap_home/rfinn/Halpha/reduced/virgo-coadds-2017/pointing-1_ha4.coadd.fits'
+        self.hacoadd_fname = '/mnt/astrophysics/reduced/20150418/MKW8_ha16.coadd.fits'
+        #self.hacoadd_fname = '/mnt/qnap_home/rfinn/Halpha/reduced/virgo-coadds-2017/pointing-1_ha4.coadd.fits'
         
         
         #self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
@@ -869,8 +869,8 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         #self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.haweight_flag = True
-        self.rcoadd_fname ='/mnt/qnap_home/share/20150418/MKW8_R.coadd.fits'
-        self.rcoadd_fname = '/mnt/qnap_home/rfinn/Halpha/reduced/virgo-coadds-2017/pointing-1_R.coadd.fits'
+        self.rcoadd_fname ='/mnt/astrophysics/reduced/20150418/MKW8_R.coadd.fits'
+        #self.rcoadd_fname = '/mnt/qnap_home/rfinn/Halpha/reduced/virgo-coadds-2017/pointing-1_R.coadd.fits'
         #self.rcoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
         #self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         self.load_rcoadd()
@@ -878,10 +878,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         #self.rweight_flag = True
         #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         #self.nsa_fname = '/mnt/qnap_home/share/catalogs/nsa_v0_1_2.fits'
-        self.nsa_fname = '/mnt/qnap_home/rfinn/Halpha/catalogs/nsa_v0_1_2.fits'
+        self.nsa_fname = '/mnt/astrophysics/catalogs/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
         #self.agc_fname = '/mnt/qnap_home/share/catalogs/agcnorthminus1.2019Sep24.fits'
-        self.agc_fname = '/mnt/qnap_home/rfinn/Halpha/catalogs/agcnorthminus1.2019Sep24.fits'
+        self.agc_fname = '/mnt/astrophysics/catalogs/agcnorthminus1.2019Sep24.fits'
         self.agc = galaxy_catalog(self.agc_fname,agc=True)
         self.agcflag = True
         #self.coadd.load_file(self.rcoadd_fname)
