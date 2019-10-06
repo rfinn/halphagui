@@ -283,47 +283,15 @@
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_4">
-         <item row="9" column="0">
-          <widget class="QLabel" name="label_19">
+         <item row="12" column="2">
+          <widget class="QLineEdit" name="errorFitLineEdit"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_9">
            <property name="text">
-            <string>Chi</string>
+            <string>xc</string>
            </property>
           </widget>
-         </item>
-         <item row="9" column="2">
-          <widget class="QLineEdit" name="chiFitLineEdit"/>
-         </item>
-         <item row="7" column="2">
-          <widget class="QLineEdit" name="PAFitLineEdit"/>
-         </item>
-         <item row="3" column="5">
-          <widget class="QLineEdit" name="yc2FitLineEdit"/>
-         </item>
-         <item row="6" column="0">
-          <widget class="QLabel" name="label_13">
-           <property name="text">
-            <string>n</string>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="2">
-          <widget class="QLineEdit" name="BAFitLineEdit"/>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_10">
-           <property name="text">
-            <string>yc</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="2">
-          <widget class="QLineEdit" name="ycFitLineEdit"/>
-         </item>
-         <item row="4" column="2">
-          <widget class="QLineEdit" name="magFitLineEdit"/>
-         </item>
-         <item row="2" column="2">
-          <widget class="QLineEdit" name="xcFitLineEdit"/>
          </item>
          <item row="1" column="0" colspan="7">
           <widget class="QWidget" name="widget_21" native="true">
@@ -338,15 +306,38 @@
            </layout>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_9">
+         <item row="9" column="2">
+          <widget class="QLineEdit" name="asymLineEdit"/>
+         </item>
+         <item row="8" column="0">
+          <widget class="QLabel" name="label_15">
            <property name="text">
-            <string>xc</string>
+            <string>B/A</string>
            </property>
           </widget>
          </item>
-         <item row="11" column="2">
-          <widget class="QLineEdit" name="errorFitLineEdit"/>
+         <item row="3" column="2">
+          <widget class="QLineEdit" name="ycFitLineEdit"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_10">
+           <property name="text">
+            <string>yc</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QLineEdit" name="xcFitLineEdit"/>
+         </item>
+         <item row="4" column="2">
+          <widget class="QLineEdit" name="magFitLineEdit"/>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="label_12">
+           <property name="text">
+            <string>PA</string>
+           </property>
+          </widget>
          </item>
          <item row="4" column="0">
           <widget class="QLabel" name="label_11">
@@ -355,10 +346,10 @@
            </property>
           </widget>
          </item>
-         <item row="7" column="0">
-          <widget class="QLabel" name="label_12">
+         <item row="12" column="0">
+          <widget class="QLabel" name="label_18">
            <property name="text">
-            <string>PA</string>
+            <string>error</string>
            </property>
           </widget>
          </item>
@@ -369,19 +360,15 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="3">
-          <widget class="QLabel" name="label_20">
+         <item row="5" column="3">
+          <widget class="QLabel" name="label_28">
            <property name="text">
-            <string>xc2</string>
+            <string>Re2</string>
            </property>
           </widget>
          </item>
-         <item row="11" column="0">
-          <widget class="QLabel" name="label_18">
-           <property name="text">
-            <string>error</string>
-           </property>
-          </widget>
+         <item row="6" column="2">
+          <widget class="QLineEdit" name="nFitLineEdit"/>
          </item>
          <item row="6" column="3">
           <widget class="QLabel" name="label_29">
@@ -390,10 +377,20 @@
            </property>
           </widget>
          </item>
-         <item row="5" column="3">
-          <widget class="QLabel" name="label_28">
+         <item row="7" column="3">
+          <widget class="QLabel" name="label_30">
            <property name="text">
-            <string>Re2</string>
+            <string>PA2</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="2">
+          <widget class="QLineEdit" name="ReFitLineEdit"/>
+         </item>
+         <item row="4" column="3">
+          <widget class="QLabel" name="label_27">
+           <property name="text">
+            <string>mag2</string>
            </property>
           </widget>
          </item>
@@ -404,32 +401,32 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="3">
-          <widget class="QLabel" name="label_27">
+         <item row="12" column="3">
+          <widget class="QLabel" name="label_19">
            <property name="text">
-            <string>mag2</string>
+            <string>Chi</string>
            </property>
           </widget>
          </item>
-         <item row="6" column="2">
-          <widget class="QLineEdit" name="nFitLineEdit"/>
+         <item row="12" column="5">
+          <widget class="QLineEdit" name="chiFitLineEdit"/>
          </item>
-         <item row="7" column="3">
-          <widget class="QLabel" name="label_30">
+         <item row="9" column="0">
+          <widget class="QLabel" name="label_32">
            <property name="text">
-            <string>PA2</string>
+            <string>asym</string>
            </property>
           </widget>
          </item>
-         <item row="8" column="0">
-          <widget class="QLabel" name="label_15">
+         <item row="2" column="3">
+          <widget class="QLabel" name="label_20">
            <property name="text">
-            <string>B/A</string>
+            <string>xc2</string>
            </property>
           </widget>
          </item>
-         <item row="5" column="2">
-          <widget class="QLineEdit" name="ReFitLineEdit"/>
+         <item row="5" column="5">
+          <widget class="QLineEdit" name="Re2FitLineEdit"/>
          </item>
          <item row="5" column="0">
           <widget class="QLabel" name="label_14">
@@ -438,33 +435,56 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="5">
-          <widget class="QLineEdit" name="mag2FitLineEdit"/>
+         <item row="8" column="2">
+          <widget class="QLineEdit" name="BAFitLineEdit"/>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="label_13">
+           <property name="text">
+            <string>n</string>
+           </property>
+          </widget>
          </item>
          <item row="2" column="5">
           <widget class="QLineEdit" name="xc2FitLineEdit"/>
          </item>
-         <item row="5" column="5">
-          <widget class="QLineEdit" name="Re2FitLineEdit"/>
-         </item>
-         <item row="6" column="5">
-          <widget class="QLineEdit" name="n2FitLineEdit"/>
+         <item row="4" column="5">
+          <widget class="QLineEdit" name="mag2FitLineEdit"/>
          </item>
          <item row="7" column="5">
           <widget class="QLineEdit" name="PA2FitLineEdit"/>
          </item>
+         <item row="3" column="5">
+          <widget class="QLineEdit" name="yc2FitLineEdit"/>
+         </item>
+         <item row="7" column="2">
+          <widget class="QLineEdit" name="PAFitLineEdit"/>
+         </item>
          <item row="8" column="5">
           <widget class="QLineEdit" name="BA2FitLineEdit"/>
          </item>
-         <item row="9" column="3">
+         <item row="6" column="5">
+          <widget class="QLineEdit" name="n2FitLineEdit"/>
+         </item>
+         <item row="10" column="0">
+          <widget class="QLabel" name="label_33">
+           <property name="text">
+            <string>aPA</string>
+           </property>
+          </widget>
+         </item>
+         <item row="10" column="2">
+          <widget class="QLineEdit" name="asymPALineEdit"/>
+         </item>
+         <item row="10" column="5">
+          <widget class="QLineEdit" name="skyFitLineEdit"/>
+         </item>
+         <item row="10" column="3">
           <widget class="QLabel" name="label_17">
            <property name="text">
             <string>sky</string>
            </property>
           </widget>
-         </item>
-         <item row="9" column="5">
-          <widget class="QLineEdit" name="skyFitLineEdit"/>
          </item>
         </layout>
        </widget>
