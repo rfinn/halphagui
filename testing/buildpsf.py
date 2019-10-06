@@ -126,10 +126,10 @@ class psf_parent_image():
         flag1 = (self.secat['CLASS_STAR'] > 0.95) & (self.secat['FLAGS'] == 0)
 
         # remove stars that are near the edge
-        # being conservative by using the 3x full image size as the buffer rather than half image size
+        # being conservative by using the 10x full image size as the buffer rather than half image size
         # in part to compensate from zeros that sometimes are seen around perimeter after swarp
-        flag2 = ((x > 3.*self.size) & (x < (self.data.shape[1] -1 - 3.*self.size)) &
-                (y > 3.*self.size) & (y < (self.data.shape[0] -1 - 3.*self.size)))
+        flag2 = ((x > 5.*self.size) & (x < (self.data.shape[1] -1 - 5.*self.size)) &
+                (y > 5.*self.size) & (y < (self.data.shape[0] -1 - 5.*self.size)))
 
         # remove stars with close neighbors
         c = SkyCoord(self.secat['ALPHA_J2000']*u.deg,self.secat['DELTA_J2000']*u.deg, frame='icrs')
@@ -151,6 +151,8 @@ class psf_parent_image():
         threshold = .65
         lower = int(threshold*len(sorted_indices)) - int((self.nstars)/2)
         upper = int(threshold*len(sorted_indices)) + int((self.nstars)/2)
+        #lower = int(.25*len(sorted_indices)) 
+        #upper = int(.85*len(sorted_indices)) 
         print('number of psf stars = ',upper-lower+1)
         self.xstar = x[lower:upper]
         self.ystar = y[lower:upper]
@@ -166,6 +168,15 @@ class psf_parent_image():
         self.data -= median_val
         nddata = NDData(data=self.data)  
         self.stars = extract_stars(nddata, self.stars_tbl, size=self.size)  
+        # check to make sure stars don't have zeros
+        # Virgo 2017 pointing-4_R.coadd.fits is giving me trouble b/c a lot of stars have zeros
+        keepflag = np.ones(len(self.stars),'bool')
+        for i,s in enumerate(self.stars):
+            if len(np.where(s.data == 0)[0]) > 1:
+                keepflag[i] = False
+        self.keepflag2 = keepflag
+        self.stars = extract_stars(nddata, self.stars_tbl[keepflag], size=self.size)  
+        #self.stars = self.stars[keepflag]
         if len(self.stars) < self.nstars:
             self.nstars = len(self.stars)
     def show_stars(self):
@@ -183,7 +194,7 @@ class psf_parent_image():
         if self.oversampling == None:
             epsf_builder = EPSFBuilder(maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)
         else:
-            epsf_builder = EPSFBuilder(oversampling=self.oversampling, maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)  
+            epsf_builder = EPSFBuilder(oversampling=self.oversampling, maxiters=13, progress_bar=False,  recentering_func = centroid_com, smoothing_kernel=None)  
         self.epsf, self.fitted_stars = epsf_builder(self.stars)
     def show_psf(self):
         norm = simple_norm(self.epsf.data, 'log', percent=99.)
@@ -231,7 +242,8 @@ class psf_parent_image():
         fits.writeto(self.psf_image_name, data, header=header, overwrite=True)
         
 if __name__ == '__main__':
-    image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
+    #image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
+    image = '/Users/rfinn/research/HalphaGroups/temp/pointing-4_R.coadd.fits'
     p = psf_parent_image(image=image, size=21, nstars=100, oversampling=2)
     p.runse()
     p.read_se_table()
