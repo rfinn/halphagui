@@ -605,10 +605,19 @@ if __name__ == '__main__':
     prefix = 'NRGs27-'
     nsaid = '110430'
     nsaid = '110276'
+    prefix='pointing-1-'
+    nsaid = '118647'
     rimage = prefix+nsaid+'-R.fits'
     rphot_table = prefix+nsaid+'-R_phot.fits'
     haimage = prefix+nsaid+'-CS.fits'
     haphot_table = prefix+nsaid+'-CS_phot.fits'
+    # testing on 2017 pointing 1
+    # second galaxy has clear halpha but profile is not fit
+    # want to make sure we record some size
+    rimage = 'test3-N119230-A742747-R.fits'
+    rphot_table = 'test3-N119230-A742747-R_phot.fits'
+    haimage = 'test3-N119230-A742747-CS.fits'
+    haphot_table = 'test3-N119230-A742747-CS_phot.fits'
     r = rprofile(rimage, rphot_table, label='R')
     r.becky_measurements()
     ha = haprofile(haimage, haphot_table, label=r"$H\alpha$")

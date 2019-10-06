@@ -53,7 +53,7 @@ def parse_galfit_results(galfit_outimage,asymflag=0,ncomp=1):
 
 
 class galfit:
-    def __init__(self,galname=None,image=None,sigma_image=None,psf_image=None,psf_oversampling=None,mask_image=None,xminfit=None,yminfit=None,xmaxfit=None,ymaxfit=None,convolution_size=None,magzp=None,pscale=None,convflag=1,constraintflag=1,fitallflag=False,ncomp=1):
+    def __init__(self,galname=None,image=None,sigma_image=None,psf_image=None,psf_oversampling=None,mask_image=None,xminfit=None,yminfit=None,xmaxfit=None,ymaxfit=None,convolution_size=None,magzp=None,pscale=None,convflag=1,constraintflag=1,fitallflag=False,ncomp=1,asym=False):
         self.galname=galname
         self.image=image
 
@@ -72,7 +72,7 @@ class galfit:
         self.constraintflag=constraintflag
         self.fitallflag=fitallflag
         self.ncomp=ncomp
-        self.asymmetry=0
+        self.asymmetry=asym
         if self.sigma_image == None:
             self.sigma_image = 'none'
 
@@ -366,7 +366,7 @@ class galfit:
         if self.ncomp == 2:
             header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_XC','2_YC','2_MAG','2_RE','2_N','2_AR','2_PA','3_SKY','ERROR','CHI2NU']
 
-        t=parse_galfit_results(image, ncomp = self.ncomp)
+        t=parse_galfit_results(image, ncomp = self.ncomp,asymflag=self.asymmetry)
         for i in range(len(header_keywords)):
             try:
                 print('%6s : %5.2f +/- %5.2f'%(header_keywords[i],t[i][0],t[i][1]))

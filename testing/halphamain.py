@@ -386,13 +386,19 @@ class output_table():
             self.galid=np.zeros(self.ngalaxies, dtype='U15')
             for i in np.arange(self.ngalaxies):
                 self.galid[i] = 'N'+str(self.table['NSAID'][i])+'-A'+str(self.table['AGCNUMBER'][i])
-                                                                                
+            # read in nsa2
+            self.nsa2 = fits.getdata(self.prefix+'-nsa-matched.fits')
+            # read in agc2
+            self.agc2 = fits.getdata(self.prefix+'-agc-matched.fits')                                                                              
         ## if not, create table
+
         else:
             self.create_table()
         self.update_gui_table()
     def create_table(self):
 
+
+        
         # updating this part to make use of NSA and AGC catalogs
         # not going to make this backward compatible, meaning you need to enter both catalogs
         # probably just being lazy, but it's giving me a headache...
@@ -455,11 +461,13 @@ class output_table():
         
         g1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_RA', unit=u.deg,description='center from galfit')
         g2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_DEC', unit=u.deg,description='center from galfit')
+        g3 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HRA', unit=u.deg,description='center from galfit')
+        g4 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HDEC', unit=u.deg,description='center from galfit')
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_RA', unit=u.deg,description='center from photutil centroid')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='center from photutil centroid')
         c9 = Column(self.haflag, name='HA_FLAG')
         c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
-        self.table.add_columns([g1,g2,e1,e2,c9,c10])
+        self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10])
         
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
         r = 22.5 - 2.5*np.log10(self.nsa2['NMGY'][:,4])
@@ -478,6 +486,9 @@ class output_table():
         c18 = Column(np.zeros(len(r),'f'), name='FILTER_RATIO')
         self.table.add_columns([c11,c12,c13,c14,c15,c16, c17,c18])
 
+        ##############################################3
+        ### GALFIT R-BAND FITS
+        ##############################################3
 
         fields = ['XC','YC','MAG','RE','N','BA','PA']
         units = ['pixel','pixel','mag','pixel',None,'deg',None]
@@ -500,20 +511,58 @@ class output_table():
         #c6 = Column(np.zeros(self.ngalaxies,'f'), name='GAL_ASYM2')
         self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
-        '''
-
-        c11 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM')
-        c12 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM_ERR')
-        c13 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM2')
-        c14 = Column(np.zeros((self.ngalaxies,2),'f'), name='GAL_ASYM2_ERR')
-        self.table.add_columns([c11,c12,c13,c14])
-        '''
         # galfit sersic parameters from 2 comp fit
         c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC')
         c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC_ERR')
         c18 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_ERROR')
         c19 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_CHISQ')
         self.table.add_columns([c16,c17,c18,c19])
+
+        # galfit 1 comp with asymmetry
+        c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_SERSASYM')
+        c17 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_SERSASYM_ERR')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_ERROR')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_CHISQ')
+        c20 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_RA',unit='deg')
+        c21 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_DEC',unit='deg')
+        self.table.add_columns([c16,c17,c18,c19,c20,c21])
+
+        ##############################################
+        ### GALFIT Halpha FITS
+        ##############################################
+
+        fields = ['XC','YC','MAG','RE','N','BA','PA']
+        units = ['pixel','pixel','mag','pixel',None,'deg',None]
+        for f,unit in zip(fields,units):
+            if unit == None:
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f+'_ERR')
+            else:
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f, unit=unit)
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f+'_ERR', unit=unit)
+
+            self.table.add_column(c1)
+            self.table.add_column(c2)
+
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HSKY')
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HCHISQ')
+        self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
+
+        # galfit sersic parameters from 2 comp fit
+        c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_H2SERSIC')
+        c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_H2SERSIC_ERR')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_H2SERSIC_ERROR')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_H2SERSIC_CHISQ')
+        self.table.add_columns([c16,c17,c18,c19])
+
+        # galfit 1 comp with asymmetry
+        c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_HSERSASYM')
+        c17 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_HSERSASYM_ERR')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_ERROR')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_CHISQ')
+        c20 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_RA',unit='deg')
+        c21 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_DEC',unit='deg')
+        self.table.add_columns([c16,c17,c18,c19,c20,c21])
 
 
         #####################################################################
@@ -527,12 +576,15 @@ class output_table():
         e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI')
         e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA')
-        e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM')
-        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM')
-        e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM_ERR')
-        e11 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM2')
-        e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM2_ERR')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12])
+        e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2)
+        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag)
+        e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM')
+        e11 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM_ERR')
+        e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM', unit=u.erg/u.s/u.cm**2)
+        e13 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag)
+        e14 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM')
+        e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
+        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13,e14,e15])
 
         #####################################################################
         # profile fitting using galfit geometry
@@ -662,7 +714,7 @@ class output_table():
         '''
         these are common comments that the user will be able to select
         '''
-        names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG']
+        names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG','NUC_HA']
         for n in names:
             #print(n)
             c = Column(np.zeros(self.ngalaxies,'bool'),name=n)
@@ -724,6 +776,7 @@ class output_table():
                 break
         if colmatch:    
             self.ui.tableWidget.setItem(row,ncol,QtWidgets.QTableWidgetItem(str(item)))
+            self.table[row][col]=item
         else:
             print('could not match column name ',col)
         self.write_fits_table()
@@ -821,6 +874,9 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
         #self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse_phot)
         self.ui.galfitButton.clicked.connect(lambda: self.run_galfit(ncomp=1))
+        self.ui.galfitAsymButton.clicked.connect(lambda: self.run_galfit(ncomp=1,asym=1))
+        self.ui.galfitHaButton.clicked.connect(lambda: self.run_galfit(ncomp=1,ha=1))
+        self.ui.galfitHaAsymButton.clicked.connect(lambda: self.run_galfit(ncomp=1,asym=1,ha=1))
         self.ui.galfit2Button.clicked.connect(lambda: self.run_galfit(ncomp=2))
         self.ui.psfButton.clicked.connect(self.build_psf)
         self.ui.saveButton.clicked.connect(self.write_fits_table)
@@ -830,16 +886,16 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         if self.nebula:
             self.setup_nebula()
     def setup_testing(self):
-        self.hacoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_ha16.coadd.fits'
-        
-        
-        self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
+        #self.hacoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_ha16.coadd.fits'
+        #self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
+        self.hacoadd_fname = os.getenv('HOME')+'/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-1_ha4.coadd.fits'
         self.load_hacoadd()
         #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.haweight_flag = True
-        self.rcoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_R.coadd.fits'
-        self.rcoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
+        #self.rcoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_R.coadd.fits'
+        #self.rcoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
+        self.rcoadd_fname = os.getenv('HOME')+'/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-1_R.coadd.fits'
         #self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         self.load_rcoadd()
         #self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
@@ -851,7 +907,8 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.agc = galaxy_catalog(self.agc_fname,agc=True)
         self.agcflag = True
         #self.coadd.load_file(self.rcoadd_fname)
-        self.filter_ratio = 0.0416
+        #self.filter_ratio = 0.0416
+        self.filter_ratio = 0.0406
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
@@ -862,8 +919,6 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
     def setup_nebula(self):
         self.hacoadd_fname = '/mnt/astrophysics/reduced/20150418/MKW8_ha16.coadd.fits'
         #self.hacoadd_fname = '/mnt/qnap_home/rfinn/Halpha/reduced/virgo-coadds-2017/pointing-1_ha4.coadd.fits'
-        
-        
         #self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
         self.load_hacoadd()
         #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
@@ -885,8 +940,8 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.agc = galaxy_catalog(self.agc_fname,agc=True)
         self.agcflag = True
         #self.coadd.load_file(self.rcoadd_fname)
-        #self.filter_ratio = 0.0416
-        self.filter_ratio = 0.0406
+        self.filter_ratio = 0.0422 #MKW8
+        #self.filter_ratio = 0.0406
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
@@ -913,6 +968,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             self.rweight_flag = False
 
         self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
+        self.check_previous_r_psf()
     def load_hacoadd(self):
         self.coadd.load_file(self.hacoadd_fname)
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
@@ -924,7 +980,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             self.haweight_flag = True
         else:
             self.haweight_flag = False
-
+        self.check_previous_ha_psf()
     def add_coadd_frame(self,panel_name):
         logger = log.get_logger("example1", log_stderr=True, level=40)
         self.coadd = image_panel(panel_name, self.ui,logger)
@@ -1047,12 +1103,12 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         except AttributeError:
             print('make sure you selected a galaxy')
     def connect_comment_menu(self):
-        comment_types = ['Cont Sub Prob','merger/tidal','scat light','asym R', 'asym Ha','fore. star', 'fore. gal','edge-on','part cov']
+        comment_types = ['Cont Sub Prob','merger/tidal','scat light','asym R', 'asym Ha','fore. star', 'fore. gal','edge-on','part cov','nuc ha']
         for name in comment_types:
             self.ui.commentComboBox.addItem(str(name))
         self.ui.commentComboBox.activated.connect(self.set_comment)
     def set_comment(self,comment):
-        col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG']
+        col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG','NUC_HA']
         self.table[col_names[int(comment)]][self.igal] = not(self.table[col_names[int(comment)]][self.igal])
         self.update_gui_table_cell(self.igal,col_names[int(comment)],str(True))
 
@@ -1060,14 +1116,36 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.prefix = prefix
         #print('prefix for output files = ',self.prefix)
 
-    def check_previous(self):
+    def check_previous_ha_psf(self):
         '''
         check for data from previous runs, including
         - psf file
         - data table with results for all/subset of galaxies
         - filter ratio
         '''
-        pass
+
+        # check for halpha psf
+        basename = os.path.basename(self.hacoadd_fname)
+        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        if os.path.exists(psf_image_name):
+            self.psf_haimage_name = psf_image_name
+        else:
+            self.psf_haimage_name = None
+    def check_previous_r_psf(self):
+        '''
+        check for data from previous runs, including
+        - psf file
+        - data table with results for all/subset of galaxies
+        - filter ratio
+        '''
+        # check for rband psf
+        basename = os.path.basename(self.rcoadd_fname)
+        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        if os.path.exists(psf_image_name):
+            self.psf_image_name = psf_image_name
+        else:
+            self.psf_image_name = None
+
     def find_galaxies(self):
         #
         # get list of NSA galaxies on image viewer
@@ -1107,6 +1185,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             #print(offimage)
         # cut down NSA catalog to keep information only for galaxies within FOV
         print('number of NSA galaxies in FOV = ',sum(keepflag))
+        if sum(keepflag) == 0:
+            print('WARNING: no NSA galaxies in FOV')
+            print('\t make sure you have selected the right filter!')
+            return
         self.nsa.cull_catalog(keepflag,self.prefix)
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
@@ -1141,6 +1223,8 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             #print(self.agcximage)
             #print(self.agcyimage)
 
+
+        
         #self.initialize_output_arrays()
         # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix)
@@ -1502,13 +1586,21 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         print('PSF RESULTS FOR R-BAND COADDED IMAGE')
         self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
         self.psf.run_all()
+        self.psf_image_name = self.psf.psf_image_name
         print('PSF RESULTS FOR COADDED IMAGE')
         self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
         self.hapsf.run_all()
-    def run_galfit(self, ncomp=1):
+        self.psf_haimage_name = self.hapsf.psf_image_name
+    def run_galfit(self, ncomp=1, asym=0, ha=0):
+        if self.psf_image_name is None:
+            print('WARNING: psf could not be found')
+            print('Please run build_psf')
+            return
         self.ncomp = ncomp
+        self.asym=asym
+        self.galha = ha
         print('running galfit with ',ncomp,' components')
-        self.gwindow = QtWidgets.QWidget()
+        #self.gwindow = QtWidgets.QWidget()
         '''
         if self.testing:
             self.ncomp = ncomp
@@ -1520,19 +1612,29 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 
         self.gwindow.show()
         '''
-        
+        try:
+            if ha:
+                self.galimage = self.cutout_name_ha
+                # setup psfimage
+                psf = self.psf_haimage_name
+                psf_oversampling = self.oversampling
+            else:
+                self.galimage = self.cutout_name_r
+                # setup psfimage
+                psf = self.psf_image_name
+                psf_oversampling = self.oversampling
+        except AttributeError:
+            print('make sure you selected a galaxy')
+            return
         try:
             self.gwindow = QtWidgets.QWidget()
             #self.gwindow.aboutToQuit.connect(self.galfit_closed)
-            if self.testing:
-                psf = 'NRGs28_R.coadd-psf.fits'
-                psf_oversampling=2
-            else:
-                psf = self.psf.psf_image_name
-                psf_oversampling = self.oversampling
+
             
-            if ncomp == 1:
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
+            if (ncomp == 1) & (asym == 0):
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
+            elif (ncomp == 1) & (asym == 1):
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80,asym=1)
             elif ncomp == 2:
                 # use results from 1 component fit as input
                 try:
@@ -1566,7 +1668,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
                 re1=1.2*re
                 re2=.5*re
                     
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True, convolution_size=80)
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True, convolution_size=80)
                     
             self.galfit.model_saved.connect(self.galfit_save)        
             self.galfit.setupUi(self.gwindow)
@@ -1583,28 +1685,35 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         if self.testing:
             self.ncomp = int(msg)
             print('ncomp = ',self.ncomp)
-        if self.ncomp == 1:
-            self.galfit_results = self.galfit.galfit_results
+        if self.galha:
+            prefix = 'GAL_H'
+        else:
+            prefix = 'GAL_'
+        if (self.ncomp == 1) & (self.asym == 0):
+            if self.galha:
+                self.galfit_hresults = self.galfit.galfit_results
+            else:
+                self.galfit_results = self.galfit.galfit_results
             fields = ['XC','YC','MAG','RE','N','BA','PA']
             values = np.array(self.galfit.galfit_results[:-2])[:,0].tolist()
             for i,f in enumerate(fields):
-                colname = 'GAL_'+f
+                colname = prefix+f
                 self.table[colname][self.igal]=values[i]
             fields = ['XC','YC','MAG','RE','N','BA','PA']
             values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
             for i,f in enumerate(fields):
-                colname = 'GAL_'+f+'_ERR'
+                colname = prefix+f+'_ERR'
                 self.table[colname][self.igal]=values[i]
             fields = ['SKY','CHISQ']
             values = [self.galfit.galfit_results[-2],self.galfit.galfit_results[-1]]
             for i,f in enumerate(fields):
-                colname = 'GAL_'+f
+                colname = prefix+f
                 self.table[colname][self.igal]=values[i]
-            wcs = WCS(self.cutout_name_r)
+            wcs = WCS(self.galimage)
             ra,dec = wcs.wcs_pix2world(self.galfit.galfit_results[0][0],self.galfit.galfit_results[1][0],0)
-            self.table['GAL_RA'][self.igal]=ra
-            self.table['GAL_DEC'][self.igal]=dec
-            self.update_gui_table()
+            self.table[prefix+'RA'][self.igal]=ra
+            self.table[prefix+'DEC'][self.igal]=dec
+            #self.update_gui_table()
 
             # save results to output table
             #self.table['GAL_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
@@ -1612,7 +1721,21 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             #self.table['GAL_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
             #self.table['GAL_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
             #print(self.table[self.igal])
-
+        elif (self.ncomp == 1) & (self.asym == 1):
+            if self.galha:
+                self.galfit_haasym_results = self.galfit.galfit_results
+            else:
+                self.galfit_asym_results = self.galfit.galfit_results
+            print('writing results for galfit w/asymmetry')
+            self.table[prefix+'SERSASYM'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
+            self.table[prefix+'SERSASYM_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
+            self.table[prefix+'SERSASYM_ERROR'][self.igal] = (self.galfit.galfit_results[-2])
+            self.table[prefix+'SERSASYM_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
+            wcs = WCS(self.galimage)
+            ra,dec = wcs.wcs_pix2world(self.galfit.galfit_results[0][0],self.galfit.galfit_results[1][0],0)
+            self.table[prefix+'SERSASYM_RA'][self.igal]=ra
+            self.table[prefix+'SERSASYM_DEC'][self.igal]=dec
+            self.update_gui_table()
         elif self.ncomp == 2:
             self.galfit_results2 = self.galfit.galfit_results
             #print(self.galfit_results2)
@@ -1635,7 +1758,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         ### MAKE SURE GALFIT 1 COMP MODEL WAS RUN
 
         try:
-            xc,yc,mag,re,n,BA,pa = np.array(self.galfit.galfit_results[:-3])[:,0].tolist()
+            xc,yc,mag,re,n,BA,pa = np.array(self.galfit_results[:-3])[:,0].tolist()
             #print('GALFIT PA = ',xc,yc,mag,re,n,BA,pa )
         except AttributeError:
             print('Warning - galfit 1 comp fit results not found!')
@@ -1644,7 +1767,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         
         ### FIT ELLIPSE
         #
-        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio)
+        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
         #fields = ['XC','YC','MAG','RE','N','BA','PA']
 
         # TRANSFORM THETA
@@ -1681,7 +1804,7 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 
         ### FIT ELLIPSE
         #
-        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio)
+        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
         self.e.run_for_gui()
         self.e.plot_profiles()
         #os.chdir(current_dir)
@@ -1689,11 +1812,13 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         ### SAVE DATA TO TABLE
 
         fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
-                  'AREA','SUM',\
-                  'ASYM','ASYM_ERR','ASYM2','ASYM2_ERR']#,'SUM_ERR']
+                  'AREA',\
+                  'SUM','SUM_MAG','ASYM','ASYM_ERR',\
+                  'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.gini2,\
-                  self.e.cat[self.e.objectIndex].area.value,self.e.cat[self.e.objectIndex].source_sum, \
-                  self.e.asym, self.e.asym_err, self.e.asym2,self.e.asym2_err]
+                  self.e.cat[self.e.objectIndex].area.value,\
+                  self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
+                  self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             self.table[colname][self.igal]=float('%.2e'%(values[i]))
@@ -1724,9 +1849,9 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         self.rfit = rprofile(self.cutout_name_r, rphot_table, label='R')
         self.rfit.becky_measurements()
         self.hafit = haprofile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
-        if self.hafit.fit_flag:
-            self.hafit.becky_measurements()
-            self.hafit.get_r24_stuff(self.rfit.iso_radii[self.rfit.isophotes == 24.][0][0])
+        #if self.hafit.fit_flag:
+        self.hafit.becky_measurements()
+        self.hafit.get_r24_stuff(self.rfit.iso_radii[self.rfit.isophotes == 24.][0][0])
         both = dualprofile(self.rfit,self.hafit)
         both.make_3panel_plot()
         

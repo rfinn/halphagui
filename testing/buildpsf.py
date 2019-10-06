@@ -228,6 +228,7 @@ class psf_parent_image():
         # rather than the directory where the image is
         basename = os.path.basename(self.image_name)
         self.psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        print('PSF image name = ',self.psf_image_name)
         fits.writeto(self.psf_image_name,self.epsf.data, overwrite=True)
 
         # update image header
@@ -243,7 +244,7 @@ class psf_parent_image():
         
 if __name__ == '__main__':
     #image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
-    image = '/Users/rfinn/research/HalphaGroups/temp/pointing-4_R.coadd.fits'
+    image = '/Users/rfinn/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-4_R.coadd.fits'
     p = psf_parent_image(image=image, size=21, nstars=100, oversampling=2)
     p.runse()
     p.read_se_table()

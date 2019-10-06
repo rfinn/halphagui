@@ -33,7 +33,9 @@ from astropy.table import Table, Column
 from astropy.visualization import SqrtStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
 
-
+import scipy.ndimage as ndi
+import statmorph
+from statmorph.utils.image_diagnostics import make_figure
 
 
 from matplotlib import pyplot as plt
@@ -61,7 +63,7 @@ dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17} 
 
 class ellipse():
 
-    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None):
+    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None):
         # use mpl for testing purposes, before integrating with pyqt gui
         # image2 is intended to be the Halpha image - use apertures from r-band but measure on Halpha
         self.image, self.header = fits.getdata(image, header=True)
@@ -85,7 +87,8 @@ class ellipse():
         self.filter_ratio = filter_ratio
         # will use the gain to calculate the noise in the image
         self.gain = self.header['GAIN']
-        
+        self.psf = psf
+        self.psf_ha = psf_ha
         # the mask should identify all pixels in the cutout image that are not associated with the target galaxy
         # these will be ignored when defining the shape of the ellipse and when measuring the photometry
         #
@@ -203,7 +206,31 @@ class ellipse():
         # save object ID as the row in table with source that is closest to center
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
         #print(self.objectIndex)
-        
+    def run_statmorph(self):
+        # show original
+        #plt.figure()
+        #plt.imshow(self.segmentation.data)
+        # need segmentation map of object only
+        segmap = self.segmentation.data == self.cat.id[self.objectIndex]
+        segmap_float = ndi.uniform_filter(np.float64(segmap), size=10)
+        segmap = segmap_float > 0.5
+        #plt.figure()
+        #plt.imshow(segmap, origin='lower', cmap='gray')
+        if self.psf is None:
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain)
+        else:
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf)
+        self.morph = source_morphs[0]
+        fig = make_figure(self.morph)
+        figname = self.image_name.split('.fits')[0]
+        fig.savefig(figname+'statmorph-r.pdf')
+        if self.psf_ha is None:
+            source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain)
+        else:
+            source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain, psf=self.psf_ha)
+        self.morph2 = source_morphs2[0]
+        fig2 = make_figure(self.morph2)
+        fig2.savefig(figname+'statmorph-ha.pdf')
     def get_image2_gini(self, snrcut=1.5):
         if self.mask_flag:
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut, mask=self.boolmask)
@@ -223,7 +250,9 @@ class ellipse():
 
         #self.tbl = self.cat.to_table()
         self.gini2 = gini(self.image2[self.gini_pixels])
-
+        self.source_sum2 = np.sum(self.image2[self.gini_pixels])
+        self.source_sum2_erg = self.uconversion1*self.source_sum2
+        self.source_sum2_mag = self.magzp2 - 2.5*np.log10(self.source_sum2)
     def get_asymmetry(self):
         '''
         goal is to measure the assymetry of the galaxy about its center
@@ -325,6 +354,7 @@ class ellipse():
         self.b = obj.semiminor_axis_sigma.value * r
         self.eps = 1 - self.b/self.sma
         self.gini = obj.gini
+        self.source_sum = self.cat[self.objectIndex].source_sum
         self.sky_centroid = obj.sky_centroid
         # orientation is angle in radians, CCW relative to +x axis
         t = obj.orientation.value
@@ -550,6 +580,8 @@ class ellipse():
         ###########################################################
         self.flux1_erg = self.uconversion1*self.flux1
         self.flux1_err_erg = self.uconversion1*self.flux1_err
+        self.source_sum_erg = self.uconversion1*self.source_sum
+        self.source_sum_mag = self.magzp - 2.5*np.log10(self.source_sum)
         self.mag1 = self.magzp - 2.5*np.log10(self.flux1)
         self.mag1_err = self.mag1 - (self.magzp - 2.5*np.log10(self.flux1 + self.flux1_err))
         self.sb1_erg_sqarcsec = self.uconversion1*self.sb1/self.pixel_scale**2
@@ -559,6 +591,7 @@ class ellipse():
         if self.image2_flag:
             self.flux2_erg = self.uconversion2*self.flux2
             self.flux2_err_erg = self.uconversion2*self.flux2_err
+
             self.mag2 = self.magzp2 - 2.5*np.log10(self.flux2)
             self.mag2_err = self.mag2 - (self.magzp2 - 2.5*np.log10(self.flux2 + self.flux2_err))
             self.sb2_erg_sqarcsec = self.uconversion2*self.sb2/self.pixel_scale**2
@@ -769,6 +802,8 @@ class ellipse():
             plt.gca().set_yscale('log')
         plt.show()
         plt.savefig(self.image_name.split('.fits')[0]+'-enclosed-flux.png')
+
+        
 if __name__ == '__main__':
     image = 'MKW8-18216-R.fits'
     mask = 'MKW8-18216-R-mask.fits'
@@ -781,11 +816,26 @@ if __name__ == '__main__':
     image = prefix+nsaid+'-R.fits'
     mask = prefix+nsaid+'-R-mask.fits'
     image2 = prefix+nsaid+'-CS.fits'
+    # testing on 2017 pointing 1
+    # second galaxy has clear halpha but profile is not fit
+    # want to make sure we record some size
+    image = 'v17p01-N119230-A742747-R.fits'
+    rphot_table = 'v17p01-N119230-A742747-R_phot.fits'
+    image2 = 'v17p01-N119230-A742747-CS.fits'
+    haphot_table = 'v17p01-N119230-A742747-CS_phot.fits'
+    mask = 'v17p01-N119230-A742747-R-mask.fits'
+    image = 'v17p01-N118647-A8219-R.fits'
+    rphot_table = 'v17p01-N118647-A8219-R_phot.fits'
+    image2 = 'v17p01-N118647-A8219-CS.fits'
+    haphot_table = 'v17p01-N118647-A8219-CS_phot.fits'
+    mask = 'v17p01-N118647-A8219-R-mask.fits'
+    myfilter = '4'
+    myratio = .0406
     #image = 'MKW8-18037-R.fits'
     #mask = 'MKW8-18037-R-mask.fits'
     #image = 'r-18045-R.fits'
     #mask = 'r-18045-R-mask.fits'
-    e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter='16', filter_ratio=.0422)
+    e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter=myfilter, filter_ratio=myratio)
     ## print('detect objects')
     ## e.detect_objects()
     ## print('find central')

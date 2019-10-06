@@ -47,7 +47,7 @@ import rungalfit as rg
 
 class galfitwindow(Ui_galfitWindow, QtCore.QObject):
     model_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None, mag2=None, nsersic2=None, rad2=None, BA2=None, PA2=None, xc2=None, yc2=None, fitn=True, fitn2=True):
+    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None, mag2=None, nsersic2=None, rad2=None, BA2=None, PA2=None, xc2=None, yc2=None, fitn=True, fitn2=True,asym=False):
         super(galfitwindow, self).__init__()
 
         # boiler plate gui stuff
@@ -105,7 +105,9 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         # number of components to fit
         # set to 1 for single component sersic fit
         self.ncomp = ncomp
-        
+
+        # asymmetry flag
+        self.asym = asym
         ###########################################################3
         # enable psf convolution in fit
         ###########################################################3
@@ -132,7 +134,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         else:
             self.mag=mag
         if rad == None:
-            self.re=5
+            self.re=10
         else:
             self.re=rad
         if nsersic == None:
@@ -191,7 +193,11 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.fitPA = 1
 
         # define galfit output image the same way that rungalfit does
-        self.output_image=self.image_rootname+'-'+ str(self.ncomp) +'Comp-galfit-out.fits'
+
+        if self.asym:
+            self.output_image=self.image_rootname+'-'+ str(self.ncomp) +'Comp-galfit-out-asym.fits'
+        else:
+            self.output_image=self.image_rootname+'-'+ str(self.ncomp) +'Comp-galfit-out.fits'
         # continue with other functions
         self.logger = logger
 
@@ -291,6 +297,9 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.ui.skyFitLineEdit.setText(str(round(self.sky,2)))
         self.ui.errorFitLineEdit.setText(str(round(self.error,2)))
         self.ui.chiFitLineEdit.setText(str(round(self.chi2nu,2)))
+        if self.asym:
+            self.ui.asymLineEdit.setText(str(round(self.asymmetry,2)))
+            self.ui.asymPALineEdit.setText(str(round(self.asymmetry_PA,2)))
         if self.ncomp == 2:
             self.ui.xc2FitLineEdit.setText(str(round(self.xc2,2)))
             self.ui.yc2FitLineEdit.setText(str(round(self.yc2,2)))
@@ -412,7 +421,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
                                 yminfit=self.yminfit,xmaxfit=self.xmaxfit,ymaxfit=self.ymaxfit,
                                 convolution_size=self.convolution_size,magzp=self.magzp,
                                 pscale=self.pscale,ncomp=self.ncomp,convflag=convflag,
-                                fitallflag = self.fitallflag)
+                                fitallflag = self.fitallflag,asym=self.asym)
         
     def run_galfit(self,fitBA=1,fitPA=1):
         if self.ncomp == 1:
@@ -446,10 +455,11 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         '''
 
 
-        t = rg.parse_galfit_results(self.output_image, ncomp = self.ncomp)
+        t = rg.parse_galfit_results(self.output_image, ncomp = self.ncomp, asymflag=self.asym)
         if printflag:
             self.galfit.print_galfit_results(self.output_image)
         self.galfit_results = t
+        print(t)
         # for 1 comp fit
         # header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','ERROR','CHI2NU']
         # for 2 component fit
@@ -461,6 +471,18 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.nsersic, self.nsersic_err = t[4]
         self.BA, self.BA_err = t[5]
         self.PA, self.PA_err = t[6]
+        if self.asym:
+            self.sky, self.sky_err = t[7]
+            self.asymmetry, self.asymmetry_err = t[8]
+            self.asymmetry_PA, self.asymmetry_PA_err = t[9]
+            self.error = t[10]
+            self.chi2nu = t[11]
+            i_next = 12
+        else:
+            i_next = 7
+            self.sky, self.sky_err = t[i_next]
+            self.error = t[i_next+1]
+            self.chi2nu = t[i_next+2]
 
         if self.ncomp == 2:
             self.xc2, self.xc2_err = t[7]
@@ -473,10 +495,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
             self.sky, self.sky_err = t[14]
             self.error = t[15]
             self.chi2nu = t[16]
-        else:
-            self.sky, self.sky_err = t[7]
-            self.error = t[8]
-            self.chi2nu = t[9]
+
 
     def display_results(self):
         self.model_data = fits.getdata(self.output_image,2)
