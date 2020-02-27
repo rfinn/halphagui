@@ -18,4 +18,5 @@ see wiki for more detailed instructions
 * astropy
 * pyqt5
 * photutils
+* statmorph https://statmorph.readthedocs.io/en/latest/
 
