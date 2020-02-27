@@ -1200,8 +1200,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
         # set up a boolean array to track whether Halpha emission is present
 
         
-
-        px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+        try:
+            px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+        except AttributeError:
+            px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)
         if self.agcflag:
             keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,zmin=self.zmin,zmax=self.zmax)
             #print('number of AGC galaxies in FOV = ',sum(keepagc))
@@ -1219,7 +1221,10 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
             if sum(keepagc) == 0:
                 self.agcflag = False
             else:
-                self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)        
+                try:
+                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+                except AttributeError:
+                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)        
             #print(self.agcximage)
             #print(self.agcyimage)
 
@@ -1970,13 +1975,25 @@ class hafunctions(Ui_MainWindow, output_table, uco_table):
 class galaxy_catalog():
     def __init__(self,catalog,nsa=False,agc=False):
         self.cat = fits.getdata(catalog)
+        self.cat = Table(self.cat)
         self.catalog_name = catalog
         self.agcflag = agc
         self.nsaflag = nsa
+        if self.agcflag:
+            self.check_ra_colname()
+    def check_ra_colname(self):
+        try:
+            t = self.cat.RA
+        except AttributeError:
+            print('defining new catalogs')
+            self.cat.rename_column('radeg','RA')
+            self.cat.rename_column('decdeg','DEC')            
+            
     def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,weight_image=None, agcflag=False):
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
+
         px,py =wcs.wcs_world2pix(self.cat.RA,self.cat.DEC,0)
         onimageflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
         try:
