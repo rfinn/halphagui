@@ -163,11 +163,19 @@ class profile():
         else:
             try:
                 self.fit_sersic_n1()
+                self.fit_flag = True
             except TypeError:
                 print('trouble fitting exponential')
                 self.fit_flag = False
-            self.linear_fit()
-            self.fit_flag = True
+            except RuntimeError:
+                print('trouble fitting exponential - runtime error')
+                self.fit_flag = False
+            try:
+                self.linear_fit()
+                self.linear_fit_flag=True
+            except:
+                self.linear_fit_flag=False
+            #self.fit_flag = True
         # setting all fitted parameters to zero initially in case halpha fit fails
         self.check_fit_flag()
     def check_fit_flag(self):
@@ -210,7 +218,8 @@ class profile():
         if self.se_flag:
             plt.axvline(x=self.R50,ls='--',label='SE R50=%5.1f'%(self.R50))
         plt.axvline(x=-1./self.cc[0],ls=':',label='log fit R50=%5.1f'%(-1./self.cc[0]))
-        plt.axvline(x=1./self.popt[1],ls='-.',label='exp fit R50=%5.1f'%(1./self.popt[1]))
+        if self.fit_flag:
+            plt.axvline(x=1./self.popt[1],ls='-.',label='exp fit R50=%5.1f'%(1./self.popt[1]))
         plt.axvline(x=self.flux_radii[1][0], ls='--',label='phot R50=%5.1f'%(self.flux_radii[1][0]))
     def fit_sersic_n1(self):
         flag = (self.tab.sb_snr > 2) & (self.tab.sb > 0.)
@@ -236,8 +245,9 @@ class profile():
         #plt.plot(self.tab.sma_arcsec, self.tab.sb_erg_sqarcsec, 'b.', label=self.rootname,markersize=6)
         if self.fit_flag:
             plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
+        if self.linear_fit_flag:
             self.plot_linear_fit()
-            self.plot_lines()
+        self.plot_lines()
         y = self.tab.sb_erg_sqarcsec[flag & (self.tab.sb_snr > 2)]
         if len(y) < 2:
             return
