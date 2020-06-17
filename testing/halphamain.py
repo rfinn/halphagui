@@ -432,7 +432,7 @@ class create_output_table():
         # read in agc2
         self.agc2 = fits.getdata(self.prefix+'-agc-matched.fits')                                                                              
         ## if not, create table
-    def read_table_virgo():
+    def read_table_virgo(self):
         self.table = Table(fits.getdata(self.output_table))
         self.gredshift = self.table['REDSHIFT']
         self.ngalaxies = len(self.gredshift)
