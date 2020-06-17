@@ -1658,22 +1658,22 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         except AttributeError:
             print('make sure you have selected a galaxy and saved the cutout')
             return
-        print('got here, so that is good')
+        #print('got here, so that is good')
         newfile = fits.PrimaryHDU()
-        print('how about here?')
+        #print('how about here?')
         newfile.data = self.r[ymin:ymax,xmin:xmax]
-        print('or here?')        
+        #print('or here?')        
         newfile.header = self.r_header
         newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        print('or maybe here?')                
+        #print('or maybe here?')                
         newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        print('or maybe here??')                
+        #print('or maybe here??')                
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        print('or maybe here???')                        
+        #print('or maybe here???')                        
         newfile.header.set('ID',str(self.galid[self.igal]))
-        print('or maybe here????')                        
+        #print('or maybe here????')                        
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
-        print('trying to add exptime now')
+        #print('trying to add exptime now')
         # set the exposure time to 1 sec
         # for some reason, in the coadded images produced by swarp, the gain has been corrected
         # to account for image units in ADU/s, but the exptime was not adjusted.
