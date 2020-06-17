@@ -1714,7 +1714,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             print('try selecting filter, then selecting galaxies')
             return
         self.mwindow = QtWidgets.QWidget()
-        self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/HalphaImaging/astromatic/')
+        self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/')
         self.mui.mask_saved.connect(self.display_mask)
         self.mui.setupUi(self.mwindow)
         self.mwindow.show()
