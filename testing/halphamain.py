@@ -79,7 +79,7 @@ if len(macos_ver) > 0:
 import matplotlib.pyplot as plt
 
 # default size for cutouts, multiple of NSA PETROTH90
-cutout_scale = 10
+cutout_scale = 12
 
 import argparse
 
