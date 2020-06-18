@@ -159,7 +159,7 @@ class profile():
 
             print('flux too low to fit profiles for image ',self.image_name)
             self.fit_flag = False
-
+            self.linear_fit_flag=False
         else:
             try:
                 self.fit_sersic_n1()
