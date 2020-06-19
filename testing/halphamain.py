@@ -1277,8 +1277,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
     def find_galaxies(self):
         print('getting galaxies in FOV')
-        self.get_gal_list()
-
+        flag = self.get_gal_list()
+        if flag == False:
+            return
         #self.initialize_output_arrays()
         # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix,virgo=self.virgo)
@@ -1321,7 +1322,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         except AttributeError:
             print('problem finding galaxies.')
             print('make sure you selected a filter!')
-            return
+            return False
         
         print('keepflag = ',keepflag)
         print('number of galaxies in FOV = ',sum(keepflag),len(keepflag))
@@ -1389,7 +1390,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             #print(self.agcximage)
             #print(self.agcyimage)
 
-
+        return True
         
     def mark_galaxies(self):
         #
