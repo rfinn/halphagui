@@ -87,6 +87,7 @@ parser = argparse.ArgumentParser(description ='Run gui for analyzing Halpha imag
 
 parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
 parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.')
+parser.add_argument('--pointing',dest = 'pointing', default=None,help='Pointing number that you want to load.  ONLY FOR VIRGO DATA.')
 parser.add_argument('--nebula',dest = 'nebula', action='store_true',default=False,help='set this if running on open nebula virtual machine.  catalog paths will be set accordingly.')
 parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
 parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
@@ -930,11 +931,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         elif self.nebula & self.virgo:
             self.setup_nebula_virgo()
             self.setup_virgo()
+        elif self.nebula & (args.pointing is not None):
+            self.setup_nebula_virgo()            
+            self.setup_virgo(pointing=args.pointing)
         elif self.nebula:
             self.setup_nebula()
         elif self.testing:
             self.setup_testing()
-
         if self.virgo:
             self.defcat = self.vf
             self.def_label = 'VF.v0.'
@@ -1040,10 +1043,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.imagedir =  '/home/rfinn/research/Virgo/Halpha/reduced/virgo-coadds-2017/'
         self.tabledir= '/home/rfinn/research/Virgo/tables-north/v0/'
 
-    def setup_virgo(self):
-        self.hacoadd_fname = self.imagedir+'pointing-3_ha4.coadd.fits'
+    def setup_virgo(self,pointing=None):
+        if pointing is None:
+            self.hacoadd_fname = self.imagedir+'pointing-3_ha4.coadd.fits'
+            self.rcoadd_fname = self.imagedir+'pointing-3_R.coadd.fits'
+        else:
+            self.hacoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_ha4.coadd.fits'
+            self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_R.coadd.fits'
+            
         self.load_hacoadd()
-        self.rcoadd_fname = self.imagedir+'pointing-3_R.coadd.fits'
         self.load_rcoadd()
 
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
