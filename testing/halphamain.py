@@ -928,12 +928,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if self.laptop & self.virgo:
             self.setup_laptop_virgo()
             self.setup_virgo()
-        elif self.nebula & self.virgo:
+        elif self.nebula & self.virgo: 
             self.setup_nebula_virgo()
-            self.setup_virgo()
-        elif self.nebula & (args.pointing is not None):
-            self.setup_nebula_virgo()            
-            self.setup_virgo(pointing=args.pointing)
+            if args.pointing is not None:
+                print('GOT A POINTING NUMBER FOR VIRGO FIELD')                
+                self.setup_virgo(pointing=args.pointing)
+            else:
+                self.setup_virgo()
         elif self.nebula:
             self.setup_nebula()
         elif self.testing:
@@ -1044,10 +1045,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.tabledir= '/home/rfinn/research/Virgo/tables-north/v0/'
 
     def setup_virgo(self,pointing=None):
+
         if pointing is None:
             self.hacoadd_fname = self.imagedir+'pointing-3_ha4.coadd.fits'
             self.rcoadd_fname = self.imagedir+'pointing-3_R.coadd.fits'
         else:
+            print('got a pointing')
+            
             self.hacoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_ha4.coadd.fits'
             self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_R.coadd.fits'
             
