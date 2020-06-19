@@ -217,7 +217,10 @@ class profile():
     def plot_lines(self):
         if self.se_flag:
             plt.axvline(x=self.R50,ls='--',label='SE R50=%5.1f'%(self.R50))
-        plt.axvline(x=-1./self.cc[0],ls=':',label='log fit R50=%5.1f'%(-1./self.cc[0]))
+        try:
+            plt.axvline(x=-1./self.cc[0],ls=':',label='log fit R50=%5.1f'%(-1./self.cc[0]))
+        if self.linear_fit_flag:
+            print('Warning: AttributeError when plotting log fit R50')
         if self.fit_flag:
             plt.axvline(x=1./self.popt[1],ls='-.',label='exp fit R50=%5.1f'%(1./self.popt[1]))
         plt.axvline(x=self.flux_radii[1][0], ls='--',label='phot R50=%5.1f'%(self.flux_radii[1][0]))

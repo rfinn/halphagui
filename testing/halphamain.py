@@ -1295,10 +1295,6 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.ui.wgalid.addItem(str(name))
         print(len(self.galid),' galaxies in FOV')
         self.ui.wgalid.activated.connect(self.select_galaxy)
-        #print(len(self.nsa.cat.RA))
-
-
-    
 
         # get transmission correction for each galaxy
         self.filter_correction= self.filter_trace.get_trans_correction(self.table['REDSHIFT'])
