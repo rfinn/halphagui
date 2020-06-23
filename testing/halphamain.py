@@ -81,18 +81,6 @@ import matplotlib.pyplot as plt
 # default size for cutouts, multiple of NSA PETROTH90
 cutout_scale = 12
 
-import argparse
-
-parser = argparse.ArgumentParser(description ='Run gui for analyzing Halpha images')
-
-parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
-parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.')
-parser.add_argument('--pointing',dest = 'pointing', default=None,help='Pointing number that you want to load.  ONLY FOR VIRGO DATA.')
-parser.add_argument('--nebula',dest = 'nebula', action='store_true',default=False,help='set this if running on open nebula virtual machine.  catalog paths will be set accordingly.')
-parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
-parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
-        
-args = parser.parse_args()
 
 
 class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
@@ -442,11 +430,21 @@ class create_output_table():
         self.gradius = self.table['radius']
         self.gzdist = self.table['ZDIST']
         self.galid=self.table['VFID']
+        self.NEDname=self.table['NEDname']        
         
     def create_table_virgo(self):
         # updating this part for virgo filament survey 
 
         self.table = self.defcat.cat['VFID','RA','DEC','vr','radius']
+        self.table['VFID'].description = 'ID from Virgo Filament catalog'                
+        self.table['RA'].unit = u.deg
+        self.table['RA'].description = 'RA from VF catalog'        
+        self.table['DEC'].unit = u.deg
+        self.table['DEC'].description = 'DEC from VF catalog'                
+        self.table['vr'].unit = u.km/u.s
+        self.table['vr'].description = 'recession velocity from VF catalog'
+        self.table['radius'].unit = u.arcsec
+        self.table['radius'].description = 'radius from VF catalog'        
         self.ngalaxies = len(self.table)
         print('number of galaxies = ',self.ngalaxies)
         self.haflag = np.zeros(self.ngalaxies,'bool')
@@ -525,31 +523,31 @@ class create_output_table():
             self.table.add_columns([c5,c6,c7,c8])
         
     def add_part1(self):
-        g1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_RA', unit=u.deg,description='center from galfit')
-        g2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_DEC', unit=u.deg,description='center from galfit')
-        g3 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HRA', unit=u.deg,description='center from galfit')
-        g4 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HDEC', unit=u.deg,description='center from galfit')
-        e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_RA', unit=u.deg,description='center from photutil centroid')
-        e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='center from photutil centroid')
-        c9 = Column(self.haflag, name='HA_FLAG')
+        g1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_RA', unit=u.deg,description='R-band center RA from galfit')
+        g2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_DEC', unit=u.deg,description='R-band center DEC from galfit')
+        g3 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HRA', unit=u.deg,description='HA center RA from galfit')
+        g4 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HDEC', unit=u.deg,description='HA center DEC from galfit')
+        e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_RA', unit=u.deg,description='R-band center RA from photutil centroid')
+        e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='R-band center DEC from photutil centroid')
+        c9 = Column(self.haflag, name='HA_FLAG',description='shows HA emission')
         c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
         self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10])
     def add_nsa(self):
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
         r = 22.5 - 2.5*np.log10(self.nsa2['NMGY'][:,4])
-        c11 = Column(r,name='NSA_RMAG')
-        c12 = Column(self.nsa2['SERSIC_TH50'],name='SERSIC_TH50', unit=u.arcsec)
-        c13 = Column(self.nsa2['SERSIC_N'],name='SERSIC_N')
-        c14 = Column(self.nsa2['SERSIC_BA'],name='SERSIC_BA')
-        c15 = Column(self.nsa2['SERSIC_PHI'],name='SERSIC_PHI', unit=u.deg)
+        c11 = Column(r,name='NSA_RMAG',unit=u.mag,description='NSA r mag')
+        c12 = Column(self.nsa2['SERSIC_TH50'],name='SERSIC_TH50', unit=u.arcsec,description='NSA SERSIC_TH50')
+        c13 = Column(self.nsa2['SERSIC_N'],name='SERSIC_N',description='NSA SERSIC index')
+        c14 = Column(self.nsa2['SERSIC_BA'],name='SERSIC_BA',description='NSA SERSIC B/A')
+        c15 = Column(self.nsa2['SERSIC_PHI'],name='SERSIC_PHI', unit=u.deg,description='NSA SERSIC PHI')
         self.gzdist = self.nsa2['ZDIST']*self.nsa_matchflag + self.gredshift*~self.nsa_matchflag
-        c16 = Column(self.gzdist,name='ZDIST')
+        c16 = Column(self.gzdist,name='ZDIST',description='NSA ZDIST')
         self.table.add_columns([c11,c12,c13,c14,c15,c16,])
     def add_cutout_info(self):
         # cutout region in coadded images
-        c1 = Column(np.zeros(len(self.table),dtype='U22'), name='BBOX')
+        c1 = Column(np.zeros(len(self.table),dtype='U22'), name='BBOX',description='location of galaxy cutout in mosaic')
         # R-band scale factor for making continuum-subtracted image
-        c2 = Column(np.zeros(len(self.table),'f'), name='FILTER_RATIO')
+        c2 = Column(np.zeros(len(self.table),'f'), name='FILTER_RATIO',description='R/Ha ratio used in cont subtraction')
         self.table.add_columns([c1,c2])
     def add_galfit_r(self):
         ##############################################3
@@ -558,19 +556,27 @@ class create_output_table():
 
         fields = ['XC','YC','MAG','RE','N','BA','PA']
         units = ['pixel','pixel','mag','pixel',None,'deg',None]
+        descriptions = ['R-band center from galfit (pix)',\
+                        'R-band center from galfit (pix)',\
+                        'R-band mag from galfit',\
+                        'R-band effective radius from galfit',\
+                        'R-band sersic index from galfit',\
+                        'R-band axis ratio from galfit',\
+                        'R-band position angle from galfit']
+        i=0
         for f,unit in zip(fields,units):
             if unit == None:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f)
-                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR')
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f,description=descriptions[i])
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR',description='err in '+descriptions[i])
             else:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f, unit=unit)
-                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f, unit=unit,description=descriptions[i])
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR', unit=unit,description='err in '+descriptions[i])
             #print(c1)
             self.table.add_column(c1)
             self.table.add_column(c2)
-
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_SKY')
-        c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_CHISQ')
+            i += 1
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_SKY',unit=u.adu,description='sky from galfit')
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_CHISQ',description='chisq of galfit sersic model')
         #c3 = Column(np.zeros(self.ngalaxies,'f'), name='GAL_GINI')
         #c4 = Column(np.zeros(self.ngalaxies), name='GAL_GINI2')
         #c5 = Column(np.zeros(self.ngalaxies,'f'), name='GAL_ASYM')
@@ -578,19 +584,19 @@ class create_output_table():
         self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
         # galfit sersic parameters from 2 comp fit
-        c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC')
-        c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC_ERR')
-        c18 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_ERROR')
-        c19 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_CHISQ')
+        c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC',description='galfit R-band 2comp fit')
+        c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC_ERR',description='galfit R-band 2comp fit errors')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_ERROR',description='galfit R-band 2comp fit num err flag')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_CHISQ',description='galfit R-band 2comp chi sq')
         self.table.add_columns([c16,c17,c18,c19])
 
         # galfit 1 comp with asymmetry
-        c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_SERSASYM')
+        c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_SERSASYM',description='galfit R-band 1comp sersic w/asymmetry')
         c17 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_SERSASYM_ERR')
-        c18 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_ERROR')
-        c19 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_CHISQ')
-        c20 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_RA',unit='deg')
-        c21 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_DEC',unit='deg')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_ERROR',description='galfit R-band 1comp sersic w/asymmetry num err flag')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_CHISQ',description='galfit R-band 1comp sersic w/asymmetry chi sq')
+        c20 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_RA',unit='deg',description='RA from galfit R-band 1comp sersic w/asymmetry')
+        c21 = Column(np.zeros(self.ngalaxies), name='GAL_SERSASYM_DEC',unit='deg',description='DEC from galfit R-band 1comp sersic w/asymmetry')
         self.table.add_columns([c16,c17,c18,c19,c20,c21])
     def add_galfit_ha(self):
         ##############################################
@@ -599,33 +605,41 @@ class create_output_table():
 
         fields = ['XC','YC','MAG','RE','N','BA','PA']
         units = ['pixel','pixel','mag','pixel',None,'deg',None]
+        descriptions = ['HA center from galfit (pix)',\
+                        'HA center from galfit (pix)',\
+                        'HA mag from galfit',\
+                        'HA effective radius from galfit',\
+                        'HA sersic index from galfit',\
+                        'HA axis ratio from galfit',\
+                        'HA position angle from galfit']
+        i=0
         for f,unit in zip(fields,units):
             if unit == None:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f)
-                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f+'_ERR')
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f,description=descriptions[i])
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f+'_ERR',description='err in '+descriptions[i])
             else:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f, unit=unit)
-                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f+'_ERR', unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f, unit=unit,description=descriptions[i])
+                c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_H'+f+'_ERR', unit=unit,description='err in '+descriptions[i])
 
             self.table.add_column(c1)
             self.table.add_column(c2)
-
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HSKY')
-        c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HCHISQ')
+            i += 1
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HSKY',description='galfit HA sky')
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HCHISQ',description='galfit chisq of HA model')
         self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
         # galfit sersic parameters from 2 comp fit
-        c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_H2SERSIC')
+        c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_H2SERSIC',description='galfit HA 2-comp fit')
         c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_H2SERSIC_ERR')
-        c18 = Column(np.zeros(self.ngalaxies), name='GAL_H2SERSIC_ERROR')
-        c19 = Column(np.zeros(self.ngalaxies), name='GAL_H2SERSIC_CHISQ')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_H2SERSIC_ERROR',description='galfit HA 2-comp num error code')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_H2SERSIC_CHISQ',description='galfit HA 2-comp chisq')
         self.table.add_columns([c16,c17,c18,c19])
 
         # galfit 1 comp with asymmetry
-        c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_HSERSASYM')
+        c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_HSERSASYM',description='galfit HA model w/asym')
         c17 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_HSERSASYM_ERR')
-        c18 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_ERROR')
-        c19 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_CHISQ')
+        c18 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_ERROR',description='galfit HA asym num error code')
+        c19 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_CHISQ',description='galfit HA asym chisq')
         c20 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_RA',unit='deg')
         c21 = Column(np.zeros(self.ngalaxies), name='GAL_HSERSASYM_DEC',unit='deg')
         self.table.add_columns([c16,c17,c18,c19,c20,c21])
@@ -635,20 +649,20 @@ class create_output_table():
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
         #####################################################################
-        e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel')
-        e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel')
-        e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS')
-        e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree)
-        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI')
-        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2')
-        e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA')
-        e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2)
-        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag)
-        e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM')
+        e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel',description='xcentroid from ellipse')
+        e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel',description='ycentroid from ellipse')
+        e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS',description='axis ratio from ellipse')
+        e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
+        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
+        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
+        e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA',description='area from ellipse')
+        e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2,description='total flux from ellipse')
+        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag,description='mag from ellipse')
+        e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM',description='asym from ellipse')
         e11 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM_ERR')
-        e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM', unit=u.erg/u.s/u.cm**2)
-        e13 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag)
-        e14 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM')
+        e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM', unit=u.erg/u.s/u.cm**2,description='HA flux from ellipse')
+        e13 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag,description='HA mag from ellipse')
+        e14 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM',description='HA asymmetry from ellipse')
         e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
         self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13,e14,e15])
     def add_profile_fit(self):
@@ -666,16 +680,38 @@ class create_output_table():
                    u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,'',\
                    u.arcsec,u.erg/u.s/u.cm**2,u.arcsec, u.arcsec,'',u.mag
                    ]
+        self.descriptions= ['isophotal radius at 24mag/sqarc AB',\
+                            'isophotal radius at 25mag/sqarc AB',\
+                            'isophotal radius at 26mag/sqarc AB',\
+                            'radius that encloses 25% of total flux',\
+                            'isophotal radius at 24mag/sqarc Vega',\
+                            'isophotal radius at 24mag/sqarc Vega',\
+                            'radius that encloses 50% of total flux',\
+                            'radius that encloses 75% of total flux',\
+                            'isophotal mag within R24',\
+                            'isophotal mag within R25',\
+                            'isophotal mag within R26',\
+                            'flux within 30% of R24',\
+                            'flux within R24',\
+                            'C30 = flux w/in 0.3 r24 / flux w/in r24',\
+                            'petrosian radius: where sb is 0.2 times mean sb',\
+                            'flux enclosed within 2xpetro radius',\
+                            'radius enclosing 50% of petrosian flux',\
+                            'radius enclosing 90% of petrosian flux',\
+                            '90% petro radius / 50% petro radius',\
+                            'magnitude of petrosian flux']
+        i=0
         for f,unit in zip(self.fields_r,self.units_r):
             if unit == None:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f,description='galfit '+self.descriptions[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f, unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f, unit=unit,description='galfit '+self.descriptions[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
+            i += 1
         #
         # Halpha parameters
         # 
@@ -692,30 +728,49 @@ class create_output_table():
                  u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2, '',\
                  u.arcsec,u.erg/u.s/u.cm**2,\
                  u.arcsec,u.erg/u.s/u.cm**2,u.arcsec, u.arcsec,'',u.mag]
+        self.descriptions_ha= ['HA isophotal radius at 16erg/s/cm^2',\
+                            'HA isophotal radius at 17erg/s/cm^2',\
+                            'HA radius that encloses 25% of total flux',\
+                            'HA radius that encloses 50% of total flux',\
+                            'HA radius that encloses 75% of total flux',\
+                            'HA isophotal radius at 16erg/s/cm^s',\
+                            'HA isophotal radius at 17erg/s/cm^2',\
+                            'HA flux within 30% of R-band R24',\
+                            'HA flux within R-band R24',\
+                            'HA C30 = flux w/in 0.3 R-band r24 / flux w/in R-band r24',\
+                            'HA flux within 30% of R-band R24',\
+                            'HA total flux',\
+                            'petrosian radius: where sb is 0.2 times mean sb',\
+                            'flux enclosed within 2xpetro radius',\
+                            'radius enclosing 50% of petrosian flux',\
+                            'radius enclosing 90% of petrosian flux',\
+                            '90% petro radius / 50% petro radius',\
+                            'magnitude of petrosian flux']
+        i=0
         for f,unit in zip(self.fields_ha,self.units_ha):
             if unit == None:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f,description='galfit '+self.descriptions_ha[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f, unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f, unit=unit,description='galfit '+self.descriptions_ha[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_'+'H'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
-
+            i += 1           
         f='GAL_'+'LOG_SFR_HA'
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr)
-        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr,description='log10 of HA SFR in Msun/yr')
+        c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr,description='error in log10 of HA SFR in Msun/yr')
         self.table.add_column(c1)
         self.table.add_column(c2)
         
         f='GAL_'+'SSFR_IN'
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f,description='F(HA)/F(r) within 0.3 R24')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_column(c1)
         self.table.add_column(c2)
         f='GAL_'+'SSFR_OUT'
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f,description='F(HA)/F(r) within 0.3 R24')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_column(c1)
         self.table.add_column(c2)
@@ -725,33 +780,36 @@ class create_output_table():
         #####################################################################
         #
         # r-band parameters
-        # 
+        #
+        i=0
         for f,unit in zip(self.fields_r,self.units_r):
             if unit == None:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name=f,description='ellipse '+self.descriptions[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
             else:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=unit,description='ellipse '+self.descriptions[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
+            i += 1
         #
         # Halpha parameters
-        # 
+        #
+        i=0
         for f,unit in zip(self.fields_ha,self.units_ha):
             if unit == None:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f,description='ellipse '+self.descriptions_ha[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f+'_ERR')
             else:
-                c1 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f, unit=unit)
+                c1 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f, unit=unit,description='ellipse '+self.descriptions_ha[i])
                 c2 = Column(np.zeros(self.ngalaxies,'f'),name='H'+f+'_ERR', unit=unit)
 
             self.table.add_column(c1)
             self.table.add_column(c2)
-
+            i += 1
         f='LOG_SFR_HA'
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr,description='log10 of HA SFR in Msun/yr')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
         self.table.add_columns([c1,c2])
 
@@ -760,12 +818,12 @@ class create_output_table():
         ######################################################################        
         
         f='SSFR_IN'
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f,description='F(HA)/F(r) within 0.3 R24')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_columns([c1,c2])
 
         f='SSFR_OUT'
-        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f)
+        c1 = Column(np.zeros(self.ngalaxies,'f'),name=f,description='F(HA)/F(R) outside 0.3R24')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR')
         self.table.add_columns([c1,c2])
 
@@ -781,9 +839,10 @@ class create_output_table():
         these are common comments that the user will be able to select
         '''
         names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG','NUC_HA']
-        for n in names:
+        descriptions =  ['Cont Sub Prob','merger/tidal','scattered light','asymmetric R-band', 'asymmetric Ha','foreground star', 'foreground gal','galaxy is edge-on','galaxy is only partially covered by mosaic','nuclear ha emission']
+        for i,n in enumerate(names):
             #print(n)
-            c = Column(np.zeros(self.ngalaxies,'bool'),name=n)
+            c = Column(np.zeros(self.ngalaxies,'bool'),name=n,description=descriptions[i])
             self.table.add_column(c)
             
     def update_gui_table(self):
@@ -1603,12 +1662,20 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # first pass of mask
         # radial profiles
         # save latest of mask
-        if self.prefix is None:
-            self.cutout_name_r = str(self.galid[self.igal])+'-R.fits'
-            self.cutout_name_ha =str(self.galid[self.igal])+'-CS.fits'
+        if self.virgo:
+            nedname = self.NEDname[self.igal].replace(" ","")
+            nedname = nedname.replace("[","")
+            nedname = nedname.replace("]","")            
+            
+            cprefix = str(self.galid[self.igal])+'-'+nedname
         else:
-            self.cutout_name_r = self.prefix+'-'+str(self.galid[self.igal])+'-R.fits'
-            self.cutout_name_ha = self.prefix+'-'+str(self.galid[self.igal])+'-CS.fits'
+            cprefix = str(self.galid[self.igal])
+        if self.prefix is None:
+            self.cutout_name_r = cprefix+'-R.fits'
+            self.cutout_name_ha =cprefix+'-CS.fits'
+        else:
+            self.cutout_name_r = self.prefix+'-'+cprefix+'-R.fits'
+            self.cutout_name_ha = self.prefix+'-'+cprefix+'-CS.fits'
 
         self.rcutout.canvas.delete_all_objects()
         self.hacutout.canvas.delete_all_objects()
@@ -2188,13 +2255,36 @@ class galaxy_catalog():
         
         
 if __name__ == "__main__":
-    catalog = os.getenv('HOME')+'/research/NSA/nsa_v0_1_2.fits'
+    ## RUNNING AS THE MAIN PROGRAM
+    
+
+
+    #####################################
+    ## SETUP COMMAND-LINE PARAMETERS
+    #####################################
+    import argparse    
+    parser = argparse.ArgumentParser(description ='Run gui for analyzing Halpha images')
+
+    parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
+    parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.')
+    parser.add_argument('--pointing',dest = 'pointing', default=None,help='Pointing number that you want to load.  ONLY FOR VIRGO DATA.')
+    parser.add_argument('--nebula',dest = 'nebula', action='store_true',default=False,help='set this if running on open nebula virtual machine.  catalog paths will be set accordingly.')
+    parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
+    parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
+        
+    args = parser.parse_args()
+
+
+    
+    #catalog = os.getenv('HOME')+'/research/NSA/nsa_v0_1_2.fits'
     #gcat = galaxy_catalog(catalog)
-    print(sys.argv)
+    #print(sys.argv)
     logger = log.get_logger("example1", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
+
+    # OLD CODE TO MAKE USE OF ARGV INPUTS
     #if int(sys.argv[1]) == 0:
     #    ui = hafunctions(MainWindow, logger, sepath = sepath, testing=False)
     #elif int(sys.argv[1]) == 1:
@@ -2205,7 +2295,9 @@ if __name__ == "__main__":
     #ui.setupUi(MainWindow)
     #ui.test()
 
+    #################################
     ## UPDATED TO USE ARGPARSE
+    #################################    
     ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop)
     MainWindow.show()
     sys.exit(app.exec_())
