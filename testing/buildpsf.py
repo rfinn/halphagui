@@ -243,9 +243,19 @@ class psf_parent_image():
         fits.writeto(self.psf_image_name, data, header=header, overwrite=True)
         
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description ='write out subtables for virgo filaments catalog')
+
+    #parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
+    parser.add_argument('--image',dest = 'image', help='input image')
+     
+    args = parser.parse_args()
+
+    
     #image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
-    image = '/Users/rfinn/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-4_R.coadd.fits'
-    p = psf_parent_image(image=image, size=21, nstars=100, oversampling=2)
+    #image = '/Users/rfinn/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-4_R.coadd.fits'
+    p = psf_parent_image(image=args.image, size=21, nstars=100, oversampling=2)
     p.runse()
     p.read_se_table()
     p.find_stars()

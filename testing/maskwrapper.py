@@ -72,7 +72,7 @@ defaultcat='default.sex.HDI.mask'
 class my_cutout_image(QtCore.QObject):#QtCore.QObject):
     #mouse_clicked = QtCore.pyqtSignal(str)
     key_pressed = QtCore.pyqtSignal(str)
-    def __init__(self,panel_name,ui, logger, row, col, drow, dcol,autocut_params='zscale'):
+    def __init__(self,panel_name,ui, logger, row, col, drow, dcol,autocut_params='stddev'):
         #super(image_panel, self).__init__(panel_name,ui, logger, row, col, drow, dcol)
         # enable some user interaction
         #fi.get_bindings.enable_all(True)
@@ -262,7 +262,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
     def display_cutouts(self):
         self.rcutout.load_file(self.image_name)
-        self.rcutout.fitsimage.set_autocut_params('histogram')
+        self.rcutout.fitsimage.set_autocut_params('stddev')
         self.hacutout.load_file(self.haimage_name)
         self.display_mask()
     def display_mask(self):

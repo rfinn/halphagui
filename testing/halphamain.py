@@ -79,7 +79,7 @@ if len(macos_ver) > 0:
 import matplotlib.pyplot as plt
 
 # default size for cutouts, multiple of NSA PETROTH90
-cutout_scale = 12
+cutout_scale = 14
 
 
 
@@ -435,7 +435,7 @@ class create_output_table():
     def create_table_virgo(self):
         # updating this part for virgo filament survey 
 
-        self.table = self.defcat.cat['VFID','RA','DEC','vr','radius']
+        self.table = self.defcat.cat['VFID','RA','DEC','vr','radius','NEDname']
         self.table['VFID'].description = 'ID from Virgo Filament catalog'                
         self.table['RA'].unit = u.deg
         self.table['RA'].description = 'RA from VF catalog'        
@@ -448,7 +448,8 @@ class create_output_table():
         self.ngalaxies = len(self.table)
         print('number of galaxies = ',self.ngalaxies)
         self.haflag = np.zeros(self.ngalaxies,'bool')
-        self.galid = self.table['VFID']        
+        self.galid = self.table['VFID']
+        self.NEDname = self.table['NEDname']                
         self.gredshift = self.defcat.cat['vr']/3.e5
         self.gzdist = self.defcat.cat['vr']/3.e5        
         self.gradius = self.defcat.cat['radius']/self.pixel_scale
@@ -1186,8 +1187,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
         self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 8, 1,autocut_params='histogram')
-        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1)
-        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1)
+        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1,autocut_params='stddev')
+        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1,autocut_params='stddev')
     def add_cutout_frames(self):
         # r-band cutout
         self.rcutout_label = QtWidgets.QLabel('r-band')
@@ -1201,10 +1202,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.ui.cutoutsLayout.addWidget(temp_label, 0, 6, 1, 2)
         self.agc_label = QtWidgets.QLabel('AGC Number')
         self.ui.cutoutsLayout.addWidget(self.agc_label, 0, 8, 1, 2)
-        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, drow, 10,autocut_params='histogram')
+        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, drow, 10,autocut_params='stddev')
         a = QtWidgets.QLabel('CS Halpha')
         self.ui.cutoutsLayout.addWidget(a, drow+1, 0, 1, 2)
-        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, drow+2, 0, drow, 10,autocut_params='histogram')
+        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, drow+2, 0, drow, 10,autocut_params='stddev')
 
         a = QtWidgets.QLabel('Mask')
         self.ui.cutoutsLayout.addWidget(a, 2*drow+2, 0, 1, 2)
