@@ -1674,9 +1674,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if self.prefix is None:
             self.cutout_name_r = cprefix+'-R.fits'
             self.cutout_name_ha =cprefix+'-CS.fits'
+            self.cutout_name_hawc =cprefix+'-Ha.fits'            
         else:
-            self.cutout_name_r = self.prefix+'-'+cprefix+'-R.fits'
-            self.cutout_name_ha = self.prefix+'-'+cprefix+'-CS.fits'
+            self.cutout_name_r = cprefix+'-'+self.prefix+'-R.fits'
+            self.cutout_name_ha = cprefix+'-'+self.prefix+'-CS.fits'
+            self.cutout_name_hawc = cprefix+'-'+self.prefix+'-Ha.fits'            
 
         self.rcutout.canvas.delete_all_objects()
         self.hacutout.canvas.delete_all_objects()
@@ -1761,7 +1763,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         print('saving r-band cutout')
         fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
 
-        # saving Ha Cutout as fits image
+        # saving Ha CS Cutout as fits image
         newfile1 = fits.PrimaryHDU()
         newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
         newfile1.header = self.ha_header
@@ -1774,6 +1776,20 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         newfile.header['EXPTIME']=1.0 
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
         print('saving halpha cutout')
+
+        # saving Ha with continuum Cutout as fits image
+        newfile1 = fits.PrimaryHDU()
+        newfile1.data = self.halpha[ymin:ymax,xmin:xmax]
+        newfile1.header = self.ha_header
+        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile.header.set('ID',str(self.galid[self.igal]))
+
+        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile.header['EXPTIME']=1.0 
+        fits.writeto(self.cutout_name_hawc, newfile1.data, header = newfile1.header, overwrite=True)
+        print('saving halpha w/continuum cutout')
         # write bounding box to output table
         # save this for later
         ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
