@@ -31,6 +31,7 @@ from photutils import EllipticalAperture
 
 prefix = 'NRGs27'
 photfile = 'halpha-data-rfinn-2019-Sep-17.fits'
+photfile = 'v17p3-data-rfinn-2020-Jun-26.fits'
 
 rcutouts = glob.glob(prefix+'*-R.fits')
 
@@ -40,7 +41,7 @@ pixel_scale = 0.43
 def mark_ellipse(cat, nsaid):
     pass
     # ellipse showing R24
-    index = np.where(cat.NSAID == nsaid)
+    index = np.where(cat.NEDname == nsaid)
     #print('start of mark_ellipse',nsaid, index)
     radii = ['GAL_R24','GAL_HR17']
     colors = ['cyan','magenta']
@@ -76,6 +77,8 @@ def mark_radii(cat,nsaid):
         plt.axvline(x=cat[sma][index][0], color=colors[i], ls='--', label=sma)
         
     # vertical line showing R17
+
+
 nperpage = 3
 npages = len(rcutouts)/nperpage
 ngal = 0
@@ -85,6 +88,8 @@ nplot = 0
 #plt.subplots_adjust(hspace=0,wspace=0)
 row = 0
 haoffset = -4.
+
+rcutouts = glob.glob('*-R.fits')
 for rc in rcutouts:
     ngal += 1
     row += 1
@@ -103,7 +108,7 @@ for rc in rcutouts:
     rphot = 'GAL_'+base_filename+'-R_phot.fits'
     himage = base_filename+'-CS.fits'
     hphot = 'GAL_'+base_filename+'-CS_phot.fits'
-    nsaid = int(base_filename.split('-')[1])
+    nsaid = (base_filename.split('-')[1])
     rdat, rheader = fits.getdata(rc, header=True)
     if os.path.exists(mask):
         mdat = fits.getdata(mask)
@@ -119,15 +124,16 @@ for rc in rcutouts:
             masked_himage = np.ma.array(hdat, mask=mdat)
         else:
             masked_himage = hdat
-    galindex = np.where(cat.NSAID == nsaid)
-    r24 = cat['GAL_R24'][galindex][0]
-    r24pix = r24/pixel_scale
+    galindex = np.where(cat.NEDname == nsaid)
+
+    #r24 = cat['GAL_R24'][galindex][0]
+    #r24pix = r24/pixel_scale
     #Halpha plus continuum
     ax1=plt.subplot2grid((nperpage,4),(row-1,0))
     norm = simple_norm(masked_image, stretch='asinh')#, percent=99.5)
     ax1.imshow(rdat, norm=norm, origin='lower', cmap='gray_r')
     ax1.set_title(str(nsaid)+': R')
-    mark_ellipse(cat, nsaid)
+    #mark_ellipse(cat, nsaid)
     #plt.gca().set_yticks(())
     if haflag:
         ax2=plt.subplot2grid((nperpage,4),(row-1,1))
@@ -144,14 +150,14 @@ for rc in rcutouts:
     if os.path.exists(rphot):
         rtab = fits.getdata(rphot)
         ax3.errorbar(rtab.sma_arcsec, rtab.sb_mag_sqarcsec, yerr=rtab.sb_mag_sqarcsec_err,fmt='b.', label='R',markersize=6)
-        mark_radii(cat,nsaid)
+        #mark_radii(cat,nsaid)
 
         if haflag:
             htab = fits.getdata(hphot)
             flag = htab.sb_erg_sqarcsec > 0.
             ax3.errorbar(htab.sma_arcsec[flag], htab.sb_mag_sqarcsec[flag]+haoffset, yerr=htab.sb_mag_sqarcsec_err[flag],fmt='c.', label=r'$H\alpha +$'+str(haoffset),markersize=6)
 
-        ax3.set_xlim(0,3*r24)
+        #ax3.set_xlim(0,3*r24)
         ax3.set_ylim(16,28)        
         ax3.invert_yaxis()
         ax3.legend()

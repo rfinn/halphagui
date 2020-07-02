@@ -1751,7 +1751,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #print('or maybe here???')                        
         newfile.header.set('ID',str(self.galid[self.igal]))
         #print('or maybe here????')                        
-        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile.header.set('SERSTH50',float('{:.2f}'.format(self.gradius[self.igal])))
         #print('trying to add exptime now')
         # set the exposure time to 1 sec
         # for some reason, in the coadded images produced by swarp, the gain has been corrected
@@ -1779,7 +1779,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         # saving Ha with continuum Cutout as fits image
         newfile1 = fits.PrimaryHDU()
-        newfile1.data = self.halpha[ymin:ymax,xmin:xmax]
+        newfile1.data = self.ha[ymin:ymax,xmin:xmax]
         newfile1.header = self.ha_header
         newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
         newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
@@ -1806,11 +1806,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             print('are you rushing to make a mask w/out selecting galaxies?')
             print('try selecting filter, then selecting galaxies')
             return
-        self.mwindow = QtWidgets.QWidget()
-        self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/')
-        self.mui.mask_saved.connect(self.display_mask)
-        self.mui.setupUi(self.mwindow)
-        self.mwindow.show()
+        try:
+            self.mwindow = QtWidgets.QWidget()
+            self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/')
+            self.mui.mask_saved.connect(self.display_mask)
+            self.mui.setupUi(self.mwindow)
+            self.mwindow.show()
+        except AttributeError:
+            print('Hey - make sure you selected a galaxy!')
         #os.chdir(current_dir)
         
     def display_mask(self, mask_image_name):

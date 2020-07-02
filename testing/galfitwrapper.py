@@ -231,7 +231,7 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
 
         # gui stuff
         # set up image frames for image, model, and residual
-        self.cutout_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1,autocut_params='histogram')
+        self.cutout_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 4, 1,autocut_params='sttdev')
         self.model_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 4, 1)
         self.residual_frame = my_cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 4, 1)
 
