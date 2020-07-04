@@ -63,7 +63,12 @@ class psf_parent_image():
         # number of stars to use to determine the psf
         self.nstars = nstars
         # default pixelscale is set for HDI camera
-        self.pixelscale = pixelscale
+
+        # get pixelscale from image header
+        try:
+            self.pixelscale = np.abs(float(self.header['CD1_1']))*3600
+        except KeyError:
+            self.pixelscale = pixelscale
         if oversampling == None:
             self.oversampling = 2
         else:
@@ -219,6 +224,7 @@ class psf_parent_image():
         self.std = np.sqrt(self.x_stddev**2 + self.y_stddev**2)/self.oversampling
         # convert gaussian std to fwhm
         self.fwhm = self.std*gaussian_sigma_to_fwhm
+        self.fwhm_arcsec = self.fwhm*self.pixelscale
         print('image fwhm = %.2f pix (%.2f arcsec)'%(self.fwhm, self.fwhm*self.pixelscale))
     def save_psf_image(self):
         # save the psf file

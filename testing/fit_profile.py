@@ -135,6 +135,7 @@ class profile():
 
         # this is the main part of the program
         base = os.path.basename(image_name)
+
         self.rootname = os.path.splitext(base)[0]
         # old way of getting filename
         #self.rootname,t = image_name.split('.fit')
@@ -604,7 +605,7 @@ class dualprofile():
                 #plt.ylim(1.e-2,2)
             #plt.xlim(-1*.02*np.max(self.r.tab.sma_arcsec),np.max(self.r.tab.sma_arcsec))
 
-        plt.savefig(self.r.rootname+'-radial-profile.png')
+        plt.savefig(self.r.image_name.split('.fits')[0]+'-radial-profile.png')
         plt.show()
 
 

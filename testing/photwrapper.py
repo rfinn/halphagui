@@ -132,6 +132,7 @@ class ellipse():
         self.get_asymmetry()
         self.write_phot_tables()
         self.write_phot_fits_tables()
+        self.get_sky_noise()
         #if self.use_mpl:
         #    self.draw_phot_results_mpl()
         #else:
@@ -181,7 +182,7 @@ class ellipse():
         #print('writing table')
         self.get_image2_gini()
         self.get_asymmetry()
-        self.write_phot_fits_tables(prefix='GAL_')
+        self.write_phot_fits_tables(prefix='GAL')
         #if self.use_mpl:
         #    self.draw_phot_results_mpl()
         #else:
@@ -199,6 +200,35 @@ class ellipse():
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
         #self.tbl = self.cat.to_table()
+    def get_sky_noise(self):
+        # get sky noise for image 1
+        if self.mask_flag:
+            threshold = detect_threshold(self.image, nsigma=1,mask=self.boolmask)
+        else:
+            threshold = detect_threshold(self.image, nsigma=snrcut)
+
+        # add sky noise to image 1 header
+        sky_noise_erg = np.mean(threshold)*self.uconversion1/self.pixel_scale**2
+        print('r sky noise = ',sky_noise_erg)
+        self.header.set('SKYERR',float('{:.2f}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+        # save files
+        fits.writeto(self.image_name,self.image,header=self.header,overwrite=True)
+        self.im1_skynoise = sky_noise_erg
+        # get sky noise for image 2
+        if self.image2 is not None:
+            if self.mask_flag:
+                threshold = detect_threshold(self.image2, nsigma=1,mask=self.boolmask)
+            else:
+                threshold = detect_threshold(self.image2, nsigma=snrcut)
+            # add sky noise to image 2 header
+            sky_noise_erg = np.mean(threshold)*self.uconversion2/self.pixel_scale**2        
+            self.header2.set('SKYERR',float('{:.2f}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+
+            fits.writeto(self.image2_name,self.image2,header=self.header2,overwrite=True)
+            self.im2_skynoise = sky_noise_erg
+            print('ha sky noise = ',sky_noise_erg)
+
+
 
     def find_central_object(self):
         xdim,ydim = self.image.shape
@@ -578,6 +608,7 @@ class ellipse():
         ### SURFACE BRIGHTNESS -> ERG/S/CM^2/ARCSEC^2
         ### SURFACE BRIGHTNESS -> MAG/ARCSEC^2
         ###########################################################
+        self.sky_noise_erg = self.sky_noise*self.uconversion1/self.pixel_scale**2
         self.flux1_erg = self.uconversion1*self.flux1
         self.flux1_err_erg = self.uconversion1*self.flux1_err
         self.source_sum_erg = self.uconversion1*self.source_sum
@@ -613,7 +644,7 @@ class ellipse():
     def write_phot_tables(self):
         # write out photometry for r-band
         # radius enclosed flux
-        outfile = open(self.image_name.split('.fits')[0]+'_phot.dat','w')#used to be _phot.dat, but changing it to .dat so that it can be read into code for ellipse profiles
+        outfile = open(self.image_name.split('.fits')[0]+'-phot.dat','w')#used to be _phot.dat, but changing it to .dat so that it can be read into code for ellipse profiles
 
         #outfile.write('# X_IMAGE Y_IMAGE ELLIPTICITY THETA_J2000 \n')
         #outfile.write('# %.2f %.2f %.2f %.2f \n'%(self.xcenter,self.ycenter,self.eps,self.theta))
@@ -665,10 +696,10 @@ class ellipse():
         # radius enclosed flux
 
         if prefix is None:
-             outfile = self.image_name.split('.fits')[0]+'_phot.fits'
+             outfile = self.image_name.split('.fits')[0]+'-phot.fits'
         else:
-             outfile = prefix+self.image_name.split('.fits')[0]+'_phot.fits'
-        
+             outfile = self.image_name.split('.fits')[0]+'-'+prefix+'-phot.fits'
+        print('photometry outfile = ',outfile)
 
         data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
              self.flux1,self.flux1_err,\
@@ -678,6 +709,7 @@ class ellipse():
              self.mag1, self.mag1_err, \
              self.sb1_erg_sqarcsec,self.sb1_erg_sqarcsec_err, \
              self.sb1_mag_sqarcsec,self.sb1_mag_sqarcsec_err]
+
         names = ['sma_arcsec','sma_pix','flux','flux_err',\
                  'sb', 'sb_err', \
                  'sb_snr', \
@@ -685,12 +717,18 @@ class ellipse():
                  'mag', 'mag_err', \
                  'sb_erg_sqarcsec','sb_erg_sqarcsec_err', \
                  'sb_mag_sqarcsec','sb_mag_sqarcsec_err']
+
         units = [u.arcsec,u.pixel,u.adu/u.s,u.adu/u.s, \
                  u.adu/u.s/u.pixel**2, u.adu/u.s/u.pixel**2, '',\
                  u.erg/u.s/u.cm**2,u.erg/u.s/u.cm**2,\
                  u.mag,u.mag,\
                  u.erg/u.s/u.cm**2/u.arcsec**2,u.erg/u.s/u.cm**2/u.arcsec**2,\
                  u.mag/u.arcsec**2,u.mag/u.arcsec**2]
+
+
+        #self.sky_noise,self.sky_noise_erg]
+        #'sky_noise_ADU_sqpix','sky_noise_erg_sqarcsec']
+        #u.adu/u.s/u.pixel**2,u.erg/u.s/u.cm**2/u.arcsec**2]        
         columns = []
         for i in range(len(data)):
             columns.append(Column(data[i],name=names[i],unit=units[i]))
@@ -702,9 +740,9 @@ class ellipse():
             # write out photometry for h-alpha
             # radius enclosed flux
             if prefix is None:
-                outfile = self.image2_name.split('.fits')[0]+'_phot.fits'
+                outfile = self.image2_name.split('.fits')[0]+'-phot.fits'
             else:
-                outfile = prefix+self.image2_name.split('.fits')[0]+'_phot.fits'
+                outfile = self.image2_name.split('.fits')[0]+'-'+prefix+'-phot.fits'
     
             data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
                 self.flux2,self.flux2_err,\

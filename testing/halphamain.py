@@ -81,6 +81,9 @@ import matplotlib.pyplot as plt
 # default size for cutouts, multiple of NSA PETROTH90
 cutout_scale = 14
 
+class psfimage():
+    fwhm = 5.6
+    fwhm_arcsec = 2.0
 
 
 class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
@@ -430,12 +433,13 @@ class create_output_table():
         self.gradius = self.table['radius']
         self.gzdist = self.table['ZDIST']
         self.galid=self.table['VFID']
-        self.NEDname=self.table['NEDname']        
+        self.NEDname=self.table['NEDname']
+        self.gprefix=self.table['prefix']                
         
     def create_table_virgo(self):
         # updating this part for virgo filament survey 
 
-        self.table = self.defcat.cat['VFID','RA','DEC','vr','radius','NEDname']
+        self.table = self.defcat.cat['VFID','RA','DEC','vr','radius','NEDname','prefix']
         self.table['VFID'].description = 'ID from Virgo Filament catalog'                
         self.table['RA'].unit = u.deg
         self.table['RA'].description = 'RA from VF catalog'        
@@ -532,7 +536,11 @@ class create_output_table():
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='R-band center DEC from photutil centroid')
         c9 = Column(self.haflag, name='HA_FLAG',description='shows HA emission')
         c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
-        self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10])
+        c11 = Column(np.zeros(self.ngalaxies,'f'),name='R_FWHM',unit=u.arcsec, description='R FWHM in arcsec')
+        c12 = Column(np.zeros(self.ngalaxies,'f'),name='H_FWHM',unit=u.arcsec, description='HA FWHM in arcsec')
+        c13 = Column(np.zeros(self.ngalaxies,dtype='|S10'),name='POINTING', description='string specifying year and pointing, like v17p01')                
+
+        self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10,c11,c12,c13])
     def add_nsa(self):
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
         r = 22.5 - 2.5*np.log10(self.nsa2['NMGY'][:,4])
@@ -665,7 +673,9 @@ class create_output_table():
         e13 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag,description='HA mag from ellipse')
         e14 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM',description='HA asymmetry from ellipse')
         e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13,e14,e15])
+        e16 = Column(np.zeros(self.ngalaxies,'f'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
+        e17 = Column(np.zeros(self.ngalaxies,'f'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
+        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13,e14,e15,e16,e17])
     def add_profile_fit(self):
         #####################################################################
         # profile fitting using galfit geometry
@@ -914,6 +924,9 @@ class create_output_table():
                 self.table['COMMENT'][self.igal] = t
                 self.update_gui_table_cell(self.igal, 'COMMENT',t)
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
+        if self.prefix is not None:
+            for i in range(len(self.table)):
+                self.table['POINTING'][i] = self.prefix
         self.table.write(self.output_table, format='fits', overwrite=True)
 
 class uco_table():
@@ -956,30 +969,16 @@ class uco_table():
 
 class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
-    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False):
+    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None):
         super(hafunctions, self).__init__()
-        #print(MainWindow)
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(MainWindow)
+        self.setup_gui()
+        
         self.prefix= None
         self.testing = testing
         self.nebula = nebula
         self.laptop = laptop
         self.virgo = virgo
-        self.logger = logger
-        self.drawcolors = colors.get_colors()
-        self.dc = get_canvas_types()
-        self.add_coadd_frame(self.ui.leftLayout)
-        self.add_cutout_frames()
-        self.connect_setup_menu()
-        self.connect_ha_menu()
-        self.connect_halpha_type_menu()
-        self.connect_comment_menu()
-        #self.connect_buttons()
-        #self.add_image(self.ui.gridLayout_2)
-        #self.add_image(self.ui.gridLayout_2)
-        self.oversampling = 2
-        self.connect_buttons()
+        self.oversampling = 2        
         if sepath == None:
             self.sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
         else:
@@ -987,12 +986,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.igal = None
         if self.laptop & self.virgo:
             self.setup_laptop_virgo()
-            self.setup_virgo()
+            self.setup_virgo(pointing=pointing)
         elif self.nebula & self.virgo: 
             self.setup_nebula_virgo()
-            if args.pointing is not None:
+            if pointing is not None:
                 print('GOT A POINTING NUMBER FOR VIRGO FIELD')                
-                self.setup_virgo(pointing=args.pointing)
+                self.setup_virgo(pointing=pointing)
             else:
                 self.setup_virgo()
         elif self.nebula:
@@ -1014,6 +1013,23 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.global_max_cutout_size = 250
 
         self.initialize_uco_arrays()
+    def setup_gui(self):
+        #print(MainWindow)
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(MainWindow)
+        self.logger = logger
+        self.drawcolors = colors.get_colors()
+        self.dc = get_canvas_types()
+        self.add_coadd_frame(self.ui.leftLayout)
+        self.add_cutout_frames()
+        self.connect_setup_menu()
+        self.connect_ha_menu()
+        self.connect_halpha_type_menu()
+        self.connect_comment_menu()
+        #self.connect_buttons()
+        #self.add_image(self.ui.gridLayout_2)
+        #self.add_image(self.ui.gridLayout_2)
+        self.connect_buttons()
     def connect_buttons(self):
         self.ui.wmark.clicked.connect(self.find_galaxies)
         #self.ui.editMaskButton.clicked.connect(self.edit_mask)
@@ -1039,7 +1055,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #self.hacoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_ha16.coadd.fits'
         #self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
         self.hacoadd_fname = os.getenv('HOME')+'/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-1_ha4.coadd.fits'
-        self.load_hacoadd()
+
         #self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         self.haweight = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.haweight_flag = True
@@ -1047,7 +1063,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #self.rcoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_R.coadd.fits'
         self.rcoadd_fname = os.getenv('HOME')+'/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-1_R.coadd.fits'
         #self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        self.load_rcoadd()
+
         #self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.rweight_flag = True
         #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
@@ -1062,6 +1078,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
+        self.load_hacoadd()
+        self.load_rcoadd()        
         self.subtract_images()
         self.setup_ratio_slider()
         self.setup_cutout_slider()
@@ -1101,7 +1119,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.imagedir =  '/mnt/astrophysics/reduced/virgo-coadds-2017/'
         self.tabledir= '/mnt/astrophysics/catalogs/Virgo/tables-north/v0/'
     def setup_laptop_virgo(self):
-        self.imagedir =  '/home/rfinn/research/Virgo/Halpha/reduced/virgo-coadds-2017/'
+        self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2017/'
         self.tabledir= '/home/rfinn/research/Virgo/tables-north/v0/'
 
     def setup_virgo(self,pointing=None):
@@ -1660,25 +1678,36 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.reset_cutout_size()
         self.reset_cutout_ratio()
         self.display_cutouts()
+
+        
         # first pass of mask
         # radial profiles
         # save latest of mask
         if self.virgo:
             nedname = self.NEDname[self.igal].replace(" ","")
             nedname = nedname.replace("[","")
-            nedname = nedname.replace("]","")            
+            nedname = nedname.replace("]","")
+            nedname = nedname.replace("/","")                        
             
             cprefix = str(self.galid[self.igal])+'-'+nedname
         else:
             cprefix = str(self.galid[self.igal])
+
+        ## create the output directory to store the cutouts and figures
+        self.cutoutdir = 'cutouts/'+cprefix+'/'
+        if not os.path.exists('cutouts'):
+            os.mkdir('cutouts')
+        if not os.path.exists(self.cutoutdir):
+            os.mkdir(self.cutoutdir)
+
         if self.prefix is None:
-            self.cutout_name_r = cprefix+'-R.fits'
-            self.cutout_name_ha =cprefix+'-CS.fits'
-            self.cutout_name_hawc =cprefix+'-Ha.fits'            
+            self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
+            self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
+            self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
         else:
-            self.cutout_name_r = cprefix+'-'+self.prefix+'-R.fits'
-            self.cutout_name_ha = cprefix+'-'+self.prefix+'-CS.fits'
-            self.cutout_name_hawc = cprefix+'-'+self.prefix+'-Ha.fits'            
+            self.cutout_name_r = self.cutoutdir+cprefix+'-'+self.prefix+'-R.fits'
+            self.cutout_name_ha = self.cutoutdir+cprefix+'-'+self.prefix+'-CS.fits'
+            self.cutout_name_hawc = self.cutoutdir+cprefix+'-'+self.prefix+'-Ha.fits'            
 
         self.rcutout.canvas.delete_all_objects()
         self.hacutout.canvas.delete_all_objects()
@@ -1690,7 +1719,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         else:
             # clear mask frame
             self.maskcutout.fitsimage.clear()
-        self.clear_comment_field()            
+        self.clear_comment_field()
+        self.write_cutouts()
     def display_cutouts(self):
         position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
         
@@ -1823,20 +1853,58 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.maskcutout.load_file(self.mask_image_name)
         self.mask_image_exists = True
     def build_psf(self):
-        print('oversampling = ',self.oversampling)
-        print('PSF RESULTS FOR R-BAND COADDED IMAGE')
-        self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
-        self.psf.run_all()
-        self.psf_image_name = self.psf.psf_image_name
-        print('PSF RESULTS FOR COADDED IMAGE')
-        self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
-        self.hapsf.run_all()
-        self.psf_haimage_name = self.hapsf.psf_image_name
+        # check to see if R-band PSF images exist
+        coadd_header = fits.getheader(self.rcoadd_fname)
+        self.pixelscale = = np.abs(float(header['CD1_1']))*3600  
+
+        basename = os.path.basename(self.rcoadd_fname)
+        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        basename = os.path.basename(self.hacoadd_fname)
+        psf_image_name_ha = basename.split('.fits')[0]+'-psf.fits'
+        if os.path.exists(psf_image_name):
+            # get fwhm from the image header
+            # and oversampling
+            print("LOADING EXISTING PSF IMAGE")
+            header = fits.getheader(psf_image_name)
+            self.psf = psfimage            
+            self.psf.fwhm = header['FWHM'] # in pixels
+            self.psf.fwhm_arcsec = self.psf.fwhm*self.pixelscale
+            self.oversampling = float(header['OVERSAMP'])
+
+        else:
+            print('oversampling = ',self.oversampling)
+            print('PSF RESULTS FOR R-BAND COADDED IMAGE')
+            self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+            self.psf.run_all()
+            self.psf_image_name = self.psf.psf_image_name
+
+        if os.path.exists(psf_image_name_ha):
+            # get fwhm from the image header
+            # and oversampling
+            header = fits.getheader(psf_image_name_ha)
+            self.hapsf = psfimage            
+            self.hapsf.fwhm = header['FWHM'] # in pixels
+            self.hapsf.fwhm_arcsec = self.hapsf.fwhm*self.pixelscale
+
+        else:
+            print('PSF RESULTS FOR HA COADDED IMAGE')
+            self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+            self.hapsf.run_all()
+            self.psf_haimage_name = self.hapsf.psf_image_name
+
+    def add_psf_to_table(self):
+        fields = ['R_FWHM','H_FWHM']
+        values = [self.psf.fwhm_arcsec,self.hapsf.fwhm_arcsec]
+        for i,f in enumerate(fields):
+            for j in range(len(self.table)):
+                self.table[f][j]=values[i]
+        pass
     def run_galfit(self, ncomp=1, asym=0, ha=0):
         if self.psf_image_name is None:
             print('WARNING: psf could not be found')
             print('Please run build_psf')
             return
+        self.add_psf_to_table()
         self.ncomp = ncomp
         self.asym=asym
         self.galha = ha
@@ -2032,7 +2100,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         '''
 
         # fit profiles
-        self.fit_profiles(prefix='GAL_')
+        self.fit_profiles(prefix='GAL')
         # save results
         self.write_profile_fits(prefix='GAL_')
         self.draw_ellipse_results(color='cyan')
@@ -2060,11 +2128,20 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.gini2,\
                   self.e.cat[self.e.objectIndex].area.value,\
+
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
+            #print(colname)
             self.table[colname][self.igal]=float('%.2e'%(values[i]))
+
+        # update sky noise
+        fields = ['R_SKYNOISE','H_SKYNOISE']
+        values = [self.e.im1_skynoise,self.e.im2_skynoise]
+        for i,f in enumerate(fields):
+            print(values[i])
+            self.table[colname] = values[i]
         wcs = WCS(self.cutout_name_r)
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
         self.table['ELLIP_RA'][self.igal]=ra
@@ -2083,11 +2160,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #image_dir = os.path.dirname(self.rcoadd_fname)
         #os.chdir(image_dir)
         if prefix is None:
-            rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.fits'
-            haphot_table = self.cutout_name_ha.split('.fits')[0]+'_phot.fits'
+            rphot_table = self.cutout_name_r.split('.fits')[0]+'-phot.fits'
+            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-phot.fits'
         else:
-            rphot_table = prefix+self.cutout_name_r.split('.fits')[0]+'_phot.fits'
-            haphot_table = prefix+self.cutout_name_ha.split('.fits')[0]+'_phot.fits'
+            rphot_table = self.cutout_name_r.split('.fits')[0]+'-'+prefix+'-phot.fits'
+            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-'+prefix+'-phot.fits'
 
         self.rfit = rprofile(self.cutout_name_r, rphot_table, label='R')
         self.rfit.becky_measurements()
@@ -2269,7 +2346,7 @@ class galaxy_catalog():
             fits.writeto(outfile,self.cat, overwrite=True)
         elif self.virgoflag:
             print('virgo, right???')
-            outfile = prefix+'_virgo.fits'
+            outfile = prefix+'_virgo_cat.fits'
             print('culled catalog = ',outfile)
             self.cat.write(outfile,format='fits',overwrite=True)
         
@@ -2318,6 +2395,6 @@ if __name__ == "__main__":
     #################################
     ## UPDATED TO USE ARGPARSE
     #################################    
-    ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop)
+    ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing)
     MainWindow.show()
     sys.exit(app.exec_())
