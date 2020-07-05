@@ -328,7 +328,8 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
 
         
 class create_output_table():
-    def initialize_results_table(self, prefix=None,virgo=False):
+    def initialize_results_table(self, prefix=None,virgo=False,nogui=False):
+        self.nogui = nogui
         if virgo:
             self.create_table_virgo()
         else:
@@ -401,8 +402,8 @@ class create_output_table():
             self.add_ellipse()
             self.add_profile_fit()
             self.add_photutils()
-
-        self.update_gui_table()
+        if not self.nogui:
+            self.update_gui_table()
                 
     def read_table():
         self.table = Table(fits.getdata(self.output_table))
@@ -857,6 +858,7 @@ class create_output_table():
             self.table.add_column(c)
             
     def update_gui_table(self):
+
         self.ui.tableWidget.setColumnCount(len(self.table.columns))
         self.ui.tableWidget.setRowCount(len(self.table))
         
@@ -917,7 +919,7 @@ class create_output_table():
             print('could not match column name ',col)
         self.write_fits_table()
     def write_fits_table(self):
-        if self.igal is not None:
+        if (self.igal is not None) & (not self.auto):
             #print(self.ui.commentLineEdit.text())
             t = str(self.ui.commentLineEdit.text())
             if len(t) > 1:
@@ -969,11 +971,12 @@ class uco_table():
 
 class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
-    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None):
+    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False):
         super(hafunctions, self).__init__()
-        self.setup_gui()
-        
-        self.prefix= None
+        self.auto = auto
+        if not(self.auto):
+            self.setup_gui()
+        self.prefix = prefix
         self.testing = testing
         self.nebula = nebula
         self.laptop = laptop
@@ -990,7 +993,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         elif self.nebula & self.virgo: 
             self.setup_nebula_virgo()
             if pointing is not None:
-                print('GOT A POINTING NUMBER FOR VIRGO FIELD')                
+                print('GOT A POINTING NUMBER FOR VIRGO FIELD')
                 self.setup_virgo(pointing=pointing)
             else:
                 self.setup_virgo()
@@ -1013,6 +1016,69 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.global_max_cutout_size = 250
 
         self.initialize_uco_arrays()
+        if self.auto:
+            self.auto_run()
+    def auto_run(self):
+        # run the analysis without starting the gui
+        # read in coadded images
+        self.read_rcoadd()
+        self.read_hacoadd()
+        
+        # set filter
+        # doing this automatically for HDI Virgo data for now
+        self.set_hafilter('4')
+        
+        # get filter ratio
+        self.get_filter_ratio()
+
+        # subtract images
+        self.subtract_images()
+        
+        # measure psf
+        self.build_psf()
+
+        # get galaxies
+        self.find_galaxies()
+        
+        # analyze galaxies
+        # the default catalog has been trimmed to only include
+        # galaxies in FOV
+
+        #for i in range(len(self.gximage)):
+        for i in [2]: # for testing
+            self.igal = i
+            # get cutouts
+            self.auto_gal()
+        self.write_fits_table()
+    def auto_gal(self):
+        # run the analysis on an individual galaxy
+
+        # create cutout
+        self.get_galaxy_cutout()
+        
+        # create mask
+        
+        self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',auto=self.auto)
+        
+        # run galfit
+        self.run_galfit(ncomp=1,ha=False)
+
+        # run galfit ellip phot
+        # use try in case fit fails
+        #self.galfit_ellip_phot()        
+        try:
+            self.galfit_ellip_phot()
+        except:
+            print('WARNING: problem running galfit ellip phot')
+        
+        # run phot util ellip phot
+        # use try in case fit fails
+        #self.photutils_ellip_phot()        
+        try:
+            self.photutils_ellip_phot()
+        except:
+            print('WARNING: problem running photutils ellip phot')
+            
     def setup_gui(self):
         #print(MainWindow)
         self.ui = Ui_MainWindow()
@@ -1133,8 +1199,6 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.hacoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_ha4.coadd.fits'
             self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_R.coadd.fits'
             
-        self.load_hacoadd()
-        self.load_rcoadd()
 
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
         self.vf_fname = self.tabledir+'vf_north_v0_main.fits'
@@ -1152,10 +1216,48 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
-        self.subtract_images()
-        self.setup_ratio_slider()
-        self.setup_cutout_slider()
+        if not self.auto:
+            self.load_hacoadd()
+            self.load_rcoadd()
+        
+            self.subtract_images()
+            self.setup_ratio_slider()
+            self.setup_cutout_slider()
 
+    def read_rcoadd(self):
+        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+
+        # check for weight image
+        # assuminging naming conventions from swarp
+        # image = NRGb161_R.coadd.fits
+        # weight = NRGb161_R.coadd.weight.fits
+        
+        weight_image = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        if os.path.exists(weight_image):
+            self.rweight = weight_image
+            self.rweight_flag = True
+        else:
+            self.rweight_flag = False
+        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
+    def read_hacoadd(self):
+        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
+
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+
+        # check for weight image
+        # assuminging naming conventions from swarp
+        # image = NRGb161_R.coadd.fits
+        # weight = NRGb161_R.coadd.weight.fits
+        
+        weight_image = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        if os.path.exists(weight_image):
+            self.haweight = weight_image
+            self.haweight_flag = True
+        else:
+            self.haweight_flag = False
+        
     def load_rcoadd(self):
         self.coadd.load_file(self.rcoadd_fname)
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
@@ -1286,6 +1388,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.ui.actionhalpha12.triggered.connect(lambda: self.set_hafilter('12'))
         self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
     def set_hafilter(self,filterid):
+        #print('setting ha filter to ',filterid)
         self.hafilter = filterid
         print('halpha filter = ',self.hafilter)
         self.filter_trace = filter_trace(self.hafilter)
@@ -1358,21 +1461,21 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         flag = self.get_gal_list()
         if flag == False:
             return
-        #self.initialize_output_arrays()
+
         # set up the output table that will store results from various fits
-        self.initialize_results_table(prefix=self.prefix,virgo=self.virgo)
+        self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
 
+        if not self.auto:
+            # plot location of galaxies in the coadd image
+            self.mark_galaxies()
 
-        # plot location of galaxies in the coadd image
-        self.mark_galaxies()
-
-        # populate a button that contains list
-        # of galaxies in the field of view,
-        # user can select from list to set the active galaxy
-        for name in self.galid:
-            self.ui.wgalid.addItem(str(name))
-        print(len(self.galid),' galaxies in FOV')
-        self.ui.wgalid.activated.connect(self.select_galaxy)
+            # populate a button that contains list
+            # of galaxies in the field of view,
+            # user can select from list to set the active galaxy
+            for name in self.galid:
+                self.ui.wgalid.addItem(str(name))
+            print(len(self.galid),' galaxies in FOV')
+            self.ui.wgalid.activated.connect(self.select_galaxy)
 
         # get transmission correction for each galaxy
         self.filter_correction= self.filter_trace.get_trans_correction(self.table['REDSHIFT'])
@@ -1390,7 +1493,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
 
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
-        
+        keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
         try:
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
         except AttributeError:
@@ -1420,12 +1523,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             keepflag[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
             #print(offimage)
         # cut down NSA catalog to keep information only for galaxies within FOV
-        print('number of NSA galaxies in FOV = ',sum(keepflag))
+        print('number of galaxies in FOV = ',sum(keepflag))
         if sum(keepflag) == 0:
             print('WARNING: no NSA galaxies in FOV')
             print('\t make sure you have selected the right filter!')
             return
         self.defcat.cull_catalog(keepflag,self.prefix)
+        if self.virgo:
+            self.nsa.cull_catalog(keepflag,self.prefix)
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
         #self.gradius=self.nsa.cat.SERSIC_TH50
@@ -1548,13 +1653,16 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
 
         self.subtract_images()
-        self.setup_ratio_slider()
+        if not self.auto:
+            self.setup_ratio_slider()
         self.clean_links()
     def subtract_images(self):
         self.halpha_cs = self.ha - self.filter_ratio*self.r
-        # display continuum subtracted Halpha image in the large frame
-        self.coadd.fitsimage.set_autocut_params('zscale')
-        self.coadd.fitsimage.set_data(self.halpha_cs)
+
+        if not self.auto:
+            # display continuum subtracted Halpha image in the large frame
+            self.coadd.fitsimage.set_autocut_params('zscale')
+            self.coadd.fitsimage.set_data(self.halpha_cs)
 
     def key_press_func(self,key):
         print(key)
@@ -1662,7 +1770,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         print('active galaxy = ',self.igal)
         # when galaxy is selected from list, trigger
         # cutout imaages
-
+        self.get_galaxy_cutout()
+    def get_galaxy_cutout(self):
         # scale cutout size according to NSA Re
         size = cutout_scale*self.gradius[self.igal]
         # set the min size to 100x100 pixels (43"x43")
@@ -1674,9 +1783,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.cutout_size = u.Quantity((size, size), u.arcsec)
         self.mincutout_size = 0.2*self.cutout_size
         self.maxcutout_size = 3.*self.cutout_size
-        
-        self.reset_cutout_size()
-        self.reset_cutout_ratio()
+
+        # only do this when running gui (as opposed to automatically)
+        if not self.auto:
+            self.reset_cutout_size()
+            self.reset_cutout_ratio()
         self.display_cutouts()
 
         
@@ -1709,17 +1820,20 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.cutout_name_ha = self.cutoutdir+cprefix+'-'+self.prefix+'-CS.fits'
             self.cutout_name_hawc = self.cutoutdir+cprefix+'-'+self.prefix+'-Ha.fits'            
 
-        self.rcutout.canvas.delete_all_objects()
-        self.hacutout.canvas.delete_all_objects()
 
         t = self.cutout_name_r.split('.fit')
         self.mask_image_name=t[0]+'-mask.fits'
-        if os.path.exists(self.mask_image_name):
-            self.display_mask(self.mask_image_name)
-        else:
-            # clear mask frame
-            self.maskcutout.fitsimage.clear()
-        self.clear_comment_field()
+        if not self.auto:
+            if os.path.exists(self.mask_image_name):
+                self.display_mask(self.mask_image_name)
+            else:
+                # clear mask frame
+                self.maskcutout.fitsimage.clear()
+
+            self.rcutout.canvas.delete_all_objects()
+            self.hacutout.canvas.delete_all_objects()            
+            self.clear_comment_field()
+
         self.write_cutouts()
     def display_cutouts(self):
         position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
@@ -1729,9 +1843,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
             ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
             #print(ymin,ymax,xmin,xmax)
-            self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
-            self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
-            #cutoutR.plot_on_original(color='white')
+            if not self.auto:
+                self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
+                self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
+                #cutoutR.plot_on_original(color='white')
         except nddata.utils.PartialOverlapError:# PartialOverlapError:
             print('galaxy is only partially covered by mosaic - skipping ',self.galid[self.igal])
             return
@@ -1825,7 +1940,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
         bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))
         self.table['BBOX'][self.igal] = bbox
-        self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
+        if not self.auto:
+            self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
     def make_mask(self):
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
@@ -1855,7 +1971,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def build_psf(self):
         # check to see if R-band PSF images exist
         coadd_header = fits.getheader(self.rcoadd_fname)
-        self.pixelscale = = np.abs(float(header['CD1_1']))*3600  
+        self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600  
 
         basename = os.path.basename(self.rcoadd_fname)
         psf_image_name = basename.split('.fits')[0]+'-psf.fits'
@@ -1870,7 +1986,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.psf.fwhm = header['FWHM'] # in pixels
             self.psf.fwhm_arcsec = self.psf.fwhm*self.pixelscale
             self.oversampling = float(header['OVERSAMP'])
+            self.psf_image_name = psf_image_name
 
+            
         else:
             print('oversampling = ',self.oversampling)
             print('PSF RESULTS FOR R-BAND COADDED IMAGE')
@@ -1885,7 +2003,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.hapsf = psfimage            
             self.hapsf.fwhm = header['FWHM'] # in pixels
             self.hapsf.fwhm_arcsec = self.hapsf.fwhm*self.pixelscale
-
+            self.psf_haimage_name = psf_image_name_ha            
         else:
             print('PSF RESULTS FOR HA COADDED IMAGE')
             self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
@@ -1936,13 +2054,17 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             print('make sure you selected a galaxy')
             return
         try:
-            self.gwindow = QtWidgets.QWidget()
+            if not self.auto:
+                self.gwindow = QtWidgets.QWidget()
             #self.gwindow.aboutToQuit.connect(self.galfit_closed)
 
             
             if (ncomp == 1) & (asym == 0):
                 #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80)
+                if self.auto:
+                    self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
+                else:
+                    self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)                
             elif (ncomp == 1) & (asym == 1):
                 #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80,asym=1)
                 self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=5,nsersic=2, convolution_size=80,asym=1)                
@@ -1980,10 +2102,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                 re2=.5*re
                     
                 self.galfit = galfitwindow(self.gwindow, self.logger, image = galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True, convolution_size=80)
-                    
-            self.galfit.model_saved.connect(self.galfit_save)        
-            self.galfit.setupUi(self.gwindow)
-            self.gwindow.show()
+
+            if not self.auto:
+                self.galfit.model_saved.connect(self.galfit_save)        
+                self.galfit.setupUi(self.gwindow)
+                self.gwindow.show()
+            else:
+                self.galfit_save(None)
         except ValueError:
             print('WARNING - ERROR RUNNING GALFIT!!!')
             print('Make sure you have measured the PSF and made a mask!')
@@ -2055,7 +2180,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.table['GAL_2SERSIC_ERROR'][self.igal] = (self.galfit_results2[-2])
             self.table['GAL_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
             #print(self.table[self.igal])
-        self.update_gui_table()
+        if not self.auto:
+            self.update_gui_table()
         
 
     def galfit_ellip_phot(self):
@@ -2078,7 +2204,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         
         ### FIT ELLIPSE
         #
-        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
+        if self.auto:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = None,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
+        else:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)            
         #fields = ['XC','YC','MAG','RE','N','BA','PA']
 
         # TRANSFORM THETA
@@ -2103,7 +2232,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.fit_profiles(prefix='GAL')
         # save results
         self.write_profile_fits(prefix='GAL_')
-        self.draw_ellipse_results(color='cyan')
+        if not self.auto:
+            self.draw_ellipse_results(color='cyan')
 
     def photutils_ellip_phot(self):
         #current_dir = os.getcwd()
@@ -2115,7 +2245,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         ### FIT ELLIPSE
         #
-        self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
+        if self.auto:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = None,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
+        else:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)            
         self.e.run_for_gui()
         self.e.plot_profiles()
         #os.chdir(current_dir)
@@ -2146,7 +2279,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
         self.table['ELLIP_RA'][self.igal]=ra
         self.table['ELLIP_DEC'][self.igal]=dec
-        self.update_gui_table()
+        if not self.auto:
+            self.update_gui_table()
 
         # convert theta to degrees, and subtract 90 to get angle relative to y axis
         #self.e.theta = np.degrees(self.e.theta) - 90
@@ -2154,7 +2288,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.fit_profiles()
         # save results
         self.write_profile_fits()
-        self.draw_ellipse_results(color='magenta')
+        if not self.auto:
+            self.draw_ellipse_results(color='magenta')
     def fit_profiles(self,prefix=None):
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
@@ -2275,10 +2410,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             colname=prefix+'SSFR_OUT'
         self.table[colname][self.igal]=float('%.2e'%(self.outer_ssfr))
         self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.outer_ssfr_err))
-        
-        
-        self.update_gui_table()
-        self.write_fits_table()
+        self.write_fits_table()        
+        if not self.auto:
+            self.update_gui_table()
+
     def closeEvent(self, event):
         # send signal that window is closed
 
@@ -2299,6 +2434,8 @@ class galaxy_catalog():
         if self.agcflag:
             self.check_ra_colname()
     def check_ra_colname(self):
+        # make sure the catalog has RA and DEC
+        # columns that are named RA and DEC
         try:
             t = self.cat.RA
         except AttributeError:
@@ -2368,6 +2505,8 @@ if __name__ == "__main__":
     parser.add_argument('--nebula',dest = 'nebula', action='store_true',default=False,help='set this if running on open nebula virtual machine.  catalog paths will be set accordingly.')
     parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
     parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
+    parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Should be vYYpNN for virgo pointings.  default is v17p03.')
+    parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')        
         
     args = parser.parse_args()
 
@@ -2394,7 +2533,12 @@ if __name__ == "__main__":
 
     #################################
     ## UPDATED TO USE ARGPARSE
-    #################################    
-    ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing)
-    MainWindow.show()
-    sys.exit(app.exec_())
+    #################################
+    if not args.auto:
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing)
+        MainWindow.show()
+        sys.exit(app.exec_())
+    else:
+        # run functions non-interactively
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix)        
+        pass

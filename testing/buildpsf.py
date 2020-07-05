@@ -193,8 +193,8 @@ class psf_parent_image():
         for i in range(self.nstars):
             norm = simple_norm(self.stars[i], 'log', percent=99.)
             ax[i].imshow(self.stars[i], norm=norm, origin='lower', cmap='viridis')
-        plt.show()
-        plt.savefig('allstars.png')
+        #plt.show()
+        plt.savefig(self.image_name+'-allstars.png')
     def build_psf(self):
         if self.oversampling == None:
             epsf_builder = EPSFBuilder(maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)
@@ -206,8 +206,8 @@ class psf_parent_image():
         plt.figure()
         plt.imshow(self.epsf.data, norm=norm, origin='lower', cmap='viridis')
         plt.colorbar()
-        plt.show()
-        plt.savefig('psf.png')
+        #plt.show()
+        plt.savefig(self.image_name+'-psf.png')
     def measure_fwhm(self):
         nx,ny = self.epsf.data.shape
         x,y = np.mgrid[:nx,:ny]

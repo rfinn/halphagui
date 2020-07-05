@@ -838,7 +838,7 @@ class ellipse():
             plt.xlabel('semi-major axis (pixels)')
             plt.ylabel('Surface Brightness')
             plt.gca().set_yscale('log')
-        plt.show()
+        #plt.show()
         plt.savefig(self.image_name.split('.fits')[0]+'-enclosed-flux.png')
 
         

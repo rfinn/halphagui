@@ -606,7 +606,7 @@ class dualprofile():
             #plt.xlim(-1*.02*np.max(self.r.tab.sma_arcsec),np.max(self.r.tab.sma_arcsec))
 
         plt.savefig(self.r.image_name.split('.fits')[0]+'-radial-profile.png')
-        plt.show()
+        #plt.show()
 
 
 if __name__ == '__main__':

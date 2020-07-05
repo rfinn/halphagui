@@ -72,7 +72,7 @@ defaultcat='default.sex.HDI.mask'
 class my_cutout_image(QtCore.QObject):#QtCore.QObject):
     #mouse_clicked = QtCore.pyqtSignal(str)
     key_pressed = QtCore.pyqtSignal(str)
-    def __init__(self,panel_name,ui, logger, row, col, drow, dcol,autocut_params='stddev'):
+    def __init__(self,panel_name,ui, logger, row, col, drow, dcol,autocut_params='stddev',auto=False):
         #super(image_panel, self).__init__(panel_name,ui, logger, row, col, drow, dcol)
         # enable some user interaction
         #fi.get_bindings.enable_all(True)
@@ -154,19 +154,20 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, config=None, threshold=0.05,snr=2,cmap='gist_heat_r'):
-        super(maskwindow, self).__init__()
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, config=None, threshold=0.05,snr=2,cmap='gist_heat_r',auto=False):
+        self.auto = auto
+        if MainWindow is None:
+            self.auto = True
+        if not self.auto:
+            super(maskwindow, self).__init__()
         
-        self.ui = Ui_maskWindow()
-        self.ui.setupUi(MainWindow)
-        MainWindow.setWindowTitle('makin a mask...')
-        self.MainWindow = MainWindow
+            self.ui = Ui_maskWindow()
+            self.ui.setupUi(MainWindow)
+            MainWindow.setWindowTitle('makin a mask...')
+            self.MainWindow = MainWindow
 
-        #self.readout = QtWidgets.QLabel('this is a test')
-        #self.ui.gridLayout_2.addWidget(self.readout, 0,0,1,2)
-        #self.readout.setText('this is another test')
 
-        self.logger = logger
+            self.logger = logger
 
         ###  The lines below are for testing purposes
         ###  and should be removed before release.
@@ -220,10 +221,12 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
         self.deleted_objects = []
         self.link_files()
-        self.add_cutout_frames()
+        if not self.auto:
+            self.add_cutout_frames()
         self.runse()
-        self.display_cutouts()
-        self.connect_buttons()
+        if not self.auto:
+            self.display_cutouts()
+            self.connect_buttons()
  
     def connect_buttons(self):
         #self.ui.msaveButton.clicked.connect(self.write_mask)
@@ -318,8 +321,9 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         invmask = self.maskdat > 0.
         invmask = np.array(~invmask,'i')
         fits.writeto(self.mask_inv_image,invmask,header = self.imheader,overwrite=True)
-        self.mask_saved.emit(self.mask_image)
-        self.display_mask()
+        if not self.auto:
+            self.mask_saved.emit(self.mask_image)
+            self.display_mask()
 
 
     def show_mask(self):

@@ -91,7 +91,7 @@ class filter_trace():
         plt.xlim((self.minz_trans10+1)*wave_halpha-50,(self.maxz_trans10+1)*wave_halpha+50)
         plt.xlabel('Wavelength (Angstrom)')
         plt.ylabel('Transmission %/10')
-        plt.show()
+        #plt.show()
         plt.savefig('galaxies_in_filter.png')
         return correction
 

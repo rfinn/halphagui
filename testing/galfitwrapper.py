@@ -47,15 +47,19 @@ import rungalfit as rg
 
 class galfitwindow(Ui_galfitWindow, QtCore.QObject):
     model_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None, mag2=None, nsersic2=None, rad2=None, BA2=None, PA2=None, xc2=None, yc2=None, fitn=True, fitn2=True,asym=False):
+    def __init__(self, MainWindow, logger, image=None, sigma_image=None, mask_image=None, psf=None,psf_oversampling=None, xmaxfit=None, ymaxfit=None, xminfit=1, yminfit=1, ncomp=1, convflag = True, convolution_size=None, fitallflag=False,xc=None, yc=None,mag=None,rad=None,nsersic=None, BA=None,PA=None, mag2=None, nsersic2=None, rad2=None, BA2=None, PA2=None, xc2=None, yc2=None, fitn=True, fitn2=True,asym=False,auto=False):
         super(galfitwindow, self).__init__()
+        self.auto = auto        
+        if MainWindow is None:
+            self.auto = True
 
-        # boiler plate gui stuff
-        # ... at least I think it is...
-        self.ui = Ui_galfitWindow()
-        self.ui.setupUi(MainWindow)
-        MainWindow.setWindowTitle('GALFIT!')
-        self.MainWindow = MainWindow
+        if not self.auto:
+            # boiler plate gui stuff
+            # ... at least I think it is...
+            self.ui = Ui_galfitWindow()
+            self.ui.setupUi(MainWindow)
+            MainWindow.setWindowTitle('GALFIT!')
+            self.MainWindow = MainWindow
 
         # name of input file
         self.image_name = image
@@ -201,13 +205,15 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         # continue with other functions
         self.logger = logger
 
+
         ############################################################
         # set up gui
         ############################################################
-        self.add_cutout_frames()
-        self.connect_buttons()
-        self.display_image()
-        self.display_initial_params()
+        if not self.auto:
+            self.add_cutout_frames()
+            self.connect_buttons()
+            self.display_image()
+            self.display_initial_params()
 
         ############################################################
         # create an instance of rungalfit.galfit
@@ -218,7 +224,8 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         # the remaining commands come from user input through the gui
         ############################################################        
 
-
+        if self.auto:
+            self.run_galfit(fitBA=self.fitBA, fitPA=self.fitPA)
     def add_cutout_frames(self):
         # gui stuff
         # set up text labels for image, model, and residual
@@ -434,15 +441,17 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
             self.galfit.set_sersic_params_comp2(xobj=self.xc2,yobj=self.yc2,mag=self.mag2,rad=self.re2,nsersic=self.nsersic2,BA=self.BA2,PA=self.PA2,fitmag=1,fitcenter=1,fitrad=1,fitBA=fitBA,fitPA=fitPA,fitn=1,first_time=0)
             self.galfit.set_sky(0)
             self.galfit.run_galfit()
-        self.display_results()
-        self.get_galfit_results(printflag=True)
-        self.display_fitted_params()
-        #self.galfit.close_input_file()
-        #self.galfit.print_params()
-        #self.galfit.print_galfit_results()
-
-        # send message that a new model is available
-        self.model_saved.emit(str(self.ncomp))
+            
+        self.get_galfit_results(printflag=True)            
+        if not self.auto:
+            self.display_results()
+            self.display_fitted_params()
+            #self.galfit.close_input_file()
+            #self.galfit.print_params()
+            #self.galfit.print_galfit_results()
+            
+            # send message that a new model is available
+            self.model_saved.emit(str(self.ncomp))
         
     def get_galfit_results(self,printflag = False):
         '''
