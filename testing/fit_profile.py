@@ -188,8 +188,8 @@ class profile():
             self.flux_r24 = np.zeros(2,'f')
             self.c30 = np.zeros(2,'f')
             self.flux_95r24 = np.zeros(2,'f')
-            if np.sum(self.tab.sb_snr > 2.) > 2 :
-                index = np.max(np.where(self.tab.sb_snr>2))
+            if np.sum(self.tab.sb_snr > 1.5) > 2 :
+                index = np.max(np.where(self.tab.sb_snr>1.5))
                 self.total_flux = np.array([self.tab.flux_erg[index],self.tab.flux_erg_err[index]])
             else:
                 self.total_flux = np.array([0,0])
@@ -501,8 +501,8 @@ class haprofile(profile): # functions specific to r-band data
         '''
 
         # find radius where snr drops to 2
-        if sum(self.tab.sb_snr > 2) > 2:
-            index = np.max(np.where(self.tab.sb_snr>2))
+        if sum(self.tab.sb_snr > 1.5) > 2:
+            index = np.max(np.where(self.tab.sb_snr>1.5))
             self.total_flux = np.array([self.tab.flux_erg[index],self.tab.flux_erg_err[index]])
         else:
             self.total_flux = np.array([0,0])

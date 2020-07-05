@@ -1045,8 +1045,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # the default catalog has been trimmed to only include
         # galaxies in FOV
 
-        #for i in range(len(self.gximage)):
-        for i in [2]: # for testing
+        for i in range(len(self.gximage)):
+        #for i in [2]: # for testing
             self.igal = i
             # get cutouts
             self.auto_gal()
@@ -1188,7 +1188,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def setup_laptop_virgo(self):
         if self.obsyear == '2018':
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2018/'
-        elif self.obsyear == '2020'
+        elif self.obsyear == '2020':
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-feb2020/'
         else:
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2017/'

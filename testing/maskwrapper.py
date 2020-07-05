@@ -224,10 +224,15 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         if not self.auto:
             self.add_cutout_frames()
         self.runse()
+        if self.auto:
+            self.grow_mask()
+            self.grow_mask()
+            self.grow_mask()
+        
         if not self.auto:
             self.display_cutouts()
             self.connect_buttons()
- 
+            
     def connect_buttons(self):
         #self.ui.msaveButton.clicked.connect(self.write_mask)
         self.ui.mquitButton.clicked.connect(self.quit_program)
@@ -517,11 +522,12 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
         # send message to main program that the mask is updated
         fits.writeto(self.mask_image, self.maskdat, header = self.imheader, overwrite=True)
-        self.mask_saved.emit(self.mask_image)
-        self.display_mask()
+        if not self.auto:
+            self.mask_saved.emit(self.mask_image)
+            self.display_mask()
         
-        #print(self.mask_image)
-        self.mask_saved.emit(self.mask_image)
+            #print(self.mask_image)
+            self.mask_saved.emit(self.mask_image)
 
 
     def edit_mask(self):
@@ -572,7 +578,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
                 continue
             #print(i,j,rowmin, rowmax, colmin, colmax)
             self.maskdat[rowmin:rowmax,colmin:colmax] = self.maskdat[i,j]*np.ones([rowmax-rowmin,colmax-colmin])
-        self.display_mask()
+        if not self.auto:
+            self.display_mask()
         # save convolved mask as new mask
         self.save_mask()
 
