@@ -1201,9 +1201,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.rcoadd_fname = self.imagedir+'pointing-3_R.coadd.fits'
         else:
             print('got a pointing')
-            
-            self.hacoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_ha4.coadd.fits'
-            self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_R.coadd.fits'
+            if self.obsyear == '2020':
+                self.hacoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_ha4.coadd.fits'
+                self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_r.coadd.fits'
+            else:
+                self.hacoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_ha4.coadd.fits'
+                self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_R.coadd.fits'
             
 
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
