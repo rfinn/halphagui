@@ -971,9 +971,10 @@ class uco_table():
 
 class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
-    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False):
+    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None):
         super(hafunctions, self).__init__()
         self.auto = auto
+        self.obsyear = obsyear
         if not(self.auto):
             self.setup_gui()
         self.prefix = prefix
@@ -1185,7 +1186,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.imagedir =  '/mnt/astrophysics/reduced/virgo-coadds-2017/'
         self.tabledir= '/mnt/astrophysics/catalogs/Virgo/tables-north/v0/'
     def setup_laptop_virgo(self):
-        self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2017/'
+        if self.obsyear == '2018':
+            self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2018/'
+        elif self.obsyear == '2020'
+            self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-feb2020/'
+        else:
+            self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2017/'
         self.tabledir= '/home/rfinn/research/Virgo/tables-north/v0/'
 
     def setup_virgo(self,pointing=None):
@@ -2506,6 +2512,7 @@ if __name__ == "__main__":
     parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
     parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
     parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Should be vYYpNN for virgo pointings.  default is v17p03.')
+    parser.add_argument('--obsyear',dest = 'obsyear', default='2017',help='year that data were taken.  default is 2017')    
     parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')        
         
     args = parser.parse_args()
@@ -2540,5 +2547,5 @@ if __name__ == "__main__":
         sys.exit(app.exec_())
     else:
         # run functions non-interactively
-        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix)        
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix,obsyear=args.obsyear)        
         pass
