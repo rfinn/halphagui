@@ -406,6 +406,7 @@ class create_output_table():
             self.update_gui_table()
                 
     def read_table():
+        ''' read in output from previous run, if it exists'''
         self.table = Table(fits.getdata(self.output_table))
         self.gredshift = self.table['REDSHIFT']
         self.ngalaxies = len(self.gredshift)
@@ -1184,7 +1185,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.setup_cutout_slider()
     def setup_nebula_virgo(self):
         self.imagedir =  '/mnt/astrophysics/reduced/virgo-coadds-2017/'
-        self.tabledir= '/mnt/astrophysics/catalogs/Virgo/tables-north/v0/'
+        self.tabledir= '/mnt/astrophysics/catalogs/Virgo/tables-north/v1/'
     def setup_laptop_virgo(self):
         if self.obsyear == '2018':
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2018/'
@@ -1192,7 +1193,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-feb2020/'
         else:
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2017/'
-        self.tabledir= '/home/rfinn/research/Virgo/tables-north/v0/'
+        self.tabledir= '/home/rfinn/research/Virgo/tables-north/v1/'
 
     def setup_virgo(self,pointing=None):
 
@@ -1210,9 +1211,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             
 
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
-        self.vf_fname = self.tabledir+'vf_north_v0_main.fits'
+        self.vf_fname = self.tabledir+'vf_north_v1_main.fits'
         self.vf = galaxy_catalog(self.vf_fname,virgo=True)
-        self.nsa_fname = self.tabledir+'vf_north_v0_nsa_v0.fits'
+        self.nsa_fname = self.tabledir+'vf_north_v1_nsa_v0.fits'
         self.nsa = galaxy_catalog(self.nsa_fname,virgo=True)
         self.agcflag = False
         self.nsaflag = False
@@ -2344,7 +2345,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         
         
     def write_profile_fits(self,prefix=None):
-        fields = ['R24','R25','R26','R24V','R25V','R_F25','R_F50','R_F75','M24','M25','M26', 'F_30R24','F_R24','C30',\
+        fields = ['R24','R25','R26','R24V','R25V',\
+                  'R_F25','R_F50','R_F75',\
+                  'M24','M25','M26',\
+                  'F_30R24','F_R24','C30',\
                   'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
         d = self.rfit
         values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],d.iso_radii[3],d.iso_radii[4],\
