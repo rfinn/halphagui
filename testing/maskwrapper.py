@@ -596,7 +596,7 @@ if __name__ == "__main__":
     #from halphamain import cutout_image
     import argparse    
     parser = argparse.ArgumentParser(description ='Run gui for making an mask')
-    parser.add_argument('--rimage',dest = 'rimage', default=None,help='r-band image')
+    parser.add_argument('--image',dest = 'image', default=None,help='r-band image')
     parser.add_argument('--haimage',dest = 'haimage', default=None,help='halpha image')
     parser.add_argument('--sepath',dest = 'sepath', default=None,help='path to source extractor config files (e.g. ~/github/HalphaImaging/astromatic/ - this is default if no path is given.)')
     parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')    
@@ -607,7 +607,10 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     #MainWindow = QtWidgets.QMainWindow()
     MainWindow = QtWidgets.QWidget()
-    ui = maskwindow(MainWindow, logger)
+    if args.image is not None:
+        ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config)
+    else:
+        ui = maskwindow(MainWindow, logger)
     #ui.setupUi(MainWindow)
     #ui.test()
 
