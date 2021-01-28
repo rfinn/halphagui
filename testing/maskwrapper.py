@@ -8,16 +8,8 @@ out other objects within the cutout area.
 
 USAGE:
 
-from within ipython type:
-
-   %run ~/github/HalphaImaging/uat_mask.py --image 'A1367-140231-R.fits'
 
 you just need to run this on R-band images.
-
-Interacting with the display is finicky.  This works fine when running
-within ipython - not so much when running from the command line.  When running
-from the command line, I am not able to interact with the figure.  This may
-have something to do with setting block=False in show().
 
 
 PROCEDURE:
@@ -602,6 +594,15 @@ if __name__ == "__main__":
     #gcat = galaxy_catalog(catalog)
     #from halphamain import cutout_image
     #from halphamain import cutout_image
+    import argparse    
+    parser = argparse.ArgumentParser(description ='Run gui for making an mask')
+    parser.add_argument('--rimage',dest = 'rimage', default=None,help='r-band image')
+    parser.add_argument('--haimage',dest = 'haimage', default=None,help='halpha image')
+    parser.add_argument('--sepath',dest = 'sepath', default=None,help='path to source extractor config files (e.g. ~/github/HalphaImaging/astromatic/ - this is default if no path is given.)')
+    parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')    
+        
+    args = parser.parse_args()
+    
     logger = log.get_logger("masklog", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     #MainWindow = QtWidgets.QMainWindow()
