@@ -4,6 +4,11 @@
 
 # Workflow #
 
+Edit the gui using qt designer:
+```
+designer &
+```
+Then open a particular ui file.  
 ```
 pyuic5 -x halpha.v1.ui -o halphav1.py
 python halphamain.py
