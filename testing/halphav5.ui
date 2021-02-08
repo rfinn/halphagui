@@ -380,7 +380,7 @@
      <x>0</x>
      <y>0</y>
      <width>1296</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSetup">
@@ -402,6 +402,8 @@
     <addaction name="actionhalpha8"/>
     <addaction name="actionhalpha12"/>
     <addaction name="actionhalpha16"/>
+    <addaction name="actioninthalpha"/>
+    <addaction name="actionintha6657"/>
    </widget>
    <addaction name="menuSetup"/>
    <addaction name="menuHalpha_Filter"/>
@@ -523,6 +525,22 @@
   <action name="actionAGC_catalog_path">
    <property name="text">
     <string>AGC catalog path</string>
+   </property>
+  </action>
+  <action name="actioninthalpha">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>int-halpha</string>
+   </property>
+  </action>
+  <action name="actionintha6657">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>int-ha6657</string>
    </property>
   </action>
  </widget>

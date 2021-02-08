@@ -1414,6 +1414,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.ui.actionhalpha8.triggered.connect(lambda: self.set_hafilter('8'))
         self.ui.actionhalpha12.triggered.connect(lambda: self.set_hafilter('12'))
         self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
+        self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('int197'))
+        self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('int227'))
     def set_hafilter(self,filterid):
         #print('setting ha filter to ',filterid)
         self.hafilter = filterid
@@ -1691,7 +1693,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.coadd.fitsimage.set_autocut_params('zscale')
             self.coadd.fitsimage.set_data(self.halpha_cs)
         # save continuum subtracted image?
-        fits.writeto(self.halpha_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)
+        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS.fits'
+        fits.writeto(self.hacoadd_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)
     def key_press_func(self,key):
         print(key)
         if key == 'r':
