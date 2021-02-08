@@ -32,6 +32,7 @@ import numpy as np
 
 from photutils import EPSFBuilder
 from photutils.psf import extract_stars
+from photutils.psf import IntegratedGaussianPRF
 from photutils import centroid_com, centroid_1dg, centroid_2dg
 
 from astropy.nddata import NDData
@@ -47,13 +48,15 @@ from astropy.stats import gaussian_sigma_to_fwhm
 from matplotlib import pyplot as plt
 
 class psf_parent_image():
-    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=100, pixelscale=0.43,oversampling=None):
+    def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=100, pixelscale=0.43,oversampling=None,saturate=None):
         self.image_name = image
+        self.basename = os.path.basename(self.image_name).split('.fits')[0]
         self.data, self.header = fits.getdata(self.image_name, header=True)
         self.sat_level = max_good
         self.size = size
         self.config = se_config
-        self.sextractor_files =['default.sex.HDI','default.param','default.conv','default.nnw']
+        self.sextractor_files =['default.sex.HDI','default.param','default.conv','default.nnw','default.sex.INT']
+        self.saturate = saturate
         # path to source extractor files
         # default is probably fine if you have github in ~/github
         if sepath == None:
@@ -73,6 +76,10 @@ class psf_parent_image():
             self.oversampling = 2
         else:
             self.oversampling = oversampling
+
+        # make a directory for saving plots
+        if not os.path.exists('plots'):
+            os.mkdir('plots')
     def link_files(self):
         # these are the sextractor files that we need
         # set up symbolic links from sextractor directory to the current working directory        
@@ -97,7 +104,10 @@ class psf_parent_image():
 
     def runse(self):
         self.link_files()
-        s = 'sex %s -c %s  -SATUR_LEVEL 40000.0'%(self.image_name,self.config)
+        if self.saturate is not None:
+            s = 'sex {} -c {}  -SATUR_LEVEL {}'.format(self.image_name,self.config,self.saturate)
+        else:
+            s = 'sex %s -c %s  -SATUR_LEVEL 40000.0'%(self.image_name,self.config)
         #print(s)
         os.system(s)
         ###################################
@@ -109,14 +119,19 @@ class psf_parent_image():
         # get median fwhm of image
         ###################################
         fwhm = np.median(secat['FWHM_IMAGE'])*self.pixelscale
-
+        self.se_fwhm_arcsec = fwhm
         #############################################################
         # rerun Source Extractor catalog with updated SEEING_FWHM
         #############################################################
-        s = 'sex %s -c %s  -SATUR_LEVEL 40000.0 -SEEING_FWHM %s'%(self.image_name,self.config,str(fwhm))
+        if self.saturate is not None:
+            s = 'sex {} -c {}  -SATUR_LEVEL {} -SEEING_FWHM {:.1f}'.format(self.image_name,self.config,self.saturate,fwhm)
+            print('running: ',s)
+        else:
+            s = 'sex %s -c %s  -SATUR_LEVEL 40000.0 -SEEING_FWHM %s'%(self.image_name,self.config,str(fwhm))
 
         os.system(s)
 
+        # should update the size to be a multiple of the fwhm
 
     def read_se_table(self):
         self.secat = fits.getdata('test_cat.fits',2)
@@ -194,7 +209,7 @@ class psf_parent_image():
             norm = simple_norm(self.stars[i], 'log', percent=99.)
             ax[i].imshow(self.stars[i], norm=norm, origin='lower', cmap='viridis')
         #plt.show()
-        plt.savefig(self.image_name+'-allstars.png')
+        plt.savefig('plots/'+self.basename+'-allstars.png')
     def build_psf(self):
         if self.oversampling == None:
             epsf_builder = EPSFBuilder(maxiters=12, progress_bar=False, smoothing_kernel=None, recentering_func = centroid_com)
@@ -207,14 +222,14 @@ class psf_parent_image():
         plt.imshow(self.epsf.data, norm=norm, origin='lower', cmap='viridis')
         plt.colorbar()
         #plt.show()
-        plt.savefig(self.image_name+'-psf.png')
+        plt.savefig('plots/'+self.basename+'-psf.png')
     def measure_fwhm(self):
         nx,ny = self.epsf.data.shape
         x,y = np.mgrid[:nx,:ny]
         # gaussian model with initial guess for center and std
         # assume the PSF is in the center of the image
         # assume a std of 4
-        p_init = models.Gaussian2D(x_mean=nx/2.,y_mean=ny/2., x_stddev=4.,y_stddev=4.)
+        p_init = models.Gaussian2D(x_mean=nx/2.,y_mean=ny/2., x_stddev=3.,y_stddev=3.)
         fit_p = fitting.LevMarLSQFitter()
         t = fit_p(p_init,x,y,self.epsf.data)
         self.x_stddev = t.x_stddev.value
@@ -222,6 +237,9 @@ class psf_parent_image():
         # compute total radial std
         # correct for oversampling of PSF
         self.std = np.sqrt(self.x_stddev**2 + self.y_stddev**2)/self.oversampling
+        # the above estimate was coming out very large.  trying this instead
+        # this next estimate gives an answer that is much closer to what you get from imexam moffat
+        self.std = np.mean([self.x_stddev,self.y_stddev])/self.oversampling
         # convert gaussian std to fwhm
         self.fwhm = self.std*gaussian_sigma_to_fwhm
         self.fwhm_arcsec = self.fwhm*self.pixelscale
@@ -232,8 +250,8 @@ class psf_parent_image():
         # just use the basename (filename), and drop any path information
         # this will have the effect of saving the psf image in the current directory,
         # rather than the directory where the image is
-        basename = os.path.basename(self.image_name)
-        self.psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+
+        self.psf_image_name = self.basename+'-psf.fits'
         print('PSF image name = ',self.psf_image_name)
         fits.writeto(self.psf_image_name,self.epsf.data, overwrite=True)
 
@@ -244,24 +262,37 @@ class psf_parent_image():
         data, header = fits.getdata(self.psf_image_name, header=True)
 
         header.append(card=('FWHM', float('{:.2f}'.format(self.fwhm)), 'PSF fwhm in pixels'))
+        header.append(card=('SEFWHM', float('{:.2f}'.format(self.se_fwhm_arcsec)), 'PSF fwhm in arcsec from SE'))        
         header.append(card=('STD', float('{:.2f}'.format(self.std)), 'PSF STD in pixels'))
         header.append(card=('OVERSAMP', self.oversampling, 'PSF oversampling'))
         fits.writeto(self.psf_image_name, data, header=header, overwrite=True)
+    def update_image_header(self):
+        '''  add fwhm and psfimage name to header of parent image '''
+        self.header.append(card=('FWHM', float('{:.2f}'.format(self.fwhm)), 'PSF fwhm in pixels'))
+        self.header.append(card=('SEFWHM', float('{:.2f}'.format(self.se_fwhm_arcsec)), 'PSF fwhm in arcsec from SE'))                
+        self.header.append(card=('STD', float('{:.2f}'.format(self.std)), 'PSF STD in pixels'))
+        self.header.append(card=('OVERSAMP', self.oversampling, 'PSF oversampling'))
+        fits.writeto(self.image_name, self.data, header=self.header, overwrite=True)
         
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description ='write out subtables for virgo filaments catalog')
+    parser = argparse.ArgumentParser(description ='create psf image from image that contains stars')
 
     #parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
     parser.add_argument('--image',dest = 'image', help='input image')
+    parser.add_argument('--saturate',default=None,dest = 'saturate', help='saturation limit')
+    parser.add_argument('--int',default=False,dest='int',action = 'store_true', help='set this for INT data')    
      
     args = parser.parse_args()
 
     
     #image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
     #image = '/Users/rfinn/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-4_R.coadd.fits'
-    p = psf_parent_image(image=args.image, size=21, nstars=100, oversampling=2)
+    if args.int:
+        p = psf_parent_image(image=args.image, size=35, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.INT')
+    else:
+        p = psf_parent_image(image=args.image, size=21, nstars=100, oversampling=2,saturate=args.saturate)
     p.runse()
     p.read_se_table()
     p.find_stars()
@@ -271,6 +302,7 @@ if __name__ == '__main__':
     p.show_psf()
     p.measure_fwhm()
     p.save_psf_image()
+    p.update_image_header()
     '''
     getting some weird noise at the bottom of the psf image
 

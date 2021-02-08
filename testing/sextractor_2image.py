@@ -74,6 +74,7 @@ def make_plot(image1, image2, return_flag = False, image_dir = './'):
 
     base = os.path.basename(image2)
     froot2 = os.path.splitext(base)[0]
+    
     cat2 = fits.getdata(froot2+'.cat',2)
     plt.figure(figsize=(6,4))
     plt.subplots_adjust(bottom=.2,left=.15,right=.95)

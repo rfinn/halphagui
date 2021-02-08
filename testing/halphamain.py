@@ -972,7 +972,7 @@ class uco_table():
 
 class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
-    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None):
+    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None):
         super(hafunctions, self).__init__()
         self.auto = auto
         self.obsyear = obsyear
@@ -988,6 +988,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
         else:
             self.sepath = sepath
+        if psfdir is None:
+            self.psfdirectory = os.getcwd()
+        else:
+            self.psfdirectory = psfdir
         self.igal = None
         if self.laptop & self.virgo:
             self.setup_laptop_virgo()
@@ -1020,6 +1024,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.initialize_uco_arrays()
         if self.auto:
             self.auto_run()
+
     def auto_run(self):
         # run the analysis without starting the gui
         # read in coadded images
@@ -1037,6 +1042,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.subtract_images()
         
         # measure psf
+        # function will check if psf image already exists
         self.build_psf()
 
         # get galaxies
@@ -1987,6 +1993,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         psf_image_name = basename.split('.fits')[0]+'-psf.fits'
         basename = os.path.basename(self.hacoadd_fname)
         psf_image_name_ha = basename.split('.fits')[0]+'-psf.fits'
+        psf_image_name = os.path.join(self.psfdirectory,psf_image_name)
+        psf_image_name_ha = os.path.join(self.psfdirectory,psf_image_name_ha)        
         if os.path.exists(psf_image_name):
             # get fwhm from the image header
             # and oversampling
@@ -1996,6 +2004,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.psf.fwhm = header['FWHM'] # in pixels
             self.psf.fwhm_arcsec = self.psf.fwhm*self.pixelscale
             self.oversampling = float(header['OVERSAMP'])
+            # if psf is in another directory, create a link to the current directory
+            # this will avoid having a long filename b/c galfit does not handle long filenames
+            
+            if self.psfdirectory != os.getcwd():
+                psfimage = os.path.base
+                command = 'ln -s {} {}'.format(psf_image_name,os.path.basename(psf_image_name))
+                os.system(command)
+                psf_image_name = os.path.basename(psf_image_name)
             self.psf_image_name = psf_image_name
 
             
@@ -2013,7 +2029,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.hapsf = psfimage            
             self.hapsf.fwhm = header['FWHM'] # in pixels
             self.hapsf.fwhm_arcsec = self.hapsf.fwhm*self.pixelscale
-            self.psf_haimage_name = psf_image_name_ha            
+            self.psf_haimage_name = psf_image_name_ha
+            # if psf is in another directory, create a link to the current directory
+            # this will avoid having a long filename b/c galfit does not handle long filenames
+            if self.psfdirectory != os.getcwd():
+                command = 'ln -s {} {}'.format(psf_haimage_name,os.path.basename(psf_haimage_name))
+                os.system(command)
+                psf_haimage_name = os.path.basename(psf_haimage_name)
+            self.psf_haimage_name = psf_haimage_name
+            
         else:
             print('PSF RESULTS FOR HA COADDED IMAGE')
             self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
@@ -2520,7 +2544,8 @@ if __name__ == "__main__":
     parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
     parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Should be vYYpNN for virgo pointings.  default is v17p03.')
     parser.add_argument('--obsyear',dest = 'obsyear', default='2017',help='year that data were taken.  default is 2017')    
-    parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')        
+    parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')
+    parser.add_argument('--psfdir',dest = 'psfdir', default=None,help='set this to the directory containing PSF images')        
         
     args = parser.parse_args()
 
