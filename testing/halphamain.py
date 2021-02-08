@@ -971,7 +971,7 @@ class uco_table():
         self.uco_table.write(self.uco_output_table, format='fits',overwrite=True)
 
 class hafunctions(Ui_MainWindow, create_output_table, uco_table):
-
+    ''' Main class for the halpha image analysis  '''
     def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None):
         super(hafunctions, self).__init__()
         self.auto = auto
@@ -993,6 +993,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         else:
             self.psfdirectory = psfdir
         self.igal = None
+
+        ############################################################
+        ### CONFIGURATION SETUP FOR RUNNING ON DIFFERENT COMPUTERS
+        ############################################################
+        
         if self.laptop & self.virgo:
             self.setup_laptop_virgo()
             self.setup_virgo(pointing=pointing)
@@ -1007,9 +1012,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.setup_nebula()
         elif self.testing:
             self.setup_testing()
+
+        ############################################################
+        ### SET PARAMETERS FOR VIRGO VS HALPHA GROUPS PROJECT
+        ### (WHICH USES THE NSA)
+        ############################################################
+
         if self.virgo:
             self.defcat = self.vf
-            self.def_label = 'VF.v0.'
+            self.def_label = 'VF.v1.'
             self.radius_label = 'radius'
             self.global_min_cutout_size = 100
             self.global_max_cutout_size = 500
@@ -1259,7 +1270,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
     def read_hacoadd(self):
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
-
+        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS.fits'
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
         # check for weight image
@@ -1679,7 +1690,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             # display continuum subtracted Halpha image in the large frame
             self.coadd.fitsimage.set_autocut_params('zscale')
             self.coadd.fitsimage.set_data(self.halpha_cs)
-
+        # save continuum subtracted image?
+        fits.writeto(self.halpha_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)
     def key_press_func(self,key):
         print(key)
         if key == 'r':
