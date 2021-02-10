@@ -5,7 +5,7 @@
 # Passband      : R
 # FWHM          : 1347
 # Cosmetics     : Some minor fingerprints/smudges
-few dust grains
+#few dust grains
 # Measured      : 2005-03-02 12:03:19
 # Wavelength Throughput
 # nm %

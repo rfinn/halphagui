@@ -48,8 +48,8 @@ start_time = time.time()
 
 ## filter information
 ## from https://www.noao.edu/kpno/mosaic/filters/
-central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28} # angstrom
-dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17} # angstrom
+central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28,'inthalpha':6568.,'intha6657':6657,'intr':6240} # angstrom
+dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17,'inthalpha':95.,'intha6657':80,'intr':1347} # angstrom
 
 # read in image and mask
 
@@ -582,10 +582,15 @@ class ellipse():
         self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
         try:
             self.magzp = float(self.header['PHOTZP'])
+
         except:
             self.magzp = 25.
+        print('mag zp = ',self.magzp)
+        filter = self.header
         # multiply by bandwidth of filter to convert from Jy to erg/s/cm^2
         bandwidth1 = 3.e8*dwavelength['R']*1.e-10/(central_wavelength['R']*1.e-10)**2
+        # need to figure out how to adjust automatically
+        bandwidth1 = 3.e8*dwavelength['r']*1.e-10/(central_wavelength['r']*1.e-10)**2        
         self.uconversion1 = 3631.*10**(self.magzp/-2.5)*1.e-23*bandwidth1
         if self.image2_filter:
             bandwidth2 = 3.e8*dwavelength[self.image2_filter]*1.e-10/(central_wavelength[self.image2_filter]*1.e-10)**2
@@ -869,6 +874,19 @@ if __name__ == '__main__':
     mask = 'v17p01-N118647-A8219-R-mask.fits'
     myfilter = '4'
     myratio = .0406
+    
+    # testing on 2019 pointing 1
+    # second galaxy has clear halpha but profile is not fit
+    # want to make sure we record some size
+    image = 'VFID3623-CGCG118-019-v19p001-R.fits'
+    
+    rphot_table = 'VFID3623-CGCG118-019-v19p001-R-phot.fits'
+    image2 = 'VFID3623-CGCG118-019-v19p001-CS.fits'
+    haphot_table = 'VFID3623-CGCG118-019-v19p001-CS-phot.fits'
+    mask = 'VFID3623-CGCG118-019-v19p001-R-mask.fits'
+    
+    myfilter = 'inthalpha'
+    myratio = .0356
     #image = 'MKW8-18037-R.fits'
     #mask = 'MKW8-18037-R-mask.fits'
     #image = 'r-18045-R.fits'

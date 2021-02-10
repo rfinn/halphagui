@@ -25,12 +25,12 @@ class filter_trace():
             self.filterpath = filterpath
 
         wavescale = 1
-        if hafilter == 'int197':
+        if hafilter == 'inthalpha':
             filterfile = self.filterpath+'/wfc-int-197-halpha.txt'
             # wavelength is in nm so scale by 10
             wavescale=10
             pass
-        elif hafilter == 'int227':
+        elif hafilter == 'intha6657':
             filterfile = self.filterpath+'/wfc-int-227-ha6657.txt'
             wavescale=10
             pass

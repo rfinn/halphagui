@@ -1,3 +1,15 @@
+'''
+
+
+USAGE:
+
+Virgo 2019 INT data, running on laptop
+
+%run ~/github/halphagui/testing/halphamain.py --virgo --rimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-r-shifted.fits --haimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-Halpha.fits --filter inthalpha --psfdir /home/rfinn/data/reduced/psf-images/ --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --auto
+
+'''
+
+
 import sys, os
 sys.path.append(os.getcwd())
 #sys.path.append(os.getenv('HOME')+'github/HalphaImaging/')
@@ -80,10 +92,13 @@ import matplotlib.pyplot as plt
 
 # default size for cutouts, multiple of NSA PETROTH90
 cutout_scale = 14
+# now in terms of R25 for
+cutout_scale = 2.5
 
 class psfimage():
-    fwhm = 5.6
-    fwhm_arcsec = 2.0
+    def __init__(self):
+        fwhm = 5.6
+        fwhm_arcsec = 2.0
 
 
 class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
@@ -972,7 +987,7 @@ class uco_table():
 
 class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     ''' Main class for the halpha image analysis  '''
-    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None):
+    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None,rimage=None,haimage=None,filter=None,tabledir=None):
         super(hafunctions, self).__init__()
         self.auto = auto
         self.obsyear = obsyear
@@ -993,32 +1008,57 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         else:
             self.psfdirectory = psfdir
         self.igal = None
+        ############################################################
+        ### CHECK TO SEE IF IMAGE NAMES ARE SPECIFIED
+        ############################################################
+        if rimage is not None:
+            self.rcoadd_fname = rimage
+        if haimage is not None:
+            self.hacoadd_fname = haimage
+        if filter is not None:
+            self.filter = filter
+        if tabledir is not None:
+            self.tabledir = tabledir
 
-        ############################################################
-        ### CONFIGURATION SETUP FOR RUNNING ON DIFFERENT COMPUTERS
-        ############################################################
+        if (rimage is None):
+            ############################################################
+            ### CONFIGURATION SETUP FOR RUNNING ON DIFFERENT COMPUTERS
+            ############################################################
         
-        if self.laptop & self.virgo:
-            self.setup_laptop_virgo()
-            self.setup_virgo(pointing=pointing)
-        elif self.nebula & self.virgo: 
-            self.setup_nebula_virgo()
-            if pointing is not None:
-                print('GOT A POINTING NUMBER FOR VIRGO FIELD')
+            if self.laptop & self.virgo:
+                self.setup_laptop_virgo()
                 self.setup_virgo(pointing=pointing)
-            else:
-                self.setup_virgo()
-        elif self.nebula:
-            self.setup_nebula()
-        elif self.testing:
-            self.setup_testing()
+            elif self.nebula & self.virgo: 
+                self.setup_nebula_virgo()
+                if pointing is not None:
+                    print('GOT A POINTING NUMBER FOR VIRGO FIELD')
+                    self.setup_virgo(pointing=pointing)
+                else:
+                    self.setup_virgo()
+            elif self.nebula:
+                self.setup_nebula()
+            elif self.testing:
+                self.setup_testing()
+        elif (rimage is not None and self.auto):
+            pass
+        else:
+            # load Halpha
+            # load rband image
+            self.load_hacoadd()
+            self.load_rcoadd()
+            print('running build_psf')
+            self.build_psf()
 
+
+            
         ############################################################
         ### SET PARAMETERS FOR VIRGO VS HALPHA GROUPS PROJECT
         ### (WHICH USES THE NSA)
         ############################################################
 
         if self.virgo:
+            self.setup_virgo_catalogs()
+            
             self.defcat = self.vf
             self.def_label = 'VF.v1.'
             self.radius_label = 'radius'
@@ -1044,13 +1084,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         
         # set filter
         # doing this automatically for HDI Virgo data for now
-        self.set_hafilter('4')
+        self.set_hafilter(self.filter)
         
         # get filter ratio
         self.get_filter_ratio()
 
         # subtract images
-        self.subtract_images()
+        self.subtract_images() # checks out ok
         
         # measure psf
         # function will check if psf image already exists
@@ -1058,17 +1098,22 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         # get galaxies
         self.find_galaxies()
-        
+
+        self.write_fits_table()
         # analyze galaxies
         # the default catalog has been trimmed to only include
         # galaxies in FOV
 
+        # skipping for now
+        # just making cutouts and getting galaxies in FOV
+        '''
         for i in range(len(self.gximage)):
         #for i in [2]: # for testing
             self.igal = i
             # get cutouts
             self.auto_gal()
-        self.write_fits_table()
+            self.write_fits_table()
+        '''
     def auto_gal(self):
         # run the analysis on an individual galaxy
 
@@ -1208,12 +1253,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2018/'
         elif self.obsyear == '2020':
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-feb2020/'
+        elif self.obsyear == '2019':
+            self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-feb2019-int/'
         else:
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2017/'
         self.tabledir= '/home/rfinn/research/Virgo/tables-north/v1/'
-
     def setup_virgo(self,pointing=None):
-
+        ''' construct image names from input.  only works for data reduced before 2021 '''
         if pointing is None:
             self.hacoadd_fname = self.imagedir+'pointing-3_ha4.coadd.fits'
             self.rcoadd_fname = self.imagedir+'pointing-3_R.coadd.fits'
@@ -1227,6 +1273,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                 self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_R.coadd.fits'
             
 
+        if not self.auto:
+            self.load_hacoadd()
+            self.load_rcoadd()
+        
+            self.subtract_images()
+            self.setup_ratio_slider()
+            self.setup_cutout_slider()
+        self.setup_virgo_catalogs()
+    def setup_virgo_catalogs(self):
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
         self.vf_fname = self.tabledir+'vf_north_v1_main.fits'
         self.vf = galaxy_catalog(self.vf_fname,virgo=True)
@@ -1243,15 +1298,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
-        if not self.auto:
-            self.load_hacoadd()
-            self.load_rcoadd()
-        
-            self.subtract_images()
-            self.setup_ratio_slider()
-            self.setup_cutout_slider()
 
     def read_rcoadd(self):
+        print('reading rband image ',self.rcoadd_fname)
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
@@ -1262,6 +1311,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # weight = NRGb161_R.coadd.weight.fits
         
         weight_image = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        if weight_image.find('-shifted') > -1:
+            weight_image = self.rcoadd_fname.replace('shifted','weight-shifted')
+
         if os.path.exists(weight_image):
             self.rweight = weight_image
             self.rweight_flag = True
@@ -1414,8 +1466,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.ui.actionhalpha8.triggered.connect(lambda: self.set_hafilter('8'))
         self.ui.actionhalpha12.triggered.connect(lambda: self.set_hafilter('12'))
         self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
-        self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('int197'))
-        self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('int227'))
+        self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('inthalpha'))
+        self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('intha6657'))
     def set_hafilter(self,filterid):
         #print('setting ha filter to ',filterid)
         self.hafilter = filterid
@@ -1522,7 +1574,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
 
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
-        keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+        #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
         try:
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
         except AttributeError:
@@ -1661,6 +1713,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
         for file in sextractor_files:
             os.system('unlink '+file)
+
+        # remove catalog
     def get_filter_ratio(self):
         #
         # get ratio of Halpha to Rband filters
@@ -1685,6 +1739,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if not self.auto:
             self.setup_ratio_slider()
         self.clean_links()
+        images = [self.rcoadd_fname, self.hacoadd_fname]
+        for im in images:
+            catfile = os.path.basename(im).split('.fits')[0]+'.cat'
+            os.remove(catfile)
     def subtract_images(self):
         self.halpha_cs = self.ha - self.filter_ratio*self.r
 
@@ -2006,28 +2064,31 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         basename = os.path.basename(self.rcoadd_fname)
         psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        if psf_image_name.find('-shifted') > -1:
+            psf_image_name = psf_image_name.replace('-shifted','')
         basename = os.path.basename(self.hacoadd_fname)
         psf_image_name_ha = basename.split('.fits')[0]+'-psf.fits'
         psf_image_name = os.path.join(self.psfdirectory,psf_image_name)
-        psf_image_name_ha = os.path.join(self.psfdirectory,psf_image_name_ha)        
+        psf_image_name_ha = os.path.join(self.psfdirectory,psf_image_name_ha).replace('-CS','')
+        print('\nPSF NAME = ',psf_image_name,'\n')
         if os.path.exists(psf_image_name):
             # get fwhm from the image header
             # and oversampling
             print("LOADING EXISTING PSF IMAGE")
             header = fits.getheader(psf_image_name)
-            self.psf = psfimage            
+            self.psf = psfimage()           
             self.psf.fwhm = header['FWHM'] # in pixels
             self.psf.fwhm_arcsec = self.psf.fwhm*self.pixelscale
             self.oversampling = float(header['OVERSAMP'])
             # if psf is in another directory, create a link to the current directory
             # this will avoid having a long filename b/c galfit does not handle long filenames
             
-            if self.psfdirectory != os.getcwd():
-                psfimage = os.path.base
-                command = 'ln -s {} {}'.format(psf_image_name,os.path.basename(psf_image_name))
-                os.system(command)
-                psf_image_name = os.path.basename(psf_image_name)
-            self.psf_image_name = psf_image_name
+            
+            command = 'cp {} r-psf.fits'.format(psf_image_name)
+            print('running: ',command)
+            os.system(command)
+            self.psf_image_name = 'r-psf.fits'
+
 
             
         else:
@@ -2036,22 +2097,25 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
             self.psf.run_all()
             self.psf_image_name = self.psf.psf_image_name
-
+            
+        print('\nPSF NAME = ',psf_image_name_ha,'\n')
         if os.path.exists(psf_image_name_ha):
             # get fwhm from the image header
             # and oversampling
+            print("LOADING EXISTING HALPHA PSF IMAGE")            
             header = fits.getheader(psf_image_name_ha)
-            self.hapsf = psfimage            
+            self.hapsf = psfimage()
             self.hapsf.fwhm = header['FWHM'] # in pixels
             self.hapsf.fwhm_arcsec = self.hapsf.fwhm*self.pixelscale
-            self.psf_haimage_name = psf_image_name_ha
+
             # if psf is in another directory, create a link to the current directory
             # this will avoid having a long filename b/c galfit does not handle long filenames
-            if self.psfdirectory != os.getcwd():
-                command = 'ln -s {} {}'.format(psf_haimage_name,os.path.basename(psf_haimage_name))
-                os.system(command)
-                psf_haimage_name = os.path.basename(psf_haimage_name)
-            self.psf_haimage_name = psf_haimage_name
+
+            command = 'cp {} ha-psf.fits'.format(psf_image_name)
+            print('running: ',command)
+            os.system(command)
+            self.psf_haimage_name = 'ha-psf.fits'
+
             
         else:
             print('PSF RESULTS FOR HA COADDED IMAGE')
@@ -2110,6 +2174,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             
             if (ncomp == 1) & (asym == 0):
                 #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
+                print('GALFIT psf image = ',psf)
                 if self.auto:
                     self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
                 else:
@@ -2552,19 +2617,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description ='Run gui for analyzing Halpha images')
 
     parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
-    parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.')
-    parser.add_argument('--pointing',dest = 'pointing', default=None,help='Pointing number that you want to load.  ONLY FOR VIRGO DATA.')
+    
+    parser.add_argument('--rimage',dest = 'rimage', default=None,help='r-band image')
+    parser.add_argument('--haimage',dest = 'haimage', default=None,help='Halpha image')
+    parser.add_argument('--filter',dest = 'filter', default=None,help='filter.  should be ha4, inthalpha, or intha6657.')
+    parser.add_argument('--tabledir',dest = 'tabledir', default=None,help='table directory. something like /home/rfinn/research/Virgo/tables-north/v1/')
+    parser.add_argument('--psfdir',dest = 'psfdir', default=None,help='set this to the directory containing PSF images')        
+    parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Should be vYYpNN for virgo pointings.  default is v17p03. required when running auto.')
+    parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')
+    
+    parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.')    
     parser.add_argument('--nebula',dest = 'nebula', action='store_true',default=False,help='set this if running on open nebula virtual machine.  catalog paths will be set accordingly.')
     parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
+    
+    parser.add_argument('--obsyear',dest = 'obsyear', default=None,help='year that data were taken.  this finds the right image directory if you are building the image name in pieces..  ')
+    parser.add_argument('--pointing',dest = 'pointing', default=None,help='Pointing number that you want to load.  ONLY FOR VIRGO DATA, and only if you are buildling the image name in pieces.')
+    
     parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
-    parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Should be vYYpNN for virgo pointings.  default is v17p03.')
-    parser.add_argument('--obsyear',dest = 'obsyear', default='2017',help='year that data were taken.  default is 2017')    
-    parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')
-    parser.add_argument('--psfdir',dest = 'psfdir', default=None,help='set this to the directory containing PSF images')        
         
     args = parser.parse_args()
-
-
     
     #catalog = os.getenv('HOME')+'/research/NSA/nsa_v0_1_2.fits'
     #gcat = galaxy_catalog(catalog)
@@ -2589,10 +2660,10 @@ if __name__ == "__main__":
     ## UPDATED TO USE ARGPARSE
     #################################
     if not args.auto:
-        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing)
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
         MainWindow.show()
         sys.exit(app.exec_())
     else:
         # run functions non-interactively
-        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix,obsyear=args.obsyear)        
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix,obsyear=args.obsyear,rimage=args.rimage,haimage=args.haimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)        
         pass
