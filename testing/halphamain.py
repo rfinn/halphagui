@@ -1106,14 +1106,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         # skipping for now
         # just making cutouts and getting galaxies in FOV
-        '''
+        
         for i in range(len(self.gximage)):
         #for i in [2]: # for testing
             self.igal = i
             # get cutouts
             self.auto_gal()
             self.write_fits_table()
-        '''
+        
     def auto_gal(self):
         # run the analysis on an individual galaxy
 
