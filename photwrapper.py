@@ -46,6 +46,8 @@ import numpy as np
 import time
 start_time = time.time()
 
+import matplotlib
+matplotlib.use('Qt5Agg')
 ## filter information
 ## from https://www.noao.edu/kpno/mosaic/filters/
 central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28,'inthalpha':6568.,'intha6657':6657,'intr':6240} # angstrom

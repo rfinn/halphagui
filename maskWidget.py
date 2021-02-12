@@ -11,7 +11,11 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(671, 555)
+        Form.resize(600, 400)
+        font = QtGui.QFont()
+        font.setFamily("STIX")
+        font.setPointSize(7)
+        Form.setFont(font)
         self.gridLayout = QtWidgets.QGridLayout(Form)
         self.gridLayout.setObjectName("gridLayout")
         self.mainframe = QtWidgets.QFrame(Form)

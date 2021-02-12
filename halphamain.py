@@ -23,9 +23,9 @@ import platform
 #from PyQt5.Qtcore import  Qt
 from PyQt5 import QtCore,QtWidgets, QtGui
 #from ginga.qtw.QtHelp import QtGui #, QtCore
-from halphav5 import Ui_MainWindow
+from halphav7 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+#from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
@@ -68,7 +68,7 @@ from halphaCommon import cutout_image
 
 from fit_profile import profile, dualprofile, rprofile, haprofile, ratio_error
 # code from HalphaImaging repository
-import sextractor_2image as runse
+import filterratio as runse
 
 # code for calculating redshift cutoffs of filter
 # and for calculating the transmission correction for each galaxy
@@ -88,7 +88,10 @@ if len(macos_ver) > 0:
     # On Mac OS X I found the default choice for matplotlib is not stable
     # with ginga
     matplotlib.use('Qt4Agg')
+else:
+    matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
+
 
 # default size for cutouts, multiple of NSA PETROTH90
 cutout_scale = 14
@@ -1065,13 +1068,16 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.global_min_cutout_size = 100
             self.global_max_cutout_size = 500
 
+        # this is for halpha groups analysis
+        # commenting this out for now
+        '''
         else:
             self.defcat = self.nsa
             self.def_label = 'NSAID'
             self.radius_label = 'PETROTH90'
             self.global_min_cutout_size = 100
             self.global_max_cutout_size = 250
-
+        '''
         self.initialize_uco_arrays()
         if self.auto:
             self.auto_run()
@@ -1146,7 +1152,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def setup_gui(self):
         #print(MainWindow)
         self.ui = Ui_MainWindow()
+
         self.ui.setupUi(MainWindow)
+        #self.ui.setGeometry(0,0,400,300)
+        #self.ui.setFont(QtGui.Qfont('Arial',10))
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
@@ -1180,7 +1189,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.ui.psfButton.clicked.connect(self.build_psf)
         self.ui.saveButton.clicked.connect(self.write_fits_table)
         self.ui.clearCutoutsButton.clicked.connect(self.clear_cutouts)
-    
+        self.ui.filterRatioLineEdit.returnPressed.connect(self.set_filter_ratio)
+        self.ui.cutoutSizeLineEdit.returnPressed.connect(self.set_cutout_size)        
     def setup_testing(self):
         #self.hacoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_ha16.coadd.fits'
         #self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
@@ -1211,8 +1221,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.load_hacoadd()
         self.load_rcoadd()        
         self.subtract_images()
-        self.setup_ratio_slider()
-        self.setup_cutout_slider()
+        #self.setup_ratio_slider()
+        #self.setup_cutout_slider()
     def setup_nebula(self):
         self.hacoadd_fname = '/mnt/astrophysics/reduced/20150418/MKW8_ha16.coadd.fits'
         #self.hacoadd_fname = '/mnt/qnap_home/rfinn/Halpha/reduced/virgo-coadds-2017/pointing-1_ha4.coadd.fits'
@@ -1243,8 +1253,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
         self.subtract_images()
-        self.setup_ratio_slider()
-        self.setup_cutout_slider()
+        #self.setup_ratio_slider()
+        #self.setup_cutout_slider()
     def setup_nebula_virgo(self):
         self.imagedir =  '/mnt/astrophysics/reduced/virgo-coadds-2017/'
         self.tabledir= '/mnt/astrophysics/catalogs/Virgo/tables-north/v1/'
@@ -1276,10 +1286,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if not self.auto:
             self.load_hacoadd()
             self.load_rcoadd()
-        
-            self.subtract_images()
-            self.setup_ratio_slider()
-            self.setup_cutout_slider()
+            try:
+                self.subtract_images()
+                #self.setup_ratio_slider()
+                #self.setup_cutout_slider()
+            except:
+                pass
         self.setup_virgo_catalogs()
     def setup_virgo_catalogs(self):
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
@@ -1506,6 +1518,22 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def set_prefix(self,prefix):
         self.prefix = prefix
         #print('prefix for output files = ',self.prefix)
+    def set_filter_ratio(self,ratio):
+        try:
+            self.filter_ratio = float(ratio)
+            self.subtract_images()
+            self.ui.filterRatioLineEdit.setText(str(ratio))
+        except:
+            print('did not understand.  try again')
+    def set_cutout_size(self,size):
+        try:
+            self.cutout_size = int(size)
+            self.display_cutouts()
+            self.ui.cutoutSizeLineEdit.setText(str(size))            
+        except:
+            print('Trouble plotting cutouts')
+            print('make sure galaxy is selected')
+            self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))            
 
     def check_previous_ha_psf(self):
         '''
@@ -1729,6 +1757,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
         ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, image_dir = current_dir)
         print(ave,std)
+        plt.show()
         #os.chdir(current_dir)
         self.filter_ratio = ave
         self.reset_ratio = ave
@@ -1736,15 +1765,19 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
 
         self.subtract_images()
-        if not self.auto:
-            self.setup_ratio_slider()
+        self.ui.filterRatioLineEdit.setText(str(self.filter_ratio))        
+        #if not self.auto:
+        #    self.setup_ratio_slider()
         self.clean_links()
         images = [self.rcoadd_fname, self.hacoadd_fname]
         for im in images:
             catfile = os.path.basename(im).split('.fits')[0]+'.cat'
             os.remove(catfile)
     def subtract_images(self):
-        self.halpha_cs = self.ha - self.filter_ratio*self.r
+        try:
+            self.halpha_cs = self.ha - self.filter_ratio*self.r
+        except AttributeError:
+            print('WARNING: no filter ratio')
 
         if not self.auto:
             # display continuum subtracted Halpha image in the large frame
@@ -1872,11 +1905,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.cutout_size = u.Quantity((size, size), u.arcsec)
         self.mincutout_size = 0.2*self.cutout_size
         self.maxcutout_size = 3.*self.cutout_size
-
+        self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
         # only do this when running gui (as opposed to automatically)
         if not self.auto:
             self.reset_cutout_size()
             self.reset_cutout_ratio()
+            pass
         self.display_cutouts()
 
         
@@ -1946,11 +1980,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def reset_cutout_size(self):
         self.cutout_size = self.reset_size
         self.update_images()
-        self.ui.cutoutSlider.setValue(50)
+        #self.ui.cutoutSlider.setValue(50)
     def reset_cutout_ratio(self):
         self.filter_ratio = self.reset_ratio
         self.update_images()
-        self.ui.ratioSlider.setValue(50)
+        #self.ui.ratioSlider.setValue(50)
     def update_images(self):
         self.subtract_images()
         self.display_cutouts()
@@ -2642,7 +2676,14 @@ if __name__ == "__main__":
     #print(sys.argv)
     logger = log.get_logger("example1", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
+    #custom_font = QtGui.QFont()
+    #custom_font.setWeight(12)
+    #QtWidgets.QApplication.setFont(custom_font,"QLabel")
+    #QtWidgets.QApplication.setFont(custom_font,"QLabel")    
     MainWindow = QtWidgets.QMainWindow()
+    #MainWindow.setStyleSheet("fusion")
+    #font = MainWindow.font()
+    #font.setPointSize(7)
     sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
 
     # OLD CODE TO MAKE USE OF ARGV INPUTS
