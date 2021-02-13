@@ -10,6 +10,11 @@
     <height>621</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <pointsize>10</pointsize>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Halpha Console</string>
   </property>
@@ -162,7 +167,7 @@
                <property name="autoFillBackground">
                 <bool>false</bool>
                </property>
-               <property name="currentText" stdset="0">
+               <property name="currentText">
                 <string extracomment="Halpha Type"/>
                </property>
               </widget>
@@ -271,7 +276,7 @@
      <x>0</x>
      <y>0</y>
      <width>591</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSetup">

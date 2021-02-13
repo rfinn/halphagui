@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>658</width>
-    <height>564</height>
+    <width>666</width>
+    <height>568</height>
    </rect>
   </property>
   <property name="font">
    <font>
-    <family>STIXGeneral</family>
-    <pointsize>6</pointsize>
+    <family>EB Garamond</family>
+    <pointsize>10</pointsize>
    </font>
   </property>
   <property name="windowTitle">
@@ -395,8 +395,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>658</width>
-     <height>19</height>
+     <width>666</width>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSetup">

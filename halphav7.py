@@ -11,10 +11,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(658, 564)
+        MainWindow.resize(666, 568)
         font = QtGui.QFont()
-        font.setFamily("STIXGeneral")
-        font.setPointSize(6)
+        font.setFamily("EB Garamond")
+        font.setPointSize(10)
         MainWindow.setFont(font)
         MainWindow.setIconSize(QtCore.QSize(20, 20))
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -226,7 +226,7 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 658, 19))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 666, 20))
         self.menubar.setObjectName("menubar")
         self.menuSetup = QtWidgets.QMenu(self.menubar)
         self.menuSetup.setObjectName("menuSetup")

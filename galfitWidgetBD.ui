@@ -12,8 +12,8 @@
   </property>
   <property name="font">
    <font>
-    <family>STIX</family>
-    <pointsize>7</pointsize>
+    <family>EB Garamond</family>
+    <pointsize>10</pointsize>
    </font>
   </property>
   <property name="windowTitle">
