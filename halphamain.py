@@ -1589,8 +1589,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         for i,s in enumerate(self.cutout_sizes_arcsec):
             if s > self.global_max_cutout_size:
                 self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
+                self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
             elif s < self.global_min_cutout_size:
-                self.cutout_size_arcsec[i] = self.global_min_cutout_size
+                self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
+                self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale                
+        print('after comparing with max/min size limits:')
+        print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
         # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
 
