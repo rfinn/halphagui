@@ -1068,7 +1068,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.def_label = 'VF.v1.'
             self.radius_label = 'radius'
             self.global_min_cutout_size = 60*u.arcsec
-            self.global_max_cutout_size = 540*u.arcsec # 9 arcmin
+            self.global_max_cutout_size = 480*u.arcsec # 9 arcmin
 
         # this is for halpha groups analysis
         # commenting this out for now
@@ -1725,7 +1725,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         for i,x in enumerate(self.gximage):
             obj = self.coadd.dc.Box(
                 x=x, y=self.gyimage[i], \
-                xradius=size[i],yradius=size[i], \
+                xradius=size[i]/2,yradius=size[i]/2, \
                 #xradius=100,yradius=100, \
                 color=markcolor, linewidth=markwidth)
             glabel = self.coadd.dc.Text(x-50,self.gyimage[i]+60,\
