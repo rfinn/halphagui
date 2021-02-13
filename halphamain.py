@@ -55,7 +55,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 from datetime import date
-
+import time
 # routines for measuring elliptical photometry
 from photwrapper import ellipse
 
@@ -92,6 +92,8 @@ else:
     matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 
+### code to measure galaxy sizes from photutils segmentation image
+from get_galaxy_size import getobjectsize
 
 # default size for cutouts, multiple of NSA PETROTH90
 cutout_scale = 14
@@ -430,7 +432,7 @@ class create_output_table():
         self.ngalaxies = len(self.gredshift)
         self.ra = self.table['NSA_RA']*self.table['NSA_FLAG']+ self.table['AGC_RA']*(~self.table['NSA_FLAG'])
         self.dec = self.table['NSA_DEC']*self.table['NSA_FLAG']+ self.table['AGC_DEC']*(~self.table['NSA_FLAG'])
-        self.gradius = self.table['SERSIC_TH50']*self.table['NSA_FLAG']/self.pixel_scale + 100.*np.ones(self.ngalaxies)*(~self.table['NSA_FLAG'])
+        self.gradius = self.table['SERSIC_TH50']*self.table['NSA_FLAG']/self.pixelscale + 100.*np.ones(self.ngalaxies)*(~self.table['NSA_FLAG'])
         self.gzdist = self.table['ZDIST']
         charar1 = np.chararray(self.ngalaxies)
         charar1[:] = 'N'
@@ -476,7 +478,7 @@ class create_output_table():
         self.NEDname = self.table['NEDname']                
         self.gredshift = self.defcat.cat['vr']/3.e5
         self.gzdist = self.defcat.cat['vr']/3.e5        
-        self.gradius = self.defcat.cat['radius']/self.pixel_scale
+        self.gradius = self.defcat.cat['radius']/self.pixelscale
         self.ra = self.defcat.cat['RA']
         self.dec = self.defcat.cat['DEC']        
         c1 = Column(self.haflag, name='HAflag', description='Halpha flag')
@@ -508,7 +510,7 @@ class create_output_table():
 
             self.dec = self.nsa2['DEC']*self.nsa_matchflag + self.agc2['DEC']*(~self.nsa_matchflag)
  
-            self.gradius = self.nsa2['SERSIC_TH50']*self.nsa_matchflag/self.pixel_scale + 100.*np.ones(self.ngalaxies)*(~self.nsa_matchflag)
+            self.gradius = self.nsa2['SERSIC_TH50']*self.nsa_matchflag/self.pixelscale + 100.*np.ones(self.ngalaxies)*(~self.nsa_matchflag)
             charar1 = np.chararray(self.ngalaxies)
             charar1[:] = 'N'
             charar2 = np.chararray(self.ngalaxies)
@@ -526,7 +528,7 @@ class create_output_table():
 
             self.dec = self.nsa2['DEC']
 
-            self.gradius = self.nsa2['SERSIC_TH50']*self.nsa_matchflag/self.pixel_scale 
+            self.gradius = self.nsa2['SERSIC_TH50']*self.nsa_matchflag/self.pixelscale 
             self.ngalaxies = len(self.nsa_matchflag)
             self.galid = self.nsa2['NSAID']*self.nsa_matchflag
             self.gredshift = self.nsa2['Z']*self.nsa_matchflag
@@ -1065,8 +1067,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.defcat = self.vf
             self.def_label = 'VF.v1.'
             self.radius_label = 'radius'
-            self.global_min_cutout_size = 100
-            self.global_max_cutout_size = 500
+            self.global_min_cutout_size = 60*u.arcsec
+            self.global_max_cutout_size = 540*u.arcsec # 9 arcmin
 
         # this is for halpha groups analysis
         # commenting this out for now
@@ -1206,7 +1208,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         #self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.rweight_flag = True
-        #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        #self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         self.nsa_fname = os.getenv('HOME')+'/research/NSA/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
         self.agc_fname = os.getenv('HOME')+'/research/AGC/agcnorthminus1.2019Sep24.fits'
@@ -1238,7 +1240,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.load_rcoadd()
         #self.rweight = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
         #self.rweight_flag = True
-        #self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        #self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         #self.nsa_fname = '/mnt/qnap_home/share/catalogs/nsa_v0_1_2.fits'
         self.nsa_fname = '/mnt/astrophysics/catalogs/nsa_v0_1_2.fits'
         self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
@@ -1314,7 +1316,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def read_rcoadd(self):
         print('reading rband image ',self.rcoadd_fname)
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
+        #self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600          
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
         # check for weight image
@@ -1352,7 +1355,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def load_rcoadd(self):
         self.coadd.load_file(self.rcoadd_fname)
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        self.pixel_scale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
         # check for weight image
@@ -1527,7 +1530,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             print('did not understand.  try again')
     def set_cutout_size(self,size):
         try:
-            self.cutout_size = int(size)
+            self.cutout_size_arcsec = int(size)*u.arcsec
+            self.cutout_size_arcsec = int(size)            
             self.display_cutouts()
             self.ui.cutoutSizeLineEdit.setText(str(size))            
         except:
@@ -1570,7 +1574,23 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         flag = self.get_gal_list()
         if flag == False:
             return
+        start_time = time.perf_counter()
+        print('getting object sizes from segmentation image')
+        self.cutout_sizes = getobjectsize(self.rcoadd_fname,np.array(self.gximage,'i'),np.array(self.gyimage,'i'))
+        print('...done with segmentation image in {:2f} sec'.format(time.perf_counter()-start_time))
+        print('...sorry for the wait')
+        print('\t cutout sizes = ',self.cutout_sizes)
+              
+        # convert to arcsec
+        self.cutout_sizes_arcsec = self.cutout_sizes*self.pixelscale*u.arcsec
+        print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)
+        # check to see if any are outside the allowed range
 
+        for i,s in enumerate(self.cutout_sizes_arcsec):
+            if s > self.global_max_cutout_size:
+                self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
+            elif s < self.global_min_cutout_size:
+                self.cutout_size_arcsec[i] = self.global_min_cutout_size
         # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
 
@@ -1637,6 +1657,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             print('WARNING: no NSA galaxies in FOV')
             print('\t make sure you have selected the right filter!')
             return
+        if self.prefix is None:
+            print('you need to set the prefix')
+            print('try again!')
+            return
         self.defcat.cull_catalog(keepflag,self.prefix)
         if self.virgo:
             self.nsa.cull_catalog(keepflag,self.prefix)
@@ -1690,14 +1714,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         markcolor='cyan'
         markwidth=1
         size = cutout_scale*self.gradius
-        size[size > self.global_max_cutout_size] = self.global_max_cutout_size
-        size[size < self.global_min_cutout_size] = self.global_min_cutout_size
+        size = self.cutout_sizes
+        #size[size > self.global_max_cutout_size] = self.global_max_cutout_size
+        #size[size < self.global_min_cutout_size] = self.global_min_cutout_size
         
         for i,x in enumerate(self.gximage):
             obj = self.coadd.dc.Box(
                 x=x, y=self.gyimage[i], \
-                #xradius=size[i],yradius=size[i], \
-                xradius=100,yradius=100, \
+                xradius=size[i],yradius=size[i], \
+                #xradius=100,yradius=100, \
                 color=markcolor, linewidth=markwidth)
             glabel = self.coadd.dc.Text(x-50,self.gyimage[i]+60,\
                                         str(self.galid[i]), color=markcolor)
@@ -1869,7 +1894,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def cutout_slider_changed(self, value):
         #print(self.minfilter_ratio, self.maxfilter_ratio, self.filter_ratio)
         delta = self.maxcutout_size - self.mincutout_size
-        self.cutout_size = self.mincutout_size + (delta)/100.*value
+        #self.cutout_size = self.mincutout_size + (delta)/100.*value
+        self.cutout_size = self.cutout_sizes[self.igal]
+        self.cutout_size_arcsec = self.cutout_sizes_arcsec[self.igal]        
         #print(value,' ratio slider changed to', round(self.filter_ratio,4))
         try:
             self.display_cutouts()
@@ -1895,14 +1922,18 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.get_galaxy_cutout()
     def get_galaxy_cutout(self):
         # scale cutout size according to NSA Re
-        size = cutout_scale*self.gradius[self.igal]
+        #size = cutout_scale*self.gradius[self.igal]
+        # updating to use the size from segmentation image from photutils
+        size_arcsec = self.cutout_sizes_arcsec[self.igal]
         # set the min size to 100x100 pixels (43"x43")
-        size = max(self.global_min_cutout_size,size)
+        print('size, global min, global max = ',size_arcsec,self.global_min_cutout_size,self.global_max_cutout_size)
+        size = max(self.global_min_cutout_size,size_arcsec)
         if size > self.global_max_cutout_size:
             size = self.global_max_cutout_size
         print('new cutout size = ',size, self.igal, self.gradius[self.igal])
-        self.reset_size = size
-        self.cutout_size = u.Quantity((size, size), u.arcsec)
+        self.reset_size = size.value
+        self.cutout_size_arcsec = size
+        self.cutout_size = size.value/self.pixelscale
         self.mincutout_size = 0.2*self.cutout_size
         self.maxcutout_size = 3.*self.cutout_size
         self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
@@ -1962,7 +1993,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
         
         try:
-            self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
+            print('in display cutouts')
+            print('\t cutout size pix = {:.1f}'.format(self.cutout_size))
+            print('\t cutout size arcsec = {:.1f}'.format(self.cutout_size_arcsec.value))
+            print(self.cutout_size_arcsec)
+            self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size_arcsec, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
             #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
             ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
             #print(ymin,ymax,xmin,xmax)
@@ -2094,7 +2129,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def build_psf(self):
         # check to see if R-band PSF images exist
         coadd_header = fits.getheader(self.rcoadd_fname)
-        self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600  
+
 
         basename = os.path.basename(self.rcoadd_fname)
         psf_image_name = basename.split('.fits')[0]+'-psf.fits'
@@ -2469,12 +2504,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         for i,im in enumerate(image_frames):
             for r in radii:
                 #print('r = ',r)
-                r = r/self.pixel_scale
+                r = r/self.pixelscale
                 #print('r = ',r)
                 obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
                 objlist.append(obj)
             if i == 1: # add R17 for Halpha image
-                r = self.hafit.iso_radii[:,0][1]/self.pixel_scale
+                r = self.hafit.iso_radii[:,0][1]/self.pixelscale
                 obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
                 objlist.append(obj)
             self.markhltag = im.canvas.add(im.dc.CompoundObject(*objlist))
