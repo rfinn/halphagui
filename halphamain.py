@@ -2741,6 +2741,10 @@ if __name__ == "__main__":
     #################################
     if not args.auto:
         ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
+        if os.getenv("HOME").find('/home/') > -1: # special case for when running on linux laptop
+            x = MainWindow.width()*.7
+            y = MainWindow.height()*.7
+            MainWindow.resize(x,y)
         MainWindow.show()
         sys.exit(app.exec_())
     else:
