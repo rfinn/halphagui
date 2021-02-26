@@ -995,6 +995,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None,rimage=None,haimage=None,filter=None,tabledir=None):
         super(hafunctions, self).__init__()
         self.auto = auto
+        #if self.auto:
+        #    matplotlib.use('TkAgg')
         self.obsyear = obsyear
         if not(self.auto):
             self.setup_gui()
@@ -1786,7 +1788,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
         ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, image_dir = current_dir)
         print(ave,std)
-        plt.show()
+        #plt.show()
         #os.chdir(current_dir)
         self.filter_ratio = ave
         self.reset_ratio = ave
@@ -1794,7 +1796,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
 
         self.subtract_images()
-        self.ui.filterRatioLineEdit.setText(str(self.filter_ratio))        
+        if not self.auto:
+            self.ui.filterRatioLineEdit.setText(str(self.filter_ratio))
         #if not self.auto:
         #    self.setup_ratio_slider()
         self.clean_links()

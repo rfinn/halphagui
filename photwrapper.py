@@ -64,10 +64,31 @@ dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17,'
 # run 
 
 class ellipse():
+    '''
+    class to run photometry routines on image
 
+    INPUT
+    * image         - primary image (this is usually rband)
+    * image2        - image2 is designed to be the Halpha image, 
+                      but it can be any second image whereby you define 
+                      the ellipse geometry using image 1, and
+                      measure the photometry on image 1 and image 2
+    * mask          - mask to apply when measuring photometry.  
+                      this is usually created from the r-band image
+    * image_frame   - image frame for plotting inside a gui; like if this is called from halphamain
+    * use_mpl       - use mpl for testing purposes, before integrating with pyqt gui
+    * napertures    - number of apertures for measuring photmetry in. default is 20.
+    * image2_filter - this is used to calculate the flux levels in the second filter.  
+                      this should be one of standard halpha filters in our dictionary 
+                      ('4','inthalpha','intha6657').
+    * filter_ratio  - ratio of flux in image2/image1
+    * psf           - used by statmorph (not sure if this is the image or the image name)
+    * psf_ha        - used by statmorph
+
+    '''
     def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None):
-        # use mpl for testing purposes, before integrating with pyqt gui
-        # image2 is intended to be the Halpha image - use apertures from r-band but measure on Halpha
+        '''  inputs described above '''
+
         self.image, self.header = fits.getdata(image, header=True)
         self.image_name = image
 
@@ -91,7 +112,8 @@ class ellipse():
         self.gain = self.header['GAIN']
         self.psf = psf
         self.psf_ha = psf_ha
-        # the mask should identify all pixels in the cutout image that are not associated with the target galaxy
+        # the mask should identify all pixels in the cutout image that are not
+        # associated with the target galaxy
         # these will be ignored when defining the shape of the ellipse and when measuring the photometry
         #
         # self.mask_flag is True if a mask is provided
@@ -119,11 +141,15 @@ class ellipse():
         # assuming a typical fwhm 
         self.fwhm = 3.5
     def get_noise_in_aper(self, flux, area):
+        ''' calculate the noise in an area '''
         noise_e = np.sqrt(flux*self.gain + area*self.sky_noise*self.gain)
         noise_adu = noise_e/self.gain
         return noise_adu
 
     def run_for_gui(self):
+        ''' 
+        batch all of the functions that we run for the gui, including:
+
         self.detect_objects()
         self.find_central_object()
         self.get_ellipse_guess()
@@ -135,6 +161,20 @@ class ellipse():
         self.write_phot_tables()
         self.write_phot_fits_tables()
         self.get_sky_noise()
+        '''
+        
+        self.detect_objects()
+        self.find_central_object()
+        self.get_ellipse_guess()
+        self.measure_phot()
+        self.calc_sb()
+        self.convert_units()
+        self.get_image2_gini()
+        self.get_asymmetry()
+        self.write_phot_tables()
+        self.write_phot_fits_tables()
+        self.get_sky_noise()
+
         #if self.use_mpl:
         #    self.draw_phot_results_mpl()
         #else:
@@ -189,20 +229,31 @@ class ellipse():
         #    self.draw_phot_results_mpl()
         #else:
         #    self.draw_phot_results()
-    def detect_objects(self, snrcut=1.5):
+    def detect_objects(self, snrcut=1.5,npixels=10):
+        ''' 
+        run photutils detect_sources to find objects in fov.  
+        you can specify the snrcut, and only pixels above this value will be counted.
+        
+        this also measures the sky noise as the mean of the threshold image
+        '''
         if self.mask_flag:
             self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
-            self.segmentation = detect_sources(self.image, self.threshold, npixels=10, mask=self.boolmask)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
             self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
         else:
             self.threshold = detect_threshold(self.image, nsigma=snrcut)
-            self.segmentation = detect_sources(self.image, self.threshold, npixels=10)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
             self.cat = source_properties(self.image, self.segmentation)
         # get average sky noise per pixel
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
         #self.tbl = self.cat.to_table()
     def get_sky_noise(self):
+        '''
+        * get the noise in image1 and image2 
+        * noise is stored as SKYERR in image header
+          - units of sky noise are erg/s/cm^2/arcsec^2
+        '''
         # get sky noise for image 1
         if self.mask_flag:
             threshold = detect_threshold(self.image, nsigma=1,mask=self.boolmask)
@@ -230,15 +281,24 @@ class ellipse():
             self.im2_skynoise = sky_noise_erg
             print('ha sky noise = ',sky_noise_erg)
 
-
-
     def find_central_object(self):
+        ''' 
+        find the central object in the image and get its objid in segmentation image.
+        object is stored as self.objectIndex
+        '''
         xdim,ydim = self.image.shape
         distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
         #print(self.objectIndex)
     def run_statmorph(self):
+        '''
+        run statmorph on image1 and image2 (if provided).
+
+        results are stored as self.morph and self.morph2
+
+        summary figures are save as XX statmorph-r.pdf and statmore-ha.pdf
+        '''
         # show original
         #plt.figure()
         #plt.imshow(self.segmentation.data)
@@ -264,6 +324,13 @@ class ellipse():
         fig2 = make_figure(self.morph2)
         fig2.savefig(figname+'statmorph-ha.pdf')
     def get_image2_gini(self, snrcut=1.5):
+        ''' 
+        calculate gini coefficient for image2 using pixels that are associated with r-band object ID
+
+        this also calculates the sum and mag of the pixels associated with the central galaxy 
+        (not sure why this is done together...)
+        
+        '''
         if self.mask_flag:
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut, mask=self.boolmask)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10,mask=self.boolmask)
@@ -271,7 +338,7 @@ class ellipse():
         else:
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10)
-            self.cat2 = source_properties(self.image, self.segmentation2)
+            self.cat2 = source_properties(self.image2, self.segmentation2)
 
         '''
         select pixels associated with rband image in the segmentation
@@ -287,10 +354,8 @@ class ellipse():
         self.source_sum2_mag = self.magzp2 - 2.5*np.log10(self.source_sum2)
     def get_asymmetry(self):
         '''
-        goal is to measure the assymetry of the galaxy about its center
-
-
-        going to measure asymmetry from pixels in the segmentation image only, so
+        * goal is to measure the assymetry of the galaxy about its center
+        * going to measure asymmetry from pixels in the segmentation image only, so
 
         '''
 
@@ -376,6 +441,9 @@ class ellipse():
             '''
         
     def get_ellipse_guess(self, r=2.5):
+        '''
+        this gets the guess for the ellipse geometry from the detection catalog 
+        '''
         obj = self.cat[self.objectIndex]
         self.xcenter = obj.xcentroid.value
         self.ycenter = obj.ycentroid.value
@@ -400,7 +468,7 @@ class ellipse():
         # EllipseGeometry using angle in radians, CCW from +x axis
         self.guess = EllipseGeometry(x0=self.xcenter,y0=self.ycenter,sma=self.sma,eps = self.eps, pa = self.theta)
     def draw_guess_ellipse(self):
-        ### DRAW INITIAL ELLIPSE ON R-BAND CUTOUT
+        ''' DRAW INITIAL ELLIPSE ON R-BAND CUTOUT '''
         #
         markcolor='magenta'
         markwidth=1
@@ -409,7 +477,7 @@ class ellipse():
         self.image_frame.fitsimage.redraw()
 
     def draw_guess_ellipse_mpl(self):
-        ### DRAW INITIAL ELLIPSE ON R-BAND CUTOUT
+        ''' DRAW INITIAL ELLIPSE ON R-BAND CUTOUT '''
         #
         norm = ImageNormalize(stretch=SqrtStretch())
         plt.figure()
@@ -418,13 +486,14 @@ class ellipse():
         plt.show()
 
     def fit_ellipse(self):
-        ### FIT ELLIPSE
+        ''' FIT ELLIPSE '''
         #
         self.ellipse = Ellipse(self.masked_image, self.guess)
         self.isolist = self.ellipse.fit_image()#sfix_pa = True, step=.5)#, fix_eps=True, fix_center=True)
         self.table = self.isolist.to_table()
+        
     def draw_fit_results(self):
-        ### DRAW RESULTING FIT ON R-BAND CUTOUT
+        ''' DRAW RESULTING FIT ON R-BAND CUTOUT '''
         markcolor='cyan'
         if len(self.isolist) > 5:
             smas = np.linspace(np.min(self.isolist.sma), np.max(self.isolist.sma), 3)
@@ -438,7 +507,7 @@ class ellipse():
         else:
             print('problem fitting ellipse')
     def draw_fit_results_mpl(self):
-        
+        ''' draw fit results in matplotlib figure '''
         norm = ImageNormalize(stretch=SqrtStretch())
         plt.figure()
         plt.imshow(self.masked_image, cmap='Greys_r', norm=norm, origin='lower')
@@ -454,6 +523,7 @@ class ellipse():
                 aperture.plot(color='white',lw=1.5)
         plt.show()
     def show_seg_aperture(self):
+        ''' matplotlib plotting to show apertures   '''
         tbl1 = self.cat.to_table()
         cat = self.cat
         r=3.
@@ -479,6 +549,7 @@ class ellipse():
             aperture.plot(axes=ax2, color='white', lw=1.5)
         plt.show()
     def measure_phot(self):
+        '''
         # alternative is to use ellipse from detect
         # then create apertures and measure flux
 
@@ -488,7 +559,8 @@ class ellipse():
         # or could cut off based on image dimension, and do the cutting afterward
         
         #rmax = 2.5*self.sma
-
+        '''
+        
         '''
         this is how becky set the apertures
         a = [0]
@@ -577,10 +649,12 @@ class ellipse():
             self.sb2_snr = np.abs(self.sb2/self.sb2_err)
 
     def convert_units(self):
+        '''
         ###########################################################
         ### SET UP INITIAL PARAMETERS TO CALCULATE CONVERSION
         ### FROM ADU/S TO PHYSICAL UNITS
         ###########################################################
+        '''
         self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
         try:
             self.magzp = float(self.header['PHOTZP'])
@@ -649,7 +723,10 @@ class ellipse():
                 self.sb2b_mag_sqarcsec_err = self.sb2b_mag_sqarcsec - (self.magzp2 - 2.5*np.log10(conversion*(self.sb2+self.sb2_err)/self.pixel_scale**2))
                 
     def write_phot_tables(self):
-        # write out photometry for r-band
+        '''
+        write out photometry for image and image2 in ascii format
+        '''
+        
         # radius enclosed flux
         outfile = open(self.image_name.split('.fits')[0]+'-phot.dat','w')#used to be _phot.dat, but changing it to .dat so that it can be read into code for ellipse profiles
 
@@ -699,8 +776,7 @@ class ellipse():
 
             outfile.close()
     def write_phot_fits_tables(self, prefix=None):
-        # write out photometry for r-band
-        # radius enclosed flux
+        ''' write out photometry for image and image2 in fits format '''
 
         if prefix is None:
              outfile = self.image_name.split('.fits')[0]+'-phot.fits'
@@ -792,7 +868,7 @@ class ellipse():
 
             
     def draw_phot_results(self):
-        ### DRAW RESULTING FIT ON R-BAND CUTOUT
+        ''' DRAW RESULTING FIT ON R-BAND CUTOUT, for gui '''
         markcolor='cyan'
         objlist=[]
         markwidth=1.5
@@ -804,6 +880,7 @@ class ellipse():
         self.image_frame.fitsimage.redraw()
         
     def draw_phot_results_mpl(self):
+        ''' draw results in matplotlib figure '''
         norm = ImageNormalize(stretch=SqrtStretch())
         plt.figure()
         plt.imshow(self.masked_image, cmap='Greys_r', norm=norm, origin='lower')
@@ -816,6 +893,7 @@ class ellipse():
             aperture.plot(color='white',lw=1.5)
         plt.show()
     def plot_profiles(self):
+        ''' enclosed flux and surface brightness profiles, save figure '''
         plt.figure(figsize=(10,4))
         plt.subplots_adjust(wspace=.3)
         plt.subplot(2,2,1)
