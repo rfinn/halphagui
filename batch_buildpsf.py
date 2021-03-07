@@ -45,7 +45,7 @@ for i,f in enumerate(filters):
     # get list of current directory
     # this will grab the coadds but not the weight images
     flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
-
+    print(i,f,len(flist1))
     # changing this to just do pointing 022 and 026
     #flistp20 = glob.glob(coadd_image_directory+'VF-*p017*-'+f+'.fits')
     #flistp26 = glob.glob(coadd_image_directory+'VF-*p072*-'+f+'.fits')
