@@ -19,6 +19,7 @@ class filter_trace():
         '''
         # read in filter trace
         # assume github directory is off main dir
+        self.hafilter = filter
         if filterpath == None:
             self.filterpath = os.getenv('HOME')+'/github/halphagui/filter_traces/'
         else:
@@ -89,7 +90,8 @@ class filter_trace():
             # function = return transmission for a given wavelength
             return interpolate.splev(wave,self.spline_fit), True
     def get_trans_correction(self, redshift):
-        # return ratio of max filter transmission to transmission at that wavelength
+        # return ratio of max filter transmission
+        # to transmission at that wavelength
         # wave can be a single value or an array
         wave = (redshift+1)*wave_halpha
         transmission, flag = self.get_transmission(wave)

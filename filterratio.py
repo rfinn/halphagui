@@ -94,10 +94,10 @@ def make_plot(image1, image2, return_flag = False, image_dir = './'):
     plt.text(20,.07,'$ ratio = %.4f (%.4f)$'%(ave,std),fontsize=12)
     plt.gca().set_xscale('log')
     filename = os.path.basename(image2)
-    t = filename.split('.coadd')
-    plt.title(t[0],fontsize=12)
+    t = filename.replace('.fits','')
+    plt.title(t,fontsize=12)
     #plt.show()
-    plt.savefig(image_dir+'/'+t[0]+'-filter-ratio.png')
+    plt.savefig(image_dir+'/'+t+'-filter-ratio.png')
 
     if return_flag:
         return ave, std

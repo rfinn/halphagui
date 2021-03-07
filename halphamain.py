@@ -1617,6 +1617,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #print(self.filter_correction)
         self.table['FILT_COR'] = self.filter_correction
 
+        # add prefix to figure that is created by filter_trace.get_trans_correction
+
+        figfile = "galaxies_in_filter.png"
+        os.rename(figfile,self.prefix+'-'+figfile)
+        
     def get_gal_list(self):
         #
         # get list of NSA galaxies on image viewer
@@ -1943,9 +1948,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.cutout_size = size.value/self.pixelscale
         self.mincutout_size = 0.2*self.cutout_size
         self.maxcutout_size = 3.*self.cutout_size
-        self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
         # only do this when running gui (as opposed to automatically)
         if not self.auto:
+            self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
             self.reset_cutout_size()
             self.reset_cutout_ratio()
             pass
