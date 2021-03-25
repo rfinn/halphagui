@@ -165,8 +165,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         ###  and should be removed before release.
         if image == None:
             image='MKW8-18216-R.fits'
-        if haimage == None:
-            haimage='MKW8-18216-CS.fits'
+        #if haimage == None:
+        #    haimage='MKW8-18216-CS.fits'
         if sepath == None:
             sepath=os.getenv('HOME')+'/github/halphagui/astromatic/'
         if config == None:
@@ -263,7 +263,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
     def display_cutouts(self):
         self.rcutout.load_file(self.image_name)
         self.rcutout.fitsimage.set_autocut_params('stddev')
-        self.hacutout.load_file(self.haimage_name)
+        if self.haimage_name is not None:
+            self.hacutout.load_file(self.haimage_name)
         self.display_mask()
     def display_mask(self):
         self.maskcutout.load_file(self.mask_image)
@@ -375,21 +376,23 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         
     def print_help_menu(self):
         print('Click on mask or r/ha image, then enter:\n \t r to remove object in mask at the cursor position;'
-              '\n \t c to add CIRCULAR mask at cursor position;'
-              '\n \t b to add BOX mask at cursor position;'
-              '\n \t g to grow the size of the current masks;'              
-              '\n \t o if target is off center (and program is removing the wrong object);'
+              '\n \t c = add CIRCULAR mask at cursor position;'
+              '\n \t b = add BOX mask at cursor position;'
+              '\n \t g = grow the size of the current masks;'              
+              '\n \t o = if target is off center (and program is removing the wrong object);'
               #'\n \t s to change the size of the mask box;'
               #'\n \t t to adjust SE threshold (0=lots, 1=no deblend );'
               #'\n \t n to adjust SE SNR; '
-              '\n \t h to print this menu; '
-              '\n \t w to write the mask image;'
+              '\n \t h = print this menu; '
+              '\n \t w = write the mask image;'
               #'\n \t q to quit \n \n'
+              '\n\n'
               'Display shortcuts (click on image to adjust):'
-              '\n \t scroll = zoom'
-              '\n \t ` = zoom to fit'
+              '\n \t scroll  = zoom'
+              '\n \t `       = zoom to fit'
               '\n \t space+s = enable contrast adjustment, click+drag, scroll wheel'
-              '\n \t a = automatically set contrast'              
+              '\n \t space   = exit contrast adjustment'              
+              '\n \t a       = automatically set contrast'              
               #'\n \t ALT-right_click = adjust contrast \n \n'
               'Click Red X to close window')
 
@@ -594,7 +597,7 @@ if __name__ == "__main__":
     import argparse    
     parser = argparse.ArgumentParser(description ='Run gui for making an mask')
     parser.add_argument('--image',dest = 'image', default=None,help='r-band image')
-    parser.add_argument('--haimage',dest = 'haimage', default=None,help='halpha image')
+    parser.add_argument('--haimage',dest = 'haimage', default=None,help='this is typically the continuum-subtracted Halpha image.  If no image is provided, the middle panel is left blank.')
     parser.add_argument('--sepath',dest = 'sepath', default=None,help='path to source extractor config files (e.g. ~/github/HalphaImaging/astromatic/ - this is default if no path is given.)')
     parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')    
         
