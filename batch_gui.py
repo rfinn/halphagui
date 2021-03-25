@@ -2,11 +2,9 @@
 
 '''
 GOAL: 
-- go into each subdirectory and run getzp on coadded images
-- delete any intermediate images to save space
 
 Run this from, e.g. /home/rfinn/research/Virgo/gui-output-2019
-- this directory has a subdirectory for each pointing
+- the gui will create a cutout folder in this directory that has a subdirectory for each pointing
 
 
 '''
@@ -19,8 +17,10 @@ import matplotlib
 
 import argparse
 
-parser = argparse.ArgumentParser(description ='Run sextractor, scamp, and swarp to determine WCS solution and make mosaics')
+parser = argparse.ArgumentParser(description ='run the halpha gui in automatic mode.  Run this from the directory where you want the output data stored.  For example: /home/rfinn/research/Virgo/gui-output-NGC5846/')
 parser.add_argument('--coaddir',dest = 'coaddir', default ='/home/rfinn/data/reduced/virgo-coadds-feb2019-int/', help = 'directory for coadds. Default is /home/rfinn/data/reduced/virgo-coadds/feb2019-int/')
+parser.add_argument('--hdi',dest = 'hdi', default =False, action='store_true', help = 'set this for HDI data.  it will grab the filenames according to the HDI naming convention for the coadded images.')
+parser.add_argument('--mosaic',dest = 'mosaic', default =False, action='store_true', help = "set this for Mosaic data.  it will grab the filenames according to Becky's naming convention for the coadded images.")
 
 args = parser.parse_args()
 
@@ -32,20 +32,22 @@ telescope = 'INT'
 
 # get list of current directory
 imagedir = args.coaddir
-flist1 = glob.glob(imagedir+'VF-*r-shifted.fits')
+if args.hdi:
+    # HDI has rband images taken in r and R, so grab both
+    flista = glob.glob(imagedir+'VF-*r-noback-coadd.fits')
+    flistb = glob.glob(imagedir+'VF-*R-noback-coadd.fits')
+    flist1 = flista + flistb
+elif args.mosaic:
+    flist1 = glob.glob(imagedir+'n*R.fits')
+else: # assume INT
+    flist1 = glob.glob(imagedir+'VF-*r-shifted.fits')
 working_dir = os.getcwd()
 # overwrite output files if they exist
 overwrite = True
 
-# just doing this for rogue pointings 022 and 026
-#flist1a = glob.glob('VF-*p022*r.fits')
-#flist1b = glob.glob('VF-*p026*r.fits')
-#flist1 = flist1a+flist1b
 flist1.sort()
-#print(flist1)
 
 
-# shift r to match Halpha
 i = 0
 for rimage in flist1: # loop through list
 
@@ -63,19 +65,54 @@ for rimage in flist1: # loop through list
 
     # grab other coadds
 
-    rootname = rimage.split('-r')[0]
-    rweightimage = rootname+'-r.weight.fits'
-    rweightimage = rweightimage.replace('-shifted','')
-    # last entry is the pointing name - match on this
-    # because sometimes the Halpha coordinates are slightly different
-    # or the UT date changed between Halpha and r images
-    pointing = rootname.split('-')[-1]
-    dirname = os.path.dirname(rimage)
-    coadds = glob.glob(dirname+'/VF*'+pointing+'*.fits')
+    if args.hdi:
+        print()
+        print('#######  HDI DATA #########')
+        print()        
+        if rimage.find('-R-') > -1:
+            rfilter = 'R'
+        elif rimage.find('-r-') > -1:
+            rfilter = 'r'
+        print(rimage)
+        rootname = rimage.split('-'+rfilter+'-')[0] # should be VF-2018-03-16-HDI-p054
+        print(rootname)        
+        rweightimage = rimage.split('.fits')[0]+'.weight.fits'
+        pointing = rootname.split('-')[-1]
+        dirname = os.path.dirname(rimage)
+        coadds = glob.glob(rootname+'*.fits')
+
+    elif args.mosaic:
+        print()
+        print('#######  MOSAIC DATA #########')
+        print()        
+        if rimage.find('R.fits') > -1:
+            rfilter = 'R'
+        elif rimage.find('r.fits') > -1:
+            rfilter = 'r'
+        print(rimage)
+        rootname = rimage.split(rfilter+'.')[0] # should be VF-2018-03-16-HDI-p054
+        print(rootname)        
+        rweightimage = None
+        pointing = rootname.split('_')[-1].replace('R','')
+        dirname = os.path.dirname(rimage)
+        coadds = glob.glob(rootname+'*.fits')
+
+    else:
+        rootname = rimage.split('-r')[0]
+        rweightimage = rootname+'-r.weight.fits'
+        rweightimage = rweightimage.replace('-shifted','')
+
+        # last entry is the pointing name - match on this
+        # because sometimes the Halpha coordinates are slightly different
+        # or the UT date changed between Halpha and r images
+        pointing = rootname.split('-')[-1]
+        dirname = os.path.dirname(rimage)
+        coadds = glob.glob(dirname+'/VF*'+pointing+'*.fits')
     #print('rootname = ',rootname)
     #print(coadds)
     #print(coadds)
     haimage = None
+    print(coadds)
     for c in coadds:
         #print(c)
         if c.find('CS') > -1:
@@ -89,11 +126,26 @@ for rimage in flist1: # loop through list
             haimage = c
             hfilter = 'intha6657'
             print('haimage = ',c)            
+        elif (c.find('-ha4') > -1) & (c.find('weight') < 0):
+            haimage = c
+            hfilter = '4'
+            print('haimage = ',c)            
+            #print('matching ha image: ',haimage)
+        elif (c.find('Ha.fits') > -1) & (c.find('weight') < 0):
+            haimage = c
+            hfilter = '4'
+            print('haimage = ',c)            
             #print('matching ha image: ',haimage)
     if haimage is not None:
         #print(rootname)
-        pointing = os.path.basename(rootname).split('-')[4]
-        prefix = 'v19'+pointing
+        if args.hdi:
+            prefix = os.path.basename(rootname)
+            #prefix = None
+        if args.mosaic:
+            prefix = os.path.basename(rootname)
+            #prefix = None
+        else:
+            prefix = 'v19'+pointing
         print('prefix = ',prefix)
         #command_string = 'python ~/github/HalphaImaging/python3/INT_align_images.py --image1 {} --image2 {} --weight2 {}'.format(haimage,rimage,rweightimage)
         command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir /home/rfinn/data/reduced/psf-images/ --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --prefix {} --auto'.format(rimage,haimage,hfilter,prefix)
@@ -101,15 +153,15 @@ for rimage in flist1: # loop through list
         # check to see if shifted r-band image exists.  if 
         try:
             print('running : ',command_string)
-            os.system(command_string)
+            #os.system(command_string)
         except:
             print('##########################################')
-            print('WARNING: problem running align_images for ',rimage)
+            print('WARNING: problem running auto gui on ',rimage)
             print('##########################################')
 
-    # just running on one directory for testing purposes
+    #just running on one directory for testing purposes
     #i += 1
-    #if i > 3:
+    #if i > 0:
     #    break
 
 

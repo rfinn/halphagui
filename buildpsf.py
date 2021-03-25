@@ -70,9 +70,12 @@ class psf_parent_image():
 
         # get pixelscale from image header
         try:
-            self.pixelscale = np.abs(float(self.header['CD1_1']))*3600
+            self.pixelscale = np.abs(float(self.header['PIXSCAL1'])) # for mosaic data
         except KeyError:
-            self.pixelscale = pixelscale
+            try:
+                self.pixelscale = np.abs(float(self.header['CD1_1']))*3600
+            except KeyError:
+                self.pixelscale = pixelscale
         if oversampling == None:
             self.oversampling = 2
         else:
@@ -294,7 +297,7 @@ if __name__ == '__main__':
     if args.int:
         p = psf_parent_image(image=args.image, size=39, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.INT')
     else:
-        p = psf_parent_image(image=args.image, size=21, nstars=100, oversampling=2,saturate=args.saturate)
+        p = psf_parent_image(image=args.image, size=25, nstars=100, oversampling=2,saturate=args.saturate)
     p.runse()
     p.read_se_table()
     p.find_stars()

@@ -41,6 +41,7 @@ from astropy import nddata
 from astropy.table import Table, Column
 from astropy.visualization import simple_norm
 from astropy.cosmology import WMAP9 as cosmo
+from astropy.time import Time
 
 # packages for ellipse fitting routine
 # https://photutils.readthedocs.io/en/stable/isophote.html
@@ -560,7 +561,7 @@ class create_output_table():
         c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
         c11 = Column(np.zeros(self.ngalaxies,'f'),name='R_FWHM',unit=u.arcsec, description='R FWHM in arcsec')
         c12 = Column(np.zeros(self.ngalaxies,'f'),name='H_FWHM',unit=u.arcsec, description='HA FWHM in arcsec')
-        c13 = Column(np.zeros(self.ngalaxies,dtype='|S10'),name='POINTING', description='string specifying year and pointing, like v17p01')                
+        c13 = Column(np.zeros(self.ngalaxies,dtype='|S23'),name='POINTING', description='string specifying year and pointing, like v17p01.  most recently like VF-2017-05-20-HDI-p004')                
 
         self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10,c11,c12,c13])
     def add_nsa(self):
@@ -1318,7 +1319,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def read_rcoadd(self):
         print('reading rband image ',self.rcoadd_fname)
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
+        try:
+            self.pixelscale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
+        except KeyError:
+            self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
         #self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600          
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
@@ -1357,7 +1361,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def load_rcoadd(self):
         self.coadd.load_file(self.rcoadd_fname)
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+        try:
+            self.pixelscale = abs(float(self.r_header['PIXSCAL1'])) # in deg per pixel
+        except KeyError:
+            self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
         # check for weight image
@@ -1957,6 +1964,68 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.display_cutouts()
 
         
+
+        # updating on march 5, 2021 to make cutout directory name unique
+        # to prevent accidentally writing over data
+        # add date and pointing
+
+        header = self.ha_header
+        # date is stored in epoch for HDI data
+        
+        try:
+            # store time 
+            t = header['EPOCH']
+            # convert to year, month,day
+            t = Time(t,format='decimalyear')
+        except KeyError:
+            # try format expected for INT data
+            t = Time(header['DATE-OBS'],format='isot')
+        dateobs = t.iso.split()[0]
+
+        # get instrument
+        try:
+            instrument = self.ha_header['INSTRUME']
+            if instrument.find('hdi') > -1:
+                instrument='HDI'
+            elif instrument.find('Mosaic') > -1:
+                instrument='MOSAIC'
+        except KeyError:
+            instrument='WFC'
+
+        # read in object
+        o = header['OBJECT']        
+        try:
+
+            if (o.find('197') > -1) | (o.find('227') > -1): #INT, may data
+                pnumber = o.split('-')[1]
+            else:
+                # try to identify format
+                #print(o,len(o))
+                print(o)
+                if len(o.split()) > 1:
+                    split_string=' '
+                    #print('object names contain ',split_string)        
+                elif len(o.split('-')) > 1:
+                    split_string='-'
+                    #print('object names contain ',split_string)
+                elif len(o.split('_')) > 1:
+                    split_string='_'
+                    #print('object names contain ',split_string)                     
+                pnumber = int(o.split(split_string)[1])
+                print('testing')
+            if (o.find('lm') > -1)| (o.find('LM') > -1):
+                # low-mass pointing
+                prefix = "lmp"
+            else:
+                prefix = "p"
+            
+            pointing = "{}{:03d}".format(prefix,pnumber)
+
+        except ValueError:
+            pointing=self.rcoadd_fname.replace('R.fits','')
+
+        if self.rcoadd_fname.find('nNGC5846') > -1:
+            pointing = os.path.basename(self.rcoadd_fname.replace('R.fits',''))
         # first pass of mask
         # radial profiles
         # save latest of mask
@@ -1966,10 +2035,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             nedname = nedname.replace("]","")
             nedname = nedname.replace("/","")                        
             
-            cprefix = str(self.galid[self.igal])+'-'+nedname
+            cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,dateobs,instrument,pointing)
+            
         else:
-            cprefix = str(self.galid[self.igal])
+            cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],dateobs,instrument,pointing)
+            
+    
 
+        
         ## create the output directory to store the cutouts and figures
         self.cutoutdir = 'cutouts/'+cprefix+'/'
         if not os.path.exists('cutouts'):
@@ -1977,14 +2050,19 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if not os.path.exists(self.cutoutdir):
             os.mkdir(self.cutoutdir)
 
-        if self.prefix is None:
-            self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
-            self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
-            self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
-        else:
-            self.cutout_name_r = self.cutoutdir+cprefix+'-'+self.prefix+'-R.fits'
-            self.cutout_name_ha = self.cutoutdir+cprefix+'-'+self.prefix+'-CS.fits'
-            self.cutout_name_hawc = self.cutoutdir+cprefix+'-'+self.prefix+'-Ha.fits'            
+            
+        self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
+        self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
+        self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
+
+        #if self.prefix is None:
+        #    self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
+        #    self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
+        #    self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'   
+        #else:
+        #    self.cutout_name_r = self.cutoutdir+cprefix+'-'+self.prefix+'-R.fits'
+        #    self.cutout_name_ha = self.cutoutdir+cprefix+'-'+self.prefix+'-CS.fits'
+        #    self.cutout_name_hawc = self.cutoutdir+cprefix+'-'+self.prefix+'-Ha.fits'            
 
 
         t = self.cutout_name_r.split('.fit')

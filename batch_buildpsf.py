@@ -30,6 +30,7 @@ import argparse
 parser = argparse.ArgumentParser(description ='Run buildpsf.py for all images in the specified directory')
 parser.add_argument('--coaddir',dest = 'coaddir', default ='/home/rfinn/data/reduced/virgo-coadds-feb2019-int/', help = 'directory for coadds. Default is /home/rfinn/data/reduced/virgo-coadds/feb2019-int/')
 parser.add_argument('--int', dest = 'int', default = False,action='store_true', help = 'set this for INT data')
+parser.add_argument('--ngc', dest = 'ngc', default = False,action='store_true', help = "set this for Becky's NGC5846 data")
 
 args = parser.parse_args()
 
@@ -38,7 +39,7 @@ coadd_image_directory = args.coaddir
 
 
 
-filters = ['r','Halpha','Ha6657','ha4','R']
+filters = ['r','Halpha','Ha6657','ha4','R','Ha']
 #saturate_level = [100,30,30]
 
 for i,f in enumerate(filters):
@@ -46,6 +47,8 @@ for i,f in enumerate(filters):
     # this will grab the coadds but not the weight images
     if args.int:
         flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
+    elif args.ngc:
+        flist1 = glob.glob(coadd_image_directory+'nNGC*'+f+'.fits')
     else:
         flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'*coadd.fits')
     print(i,f,len(flist1))

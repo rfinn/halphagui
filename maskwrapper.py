@@ -349,7 +349,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         except IndexError:
             print('out of bounds, try again')
         #print('cursor value = ',self.cursor_value, key)
-        if key == 'a':
+        if key == 'c':
             self.add_circ_object()
         elif key == 'b':
             self.add_box_object()
@@ -366,7 +366,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         #    self.set_sesnr()
         elif key == 'h': 
             self.print_help_menu()
-        elif key == 's': 
+        elif key == 'w': 
             self.save_mask()
         elif key == 'q':
             self.quit_program()
@@ -375,19 +375,22 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         
     def print_help_menu(self):
         print('Click on mask or r/ha image, then enter:\n \t r to remove object in mask at the cursor position;'
-              '\n \t a to add CIRCULAR mask at cursor position;'
+              '\n \t c to add CIRCULAR mask at cursor position;'
               '\n \t b to add BOX mask at cursor position;'
+              '\n \t g to grow the size of the current masks;'              
               '\n \t o if target is off center (and program is removing the wrong object);'
               #'\n \t s to change the size of the mask box;'
               #'\n \t t to adjust SE threshold (0=lots, 1=no deblend );'
               #'\n \t n to adjust SE SNR; '
               '\n \t h to print this menu; '
-              '\n \t s to save output;'
+              '\n \t w to write the mask image;'
               #'\n \t q to quit \n \n'
               'Display shortcuts (click on image to adjust):'
               '\n \t scroll = zoom'
               '\n \t ` = zoom to fit'
-              '\n \t ALT-right_click = adjust contrast \n \n'
+              '\n \t space+s = enable contrast adjustment, click+drag, scroll wheel'
+              '\n \t a = automatically set contrast'              
+              #'\n \t ALT-right_click = adjust contrast \n \n'
               'Click Red X to close window')
 
 
@@ -507,12 +510,6 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
     def save_mask(self):
         #super(maskwindow,self).mask_saved(event)
         print('saving mask: ',self.mask_image)
-        #newfile = fits.PrimaryHDU()
-        #newfile.data = self.maskdat
-        #newfile.header = self.imheader
-        #fits.writeto(self.mask_image, newfile.data, header = newfile.header, overwrite=True)
-
-        # send message to main program that the mask is updated
         fits.writeto(self.mask_image, self.maskdat, header = self.imheader, overwrite=True)
         if not self.auto:
             self.mask_saved.emit(self.mask_image)

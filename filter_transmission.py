@@ -19,7 +19,7 @@ class filter_trace():
         '''
         # read in filter trace
         # assume github directory is off main dir
-        self.hafilter = filter
+        self.hafilter = hafilter
         if filterpath == None:
             self.filterpath = os.getenv('HOME')+'/github/halphagui/filter_traces/'
         else:
@@ -100,10 +100,12 @@ class filter_trace():
         correction = self.maxtrans/transmission
         plt.figure()
         plt.plot(self.wave, self.trans/10,'k-')
-        plt.hist(wave, bins=10)
+        plt.hist(wave, bins=5)
         plt.xlim((self.minz_trans10+1)*wave_halpha-50,(self.maxz_trans10+1)*wave_halpha+50)
         plt.xlabel('Wavelength (Angstrom)')
         plt.ylabel('Transmission %/10')
+        titlestring = 'Halpha Filter = {}'.format(self.hafilter)
+        plt.title(titlestring)
         #plt.show()
         plt.savefig('galaxies_in_filter.png')
         return correction

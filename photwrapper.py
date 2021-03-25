@@ -655,7 +655,10 @@ class ellipse():
         ### FROM ADU/S TO PHYSICAL UNITS
         ###########################################################
         '''
-        self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
+        try:
+            self.pixel_scale = abs(float(self.header['PIXSCAL1'])) # in deg per pixel
+        except KeyError:
+            self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
         try:
             self.magzp = float(self.header['PHOTZP'])
 
