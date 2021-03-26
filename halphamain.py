@@ -1979,7 +1979,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             t = Time(t,format='decimalyear')
         except KeyError:
             # try format expected for INT data
-            t = Time(header['DATE-OBS'],format='isot')
+            try:
+                t = Time(header['DATE-OBS'],format='isot')
+            except KeyError:
+                # putting in a place holder b/c older (2017)
+                # HDI coadds don't have epoch in the header.
+                t = Time('2017-05-20T00:00:00.0',format='isot')
         dateobs = t.iso.split()[0]
 
         # get instrument
