@@ -39,7 +39,7 @@ coadd_image_directory = args.coaddir
 
 
 
-filters = ['r','Halpha','Ha6657','ha4','R','Ha']
+filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4']
 #saturate_level = [100,30,30]
 
 for i,f in enumerate(filters):
