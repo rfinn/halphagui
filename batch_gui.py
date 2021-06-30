@@ -22,6 +22,7 @@ parser.add_argument('--coaddir',dest = 'coaddir', default ='/home/rfinn/data/red
 parser.add_argument('--hdi',dest = 'hdi', default =False, action='store_true', help = 'set this for HDI data.  it will grab the filenames according to the HDI naming convention for the coadded images.')
 parser.add_argument('--mosaic',dest = 'mosaic', default =False, action='store_true', help = "set this for Mosaic data.  it will grab the filenames according to Becky's naming convention for the coadded images.")
 parser.add_argument('--bok',dest = 'bok', default =False, action='store_true', help = "set this for Bok 90prime data.  it will grab the filenames according to naming convention for the 90Prime images.")
+parser.add_argument('--psfdir',dest = 'psfdir', default='/home/rfinn/data/reduced/psf-images/', help = "directory containing PSF images.  Default is /home/rfinn/data/reduced/psf-images/, which is for laptop.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
 
 args = parser.parse_args()
 
@@ -167,7 +168,7 @@ for rimage in flist1: # loop through list
             prefix = 'v19'+pointing
         print('prefix = ',prefix)
         #command_string = 'python ~/github/HalphaImaging/python3/INT_align_images.py --image1 {} --image2 {} --weight2 {}'.format(haimage,rimage,rweightimage)
-        command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir /home/rfinn/data/reduced/psf-images/ --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --prefix {} --auto'.format(rimage,haimage,hfilter,prefix)
+        command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
 
         # check to see if shifted r-band image exists.  if 
         try:
