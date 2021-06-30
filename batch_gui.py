@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser(description ='run the halpha gui in automatic m
 parser.add_argument('--coaddir',dest = 'coaddir', default ='/home/rfinn/data/reduced/virgo-coadds-feb2019-int/', help = 'directory for coadds. Default is /home/rfinn/data/reduced/virgo-coadds/feb2019-int/')
 parser.add_argument('--hdi',dest = 'hdi', default =False, action='store_true', help = 'set this for HDI data.  it will grab the filenames according to the HDI naming convention for the coadded images.')
 parser.add_argument('--mosaic',dest = 'mosaic', default =False, action='store_true', help = "set this for Mosaic data.  it will grab the filenames according to Becky's naming convention for the coadded images.")
+parser.add_argument('--bok',dest = 'bok', default =False, action='store_true', help = "set this for Bok 90prime data.  it will grab the filenames according to naming convention for the 90Prime images.")
 
 args = parser.parse_args()
 
@@ -39,6 +40,8 @@ if args.hdi:
     flist1 = flista + flistb
 elif args.mosaic:
     flist1 = glob.glob(imagedir+'n*R.fits')
+elif args.bok:
+    flist1 = glob.glob(imagedir+'VF-*r.fits')
 else: # assume INT
     flist1 = glob.glob(imagedir+'VF-*r-shifted.fits')
 working_dir = os.getcwd()
@@ -97,6 +100,14 @@ for rimage in flist1: # loop through list
         dirname = os.path.dirname(rimage)
         coadds = glob.glob(rootname+'*.fits')
 
+    elif args.bok:
+        rootname = rimage.split('-r')[0]
+        rweightimage = rootname+'-r.weight.fits'
+
+        # last entry is the pointing name - VFIDXXXX for the case of the Bok data
+        pointing = rootname.split('-')[-1]
+        dirname = os.path.dirname(rimage)
+        coadds = glob.glob(dirname+'/VF*'+pointing+'*.fits')
     else:
         rootname = rimage.split('-r')[0]
         rweightimage = rootname+'-r.weight.fits'
@@ -131,6 +142,12 @@ for rimage in flist1: # loop through list
             hfilter = '4'
             print('haimage = ',c)            
             #print('matching ha image: ',haimage)
+        
+        elif (c.find('-Ha4') > -1) & (c.find('weight') < 0):
+            haimage = c
+            hfilter = '4'
+            print('haimage = ',c)            
+            
         elif (c.find('Ha.fits') > -1) & (c.find('weight') < 0):
             haimage = c
             hfilter = '4'
@@ -141,7 +158,9 @@ for rimage in flist1: # loop through list
         if args.hdi:
             prefix = os.path.basename(rootname)
             #prefix = None
-        if args.mosaic:
+        elif args.mosaic:
+            prefix = os.path.basename(rootname)
+        elif args.bok:
             prefix = os.path.basename(rootname)
             #prefix = None
         else:
