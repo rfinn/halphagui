@@ -599,7 +599,8 @@ if __name__ == "__main__":
     parser.add_argument('--image',dest = 'image', default=None,help='r-band image')
     parser.add_argument('--haimage',dest = 'haimage', default=None,help='this is typically the continuum-subtracted Halpha image.  If no image is provided, the middle panel is left blank.')
     parser.add_argument('--sepath',dest = 'sepath', default=None,help='path to source extractor config files (e.g. ~/github/HalphaImaging/astromatic/ - this is default if no path is given.)')
-    parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')    
+    parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')
+    parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')        
         
     args = parser.parse_args()
     
@@ -608,7 +609,7 @@ if __name__ == "__main__":
     #MainWindow = QtWidgets.QMainWindow()
     MainWindow = QtWidgets.QWidget()
     if args.image is not None:
-        ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config)
+        ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
     else:
         ui = maskwindow(MainWindow, logger)
     #ui.setupUi(MainWindow)
