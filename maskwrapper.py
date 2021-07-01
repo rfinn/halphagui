@@ -325,7 +325,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
 
     def show_mask(self):
-        if self.nods9:
+        if self.nods9 & (not self.auto):
             plt.close('all')
             self.fig = plt.figure(1,figsize=self.figure_size)
             plt.clf()
@@ -339,7 +339,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             plt.title('mask')
             plt.gca().set_yticks(())
             #plt.draw()
-            plt.show(block=False)
+            #plt.show(block=False)
 
     def key_press_func(self,text):
         key, x, y = text.split(',')
@@ -607,15 +607,22 @@ if __name__ == "__main__":
     logger = log.get_logger("masklog", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     #MainWindow = QtWidgets.QMainWindow()
-    MainWindow = QtWidgets.QWidget()
+        
     if args.image is not None:
-        ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
+        if not args.auto:
+            #print('got here 1')
+            MainWindow = QtWidgets.QWidget()
+            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
+        else:
+            #print('got here 2')
+            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
     else:
+        #print('got here 3')
         ui = maskwindow(MainWindow, logger)
     #ui.setupUi(MainWindow)
     #ui.test()
-
-    MainWindow.show()
-    sys.exit(app.exec_())
+    if not args.auto:
+        MainWindow.show()
+        sys.exit(app.exec_())
 
     
