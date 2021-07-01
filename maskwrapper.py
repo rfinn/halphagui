@@ -375,7 +375,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             print('did not understand that.  \n Try again!')
         
     def print_help_menu(self):
-        print('Click on mask or r/ha image, then enter:\n \t r to remove object in mask at the cursor position;'
+        print('Click on mask or r/ha image, then enter:\n \t r = remove object in mask at the cursor position;'
               '\n \t c = add CIRCULAR mask at cursor position;'
               '\n \t b = add BOX mask at cursor position;'
               '\n \t g = grow the size of the current masks;'              
@@ -394,7 +394,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
               '\n \t space   = exit contrast adjustment'              
               '\n \t a       = automatically set contrast'              
               #'\n \t ALT-right_click = adjust contrast \n \n'
-              'Click Red X to close window')
+              '\n \t Click Red X to close window')
 
 
     def add_box_object(self):
