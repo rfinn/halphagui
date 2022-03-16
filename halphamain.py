@@ -1325,7 +1325,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             try:
                 self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
             except KeyError:
-                self.pixelscale = np.abs(float(self.r_header['CDELT1']))*3600. # Siena pipeline from astronometry.net
+                self.pixelscale = np.abs(float(self.r_header['PC1_1']))*3600. # Siena pipeline from astronometry.net
         #self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600          
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
