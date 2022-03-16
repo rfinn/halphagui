@@ -35,6 +35,11 @@ class filter_trace():
             filterfile = self.filterpath+'/wfc-int-227-ha6657.txt'
             wavescale=10
             pass
+        elif hafilter == 'sienaha':
+            # wavelength in nm, transmission in percent
+            filterfile = self.filterpath+'/chroma-halpha-transmission-ascii.txt'
+            wavescale=10
+            pass
         else:
             filterfile = self.filterpath+'/ha'+str(hafilter)+'-sim04.txt'
         tab = ascii.read(filterfile)

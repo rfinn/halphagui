@@ -1498,6 +1498,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
         self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('inthalpha'))
         self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('intha6657'))
+        self.ui.actionsienaha.triggered.connect(lambda: self.set_hafilter('sienaha'))        
     def set_hafilter(self,filterid):
         #print('setting ha filter to ',filterid)
         self.hafilter = filterid

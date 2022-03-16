@@ -394,7 +394,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
               '\n \t space   = exit contrast adjustment'              
               '\n \t a       = automatically set contrast'              
               #'\n \t ALT-right_click = adjust contrast \n \n'
-              '\n \t Click Red X to close window')
+              '\n\nClick Red X to close window')
 
 
     def add_box_object(self):
