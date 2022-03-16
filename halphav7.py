@@ -326,6 +326,7 @@ class Ui_MainWindow(object):
         self.actionintha6657.setFont(font)
         self.actionintha6657.setObjectName("actionintha6657")
         self.actionsienaha = QtWidgets.QAction(MainWindow)
+        self.actionsienaha.setCheckable(True)
         self.actionsienaha.setObjectName("actionsienaha")
         self.menuSetup.addAction(self.actionR_coadd)
         self.menuSetup.addAction(self.actionHa_coadd_2)
