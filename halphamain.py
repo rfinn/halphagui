@@ -1367,7 +1367,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         try:
             self.pixelscale = abs(float(self.r_header['PIXSCAL1'])) # in deg per pixel
         except KeyError:
-            self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+            try:
+                self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+            except KeyError:
+                self.pixelscale = abs(float(self.r_header['PC1_1']))*3600. # in deg per pixel
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
         # check for weight image
