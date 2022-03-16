@@ -325,8 +325,8 @@ class Ui_MainWindow(object):
         font.setPointSize(7)
         self.actionintha6657.setFont(font)
         self.actionintha6657.setObjectName("actionintha6657")
-        self.actionsiena_halpha = QtWidgets.QAction(MainWindow)
-        self.actionsiena_halpha.setObjectName("actionsiena_halpha")
+        self.actionsienaha = QtWidgets.QAction(MainWindow)
+        self.actionsienaha.setObjectName("actionsienaha")
         self.menuSetup.addAction(self.actionR_coadd)
         self.menuSetup.addAction(self.actionHa_coadd_2)
         self.menuSetup.addAction(self.actionNSA_catalog_path)
@@ -339,7 +339,7 @@ class Ui_MainWindow(object):
         self.menuHalpha_Filter.addAction(self.actionhalpha16)
         self.menuHalpha_Filter.addAction(self.actioninthalpha)
         self.menuHalpha_Filter.addAction(self.actionintha6657)
-        self.menuHalpha_Filter.addAction(self.actionsiena_halpha)
+        self.menuHalpha_Filter.addAction(self.actionsienaha)
         self.menubar.addAction(self.menuSetup.menuAction())
         self.menubar.addAction(self.menuHalpha_Filter.menuAction())
 
@@ -397,7 +397,7 @@ class Ui_MainWindow(object):
         self.actionAGC_catalog_path.setText(_translate("MainWindow", "AGC catalog path"))
         self.actioninthalpha.setText(_translate("MainWindow", "int-halpha"))
         self.actionintha6657.setText(_translate("MainWindow", "int-ha6657"))
-        self.actionsiena_halpha.setText(_translate("MainWindow", "siena-halpha"))
+        self.actionsienaha.setText(_translate("MainWindow", "siena-halpha"))
 
 
 if __name__ == "__main__":

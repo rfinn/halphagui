@@ -432,7 +432,7 @@
     <addaction name="actionhalpha16"/>
     <addaction name="actioninthalpha"/>
     <addaction name="actionintha6657"/>
-    <addaction name="actionsiena_halpha"/>
+    <addaction name="actionsienaha"/>
    </widget>
    <addaction name="menuSetup"/>
    <addaction name="menuHalpha_Filter"/>
@@ -628,7 +628,7 @@
     </font>
    </property>
   </action>
-  <action name="actionsiena_halpha">
+  <action name="actionsienaha">
    <property name="text">
     <string>siena-halpha</string>
    </property>
