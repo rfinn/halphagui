@@ -1649,7 +1649,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
-        try:
+        keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)         try:
             print('min and max redshift = ',self.zmin,self.zmax)
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
             
