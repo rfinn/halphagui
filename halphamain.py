@@ -1652,6 +1652,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         try:
             print('min and max redshift = ',self.zmin,self.zmax)
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+            
         except AttributeError:
             print('problem finding galaxies.')
             print('make sure you selected a filter!')
@@ -2734,11 +2735,14 @@ class galaxy_catalog():
             self.cat.rename_column('decdeg','DEC')            
             
     def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,weight_image=None, agcflag=False,virgoflag=False):
+
+        print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
 
         px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
+        print('in galaxies_in_fov: px={},py={}'.format(px,py))
         onimageflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
         print('number of galaxies on image, before z cut = ',sum(onimageflag))
         try:
