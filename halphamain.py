@@ -23,7 +23,7 @@ import platform
 #from PyQt5.Qtcore import  Qt
 from PyQt5 import QtCore,QtWidgets, QtGui
 #from ginga.qtw.QtHelp import QtGui #, QtCore
-from halphav5 import Ui_MainWindow
+from halphav7 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
 #from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
 from ginga import colors
