@@ -1477,6 +1477,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         else:
             self.nsa_fname = fname[0]
             self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
+        print('Got NSA catalog with {} lines!'.format(len(self.nsa))
         #self.le.setPixmap(QPixmap(fname))
     def getagcfile(self):
         fname = QtWidgets.QFileDialog.getOpenFileName()
