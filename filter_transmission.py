@@ -35,11 +35,18 @@ class filter_trace():
             filterfile = self.filterpath+'/wfc-int-227-ha6657.txt'
             wavescale=10
             pass
+        elif hafilter == 'sienaha':
+            # wavelength in nm, transmission in percent
+            filterfile = self.filterpath+'/chroma-halpha-transmission-ascii.txt'
+            wavescale=10
+            pass
         else:
             filterfile = self.filterpath+'/ha'+str(hafilter)+'-sim04.txt'
         tab = ascii.read(filterfile)
         self.wave = tab['col1']*wavescale # wavelength in angstrom
         self.trans = tab['col2'] # transmission percent
+        if hafilter == 'sienaha':
+            self.trans = 100*self.trans
         self.maxtrans = np.max(self.trans)
         # get wavelengths where transmission crosses 10 percent level
         ids = np.where(self.trans > 10.)

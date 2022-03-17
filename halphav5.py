@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(971, 566)
+        MainWindow.resize(1124, 625)
         font = QtGui.QFont()
         font.setPointSize(10)
         MainWindow.setFont(font)
@@ -210,7 +210,7 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 971, 20))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1124, 22))
         self.menubar.setObjectName("menubar")
         self.menuSetup = QtWidgets.QMenu(self.menubar)
         self.menuSetup.setObjectName("menuSetup")
@@ -266,6 +266,9 @@ class Ui_MainWindow(object):
         self.actionintha6657 = QtWidgets.QAction(MainWindow)
         self.actionintha6657.setCheckable(True)
         self.actionintha6657.setObjectName("actionintha6657")
+        self.actionsienaha = QtWidgets.QAction(MainWindow)
+        self.actionsienaha.setCheckable(True)
+        self.actionsienaha.setObjectName("actionsienaha")
         self.menuSetup.addAction(self.actionR_coadd)
         self.menuSetup.addAction(self.actionHa_coadd_2)
         self.menuSetup.addAction(self.actionNSA_catalog_path)
@@ -278,6 +281,7 @@ class Ui_MainWindow(object):
         self.menuHalpha_Filter.addAction(self.actionhalpha16)
         self.menuHalpha_Filter.addAction(self.actioninthalpha)
         self.menuHalpha_Filter.addAction(self.actionintha6657)
+        self.menuHalpha_Filter.addAction(self.actionsienaha)
         self.menubar.addAction(self.menuSetup.menuAction())
         self.menubar.addAction(self.menuHalpha_Filter.menuAction())
 
@@ -335,6 +339,7 @@ class Ui_MainWindow(object):
         self.actionAGC_catalog_path.setText(_translate("MainWindow", "AGC catalog path"))
         self.actioninthalpha.setText(_translate("MainWindow", "int-halpha"))
         self.actionintha6657.setText(_translate("MainWindow", "int-ha6657"))
+        self.actionsienaha.setText(_translate("MainWindow", "siena-halpha"))
 
 
 if __name__ == "__main__":

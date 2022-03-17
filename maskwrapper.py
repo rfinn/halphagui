@@ -325,7 +325,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
 
     def show_mask(self):
-        if self.nods9:
+        if self.nods9 & (not self.auto):
             plt.close('all')
             self.fig = plt.figure(1,figsize=self.figure_size)
             plt.clf()
@@ -339,7 +339,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             plt.title('mask')
             plt.gca().set_yticks(())
             #plt.draw()
-            plt.show(block=False)
+            #plt.show(block=False)
 
     def key_press_func(self,text):
         key, x, y = text.split(',')
@@ -375,7 +375,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             print('did not understand that.  \n Try again!')
         
     def print_help_menu(self):
-        print('Click on mask or r/ha image, then enter:\n \t r to remove object in mask at the cursor position;'
+        print('Click on mask or r/ha image, then enter:\n \t r = remove object in mask at the cursor position;'
               '\n \t c = add CIRCULAR mask at cursor position;'
               '\n \t b = add BOX mask at cursor position;'
               '\n \t g = grow the size of the current masks;'              
@@ -394,7 +394,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
               '\n \t space   = exit contrast adjustment'              
               '\n \t a       = automatically set contrast'              
               #'\n \t ALT-right_click = adjust contrast \n \n'
-              'Click Red X to close window')
+              '\n\nClick Red X to close window')
 
 
     def add_box_object(self):
@@ -599,22 +599,30 @@ if __name__ == "__main__":
     parser.add_argument('--image',dest = 'image', default=None,help='r-band image')
     parser.add_argument('--haimage',dest = 'haimage', default=None,help='this is typically the continuum-subtracted Halpha image.  If no image is provided, the middle panel is left blank.')
     parser.add_argument('--sepath',dest = 'sepath', default=None,help='path to source extractor config files (e.g. ~/github/HalphaImaging/astromatic/ - this is default if no path is given.)')
-    parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')    
+    parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')
+    parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')        
         
     args = parser.parse_args()
     
     logger = log.get_logger("masklog", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     #MainWindow = QtWidgets.QMainWindow()
-    MainWindow = QtWidgets.QWidget()
+        
     if args.image is not None:
-        ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config)
+        if not args.auto:
+            #print('got here 1')
+            MainWindow = QtWidgets.QWidget()
+            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
+        else:
+            #print('got here 2')
+            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
     else:
+        #print('got here 3')
         ui = maskwindow(MainWindow, logger)
     #ui.setupUi(MainWindow)
     #ui.test()
-
-    MainWindow.show()
-    sys.exit(app.exec_())
+    if not args.auto:
+        MainWindow.show()
+        sys.exit(app.exec_())
 
     

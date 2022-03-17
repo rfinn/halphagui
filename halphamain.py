@@ -1322,7 +1322,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         try:
             self.pixelscale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
         except KeyError:
-            self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
+            try:
+                self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
+            except KeyError:
+                self.pixelscale = np.abs(float(self.r_header['PC1_1']))*3600. # Siena pipeline from astronometry.net
         #self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600          
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
@@ -1364,7 +1367,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         try:
             self.pixelscale = abs(float(self.r_header['PIXSCAL1'])) # in deg per pixel
         except KeyError:
-            self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+            try:
+                self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+            except KeyError:
+                self.pixelscale = abs(float(self.r_header['PC1_1']))*3600. # in deg per pixel
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
 
         # check for weight image
@@ -1471,6 +1477,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         else:
             self.nsa_fname = fname[0]
             self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
+        print('Got NSA catalog with {} lines!'.format(len(self.nsa.cat)))
+        self.defcat = self.nsa
         #self.le.setPixmap(QPixmap(fname))
     def getagcfile(self):
         fname = QtWidgets.QFileDialog.getOpenFileName()
@@ -1492,6 +1500,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
         self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('inthalpha'))
         self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('intha6657'))
+        self.ui.actionsienaha.triggered.connect(lambda: self.set_hafilter('sienaha'))        
     def set_hafilter(self,filterid):
         #print('setting ha filter to ',filterid)
         self.hafilter = filterid
@@ -1641,8 +1650,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+        keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
         try:
+            print('min and max redshift = ',self.zmin,self.zmax)
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+            
         except AttributeError:
             print('problem finding galaxies.')
             print('make sure you selected a filter!')
@@ -2729,11 +2741,14 @@ class galaxy_catalog():
             self.cat.rename_column('decdeg','DEC')            
             
     def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,weight_image=None, agcflag=False,virgoflag=False):
+
+        print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
 
         px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
+        print('in galaxies_in_fov: px={},py={}'.format(px,py))
         onimageflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
         print('number of galaxies on image, before z cut = ',sum(onimageflag))
         try:

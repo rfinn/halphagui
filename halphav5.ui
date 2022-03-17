@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>971</width>
-    <height>566</height>
+    <width>1124</width>
+    <height>625</height>
    </rect>
   </property>
   <property name="font">
@@ -364,8 +364,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>971</width>
-     <height>20</height>
+     <width>1124</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSetup">
@@ -389,6 +389,7 @@
     <addaction name="actionhalpha16"/>
     <addaction name="actioninthalpha"/>
     <addaction name="actionintha6657"/>
+    <addaction name="actionsienaha"/>
    </widget>
    <addaction name="menuSetup"/>
    <addaction name="menuHalpha_Filter"/>
@@ -526,6 +527,14 @@
    </property>
    <property name="text">
     <string>int-ha6657</string>
+   </property>
+  </action>
+  <action name="actionsienaha">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>siena-halpha</string>
    </property>
   </action>
  </widget>
