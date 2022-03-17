@@ -1998,39 +1998,43 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             instrument='WFC'
 
         # read in object
-        o = header['OBJECT']        
-        try:
+        o = header['OBJECT']
+        if instrument == '90prime':
+            # this should be the VFID of the primary target
+            pointing = o.split('_')[0]
+        else:
+            try:
 
-            if (o.find('197') > -1) | (o.find('227') > -1): #INT, may data
-                pnumber = o.split('-')[1]
-            else:
-                # try to identify format
-                #print(o,len(o))
-                print(o)
-                if len(o.split()) > 1:
-                    split_string=' '
-                    #print('object names contain ',split_string)        
-                elif len(o.split('-')) > 1:
-                    split_string='-'
-                    #print('object names contain ',split_string)
-                elif len(o.split('_')) > 1:
-                    split_string='_'
-                    #print('object names contain ',split_string)                     
-                pnumber = int(o.split(split_string)[1])
-                print('testing')
-            if (o.find('lm') > -1)| (o.find('LM') > -1):
-                # low-mass pointing
-                prefix = "lmp"
-            else:
-                prefix = "p"
+                if (o.find('197') > -1) | (o.find('227') > -1): #INT, may data
+                    pnumber = o.split('-')[1]
+                else:
+                    # try to identify format
+                    #print(o,len(o))
+                    print(o)
+                    if len(o.split()) > 1:
+                        split_string=' '
+                        #print('object names contain ',split_string)        
+                    elif len(o.split('-')) > 1:
+                        split_string='-'
+                        #print('object names contain ',split_string)
+                    elif len(o.split('_')) > 1:
+                        split_string='_'
+                        #print('object names contain ',split_string)                     
+                    pnumber = int(o.split(split_string)[1])
+                    print('testing')
+                if (o.find('lm') > -1)| (o.find('LM') > -1):
+                    # low-mass pointing
+                    prefix = "lmp"
+                else:
+                    prefix = "p"
             
-            pointing = "{}{:03d}".format(prefix,pnumber)
+                pointing = "{}{:03d}".format(prefix,pnumber)
 
-        except ValueError:
-            pointing=self.rcoadd_fname.replace('R.fits','')
+            except ValueError:
+                pointing=self.rcoadd_fname.replace('R.fits','')
 
-        if self.rcoadd_fname.find('nNGC5846') > -1:
-            pointing = os.path.basename(self.rcoadd_fname.replace('R.fits',''))
+            if self.rcoadd_fname.find('nNGC5846') > -1:
+                pointing = os.path.basename(self.rcoadd_fname.replace('R.fits',''))
         # first pass of mask
         # radial profiles
         # save latest of mask
