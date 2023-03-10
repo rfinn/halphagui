@@ -109,7 +109,11 @@ class ellipse():
         self.image2_filter = image2_filter
         self.filter_ratio = filter_ratio
         # will use the gain to calculate the noise in the image
-        self.gain = self.header['GAIN']
+        try:
+            self.gain = self.header['GAIN']
+        except KeyError:
+            print("WARNING: no GAIN keyword in header. Setting gain=1")
+            self.gain = 1.
         self.psf = psf
         self.psf_ha = psf_ha
         # the mask should identify all pixels in the cutout image that are not
