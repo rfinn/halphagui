@@ -30,12 +30,12 @@ python -m venv venv
 
 To activate the new environment
 ```
-venv/bin/activate
+source venv/bin/activate
 ```
 To install the required modules, type:
 
 ```
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 To deactivate the virtual environment
 ```
