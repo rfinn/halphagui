@@ -26,6 +26,7 @@ REQUIRED MODULES:
 NOTES:
 - rewrote using a class
 
+# TODO: 2023-02-09: this program relies on source extractor.  I should rewrite to use photutils instead.
 '''
 
 import os
@@ -217,6 +218,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             self.add_cutout_frames()
         self.runse()
         if self.auto:
+            # grow mask 3x when running in auto mode
             self.grow_mask()
             self.grow_mask()
             self.grow_mask()
@@ -269,6 +271,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
     def display_mask(self):
         self.maskcutout.load_file(self.mask_image)
     def link_files(self):
+        # TODO: replace sextractor with photutils
         # these are the sextractor files that we need
         # set up symbolic links from sextractor directory to the current working directory
         sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
@@ -293,6 +296,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         return objNumber[0] # not sure why above line returns a list
 
     def runse(self,galaxy_id = None):
+        # TODO update this to implement running SE with two diff thresholds
         print('using a deblending threshold = ',self.threshold)
         print('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr_analysis)))
         os.system('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr)))
@@ -530,12 +534,11 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
             self.mask_saved.emit(self.mask_image)
     def grow_mask(self, size=7):
-        # convolve mask with top hat kernel
-        #kernel = Tophat2DKernel(5)
-        '''
+
+        """
         Convolution: one way to grow the mask is to convolve the image with a kernel
 
-        however, this does not preserve the pixels values of the original
+        however, this does not preserve the pixels value of the original
         object, which come from the sextractor segmentation image.
 
         if the user wants to remove an object, it's much easier to do this
@@ -550,7 +553,9 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
 
         Alternative is currently implemented.
         
-        '''
+        """
+        # convolve mask with top hat kernel
+        # kernel = Tophat2DKernel(5)
         #mykernel = np.ones([5,5])
         #kernel = CustomKernel(mykernel)
         #self.maskdat = convolve(self.maskdat, kernel)
