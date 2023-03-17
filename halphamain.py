@@ -53,7 +53,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from datetime import date
 import time

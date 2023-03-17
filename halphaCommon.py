@@ -7,7 +7,8 @@ from PyQt5 import QtCore,QtWidgets, QtGui
 
 #from halphav3 import Ui_MainWindow
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+#from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewMpl import ImageView
 from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log

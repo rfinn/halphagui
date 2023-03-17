@@ -24,7 +24,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 #from ginga.qtw.QtHelp import QtGui
 #from PyQt5 import QtCore
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+#from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+from ginga.mplw.ImageViewMpl import ImageView
 from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
 
