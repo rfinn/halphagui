@@ -32,7 +32,11 @@ To activate the new environment
 ```
 venv/bin/activate
 ```
+To install the required modules, type:
 
+```
+pip install requirements.txt
+```
 To deactivate the virtual environment
 ```
 (venv) $ deactivate
