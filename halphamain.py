@@ -84,13 +84,7 @@ lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
 
 # Force a specific toolkit on mac
 macos_ver = platform.mac_ver()[0]
-if len(macos_ver) > 0:
-    # change this to "pass" if you want to force a different backend
-    # On Mac OS X I found the default choice for matplotlib is not stable
-    # with ginga
-    matplotlib.use('Qt4Agg')
-else:
-    matplotlib.use('Qt5Agg')
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 
 ### code to measure galaxy sizes from photutils segmentation image
