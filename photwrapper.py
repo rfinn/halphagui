@@ -492,6 +492,8 @@ class ellipse():
     def fit_ellipse(self):
         ''' FIT ELLIPSE '''
         #
+        # create instance of photutils.Ellipse
+        # https://photutils.readthedocs.io/en/stable/isophote.html
         self.ellipse = Ellipse(self.masked_image, self.guess)
         self.isolist = self.ellipse.fit_image()#sfix_pa = True, step=.5)#, fix_eps=True, fix_center=True)
         self.table = self.isolist.to_table()
@@ -537,7 +539,7 @@ class ellipse():
             a = obj.semimajor_axis_sigma.value * r
             b = obj.semiminor_axis_sigma.value * r
             theta = obj.orientation.to(u.rad).value
-            print(theta)
+            #print(theta)
             apertures.append(EllipticalAperture(position, a, b, theta=theta))
     
         norm = ImageNormalize(stretch=SqrtStretch())
@@ -603,11 +605,13 @@ class ellipse():
         if self.image2_flag:
             self.flux2 = np.zeros(len(self.apertures_a),'f')
             self.flux2_err = np.zeros(len(self.apertures_a),'f')
+        self.allellipses = []
         for i in range(len(self.apertures_a)):
             #print('measure phot: ',self.xcenter, self.ycenter,self.apertures_a[i],self.apertures_b[i],self.theta)
             #,ai,bi,theta) for ai,bi in zip(a,b)]
             # EllipticalAperture takes rotation angle in radians, CCW from +x axis
             ap = EllipticalAperture((self.xcenter, self.ycenter),self.apertures_a[i],self.apertures_b[i],self.theta)#,ai,bi,theta) for ai,bi in zip(a,b)]
+            self.allellipses.append(ap)
 
             if self.mask_flag:
                 self.phot_table1 = aperture_photometry(self.image, ap, mask=self.boolmask)
@@ -625,6 +629,25 @@ class ellipse():
             if self.image2_flag:
                 self.flux2[i] = self.phot_table2['aperture_sum'][0]
                 self.flux2_err[i] = self.get_noise_in_aper(self.flux2[i], self.area[i])
+    def draw_phot_apertures(self):
+        ''' matplotlib plotting to show apertures   '''
+        tbl1 = self.cat.to_table()
+        cat = self.cat
+        r=3.
+        apertures = []
+        norm = ImageNormalize(stretch=SqrtStretch())
+        plt.figure()
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 8))
+        ax1.imshow(self.image, origin='lower', cmap='Greys_r', norm=norm)
+        ax1.set_title('Data')
+        #cmap = segm_deblend.make_cmap(random_state=12345)
+        ax2.imshow(self.segmentation.data, origin='lower')
+        ax2.set_title('Segmentation Image')
+        for aperture in self.allellipses:
+            aperture.plot(axes=ax1, color='white', lw=1.5)
+            aperture.plot(axes=ax2, color='white', lw=1.5)
+        plt.show()
+
     def calc_sb(self):
         # calculate surface brightness in each aperture
 
