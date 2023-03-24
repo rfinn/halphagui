@@ -690,6 +690,7 @@ class ellipse():
             self.magzp = float(self.header['PHOTZP'])
 
         except:
+            print("WARNING: no PHOTZP keyword in image header. \nAssuming ZP=22.5")
             self.magzp = 22.5
         print('mag zp = ',self.magzp)
         filter = self.header
