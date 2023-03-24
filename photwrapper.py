@@ -690,7 +690,7 @@ class ellipse():
             self.magzp = float(self.header['PHOTZP'])
 
         except:
-            self.magzp = 25.
+            self.magzp = 22.5
         print('mag zp = ',self.magzp)
         filter = self.header
         # multiply by bandwidth of filter to convert from Jy to erg/s/cm^2
