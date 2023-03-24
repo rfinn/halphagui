@@ -1294,9 +1294,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.setup_virgo_catalogs()
     def setup_virgo_catalogs(self):
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
-        self.vf_fname = self.tabledir+'vf_north_v1_main.fits'
+        #self.vf_fname = self.tabledir+'vf_north_v1_main.fits'
+        #self.nsa_fname = self.tabledir+'vf_north_v1_nsa_v0.fits'
+        # RF 2023-03-24: updating to use the v2 catalogs
+        self.vf_fname = self.tabledir+'vf_v2_main.fits'
+        self.nsa_fname = self.tabledir+'vf_v2_nsa_v0.fits'
         self.vf = galaxy_catalog(self.vf_fname,virgo=True)
-        self.nsa_fname = self.tabledir+'vf_north_v1_nsa_v0.fits'
+
         self.nsa = galaxy_catalog(self.nsa_fname,virgo=True)
         self.agcflag = False
         self.nsaflag = False
