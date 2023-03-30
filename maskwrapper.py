@@ -60,6 +60,9 @@ import matplotlib.pyplot as plt
 from maskWidget import Ui_Form as Ui_maskWindow
 from halphaCommon import cutout_image, circle_pixels
 
+from photutils import detect_threshold, detect_sources
+from photutils import source_properties
+
 defaultcat='default.sex.HDI.mask'
 
 class my_cutout_image(QtCore.QObject):#QtCore.QObject):
@@ -109,7 +112,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         self.fitsimage.set_image(image)
         #self.setWindowTitle(filepath)
 
-    # adding cursor readout so we can identify the pixel values to change
+        # adding cursor readout so we can identify the pixel values to change
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor
@@ -147,7 +150,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, config=None, threshold=0.05,snr=2,cmap='gist_heat_r',auto=False):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.05,snr=2,cmap='gist_heat_r',auto=False):
         self.auto = auto
         if MainWindow is None:
             self.auto = True
@@ -170,6 +173,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         #    haimage='MKW8-18216-CS.fits'
         if sepath == None:
             sepath=os.getenv('HOME')+'/github/halphagui/astromatic/'
+        if gaiapath == None:
+            gaiapath = os.path.join(os.getenv("HOME"),'/research/legacy/gaia-mask-dr9.virgo.fits')
         if config == None:
             config='default.sex.HDI.mask'
         self.image_name = image
@@ -178,6 +183,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         print(self.haimage_name)
         print(sepath)
         self.sepath = sepath
+        self.gaiapath = gaiapath
         self.config = config
         self.threshold = threshold
         self.snr = snr
@@ -270,64 +276,6 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
         self.display_mask()
     def display_mask(self):
         self.maskcutout.load_file(self.mask_image)
-    def link_files(self):
-        # TODO: replace sextractor with photutils
-        # these are the sextractor files that we need
-        # set up symbolic links from sextractor directory to the current working directory
-        sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
-        for file in sextractor_files:
-            os.system('ln -s '+self.sepath+'/'+file+' .')
-    def clean_links(self):
-        # clean up symbolic links to sextractor files
-        # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
-        sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
-        for file in sextractor_files:
-            os.system('unlink '+file)
-
-    def read_se_cat(self):
-        sexout=fits.getdata('test.cat')
-        self.xsex=sexout['XWIN_IMAGE']
-        self.ysex=sexout['YWIN_IMAGE']
-        self.fwhm = sexout['FWHM_IMAGE']
-        dist=np.sqrt((self.yc-self.ysex)**2+(self.xc-self.xsex)**2)
-        #   find object ID
-        objIndex=np.where(dist == min(dist))
-        objNumber=sexout['NUMBER'][objIndex]
-        return objNumber[0] # not sure why above line returns a list
-
-    def runse(self,galaxy_id = None):
-        # TODO update this to implement running SE with two diff thresholds
-        print('using a deblending threshold = ',self.threshold)
-        print('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr_analysis)))
-        os.system('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr)))
-        self.maskdat = fits.getdata('segmentation.fits')
-        # grow masked areas
-        bool_array = np.array(self.maskdat.shape,'bool')
-        #for i in range(len(self.xsex)):
-            
-            
-        if self.off_center_flag:
-            print('setting center object to objid ',self.galaxy_id)
-            self.center_object = self.galaxy_id
-        else:
-            self.center_object = self.read_se_cat()
-        self.maskdat[self.maskdat == self.center_object] = 0
-        # add back the square masked areas that the user added
-        self.maskdat = self.maskdat + self.usr_mask
-        # remove objects that have already been deleted by user
-        if len(self.deleted_objects) > 0:
-            for objID in self.deleted_objects:
-                self.maskdat[self.maskdat == objID] = 0.
-        # write out mask image
-        fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
-        invmask = self.maskdat > 0.
-        invmask = np.array(~invmask,'i')
-        fits.writeto(self.mask_inv_image,invmask,header = self.imheader,overwrite=True)
-        if not self.auto:
-            self.mask_saved.emit(self.mask_image)
-            self.display_mask()
-
-
     def show_mask(self):
         if self.nods9 & (not self.auto):
             plt.close('all')
@@ -533,6 +481,137 @@ class maskwindow(Ui_maskWindow, QtCore.QObject):
             self.print_menu()
             fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
             self.mask_saved.emit(self.mask_image)
+            
+class buildmask():
+    def link_files(self):
+        # TODO: replace sextractor with photutils
+        # these are the sextractor files that we need
+        # set up symbolic links from sextractor directory to the current working directory
+        sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
+        for file in sextractor_files:
+            os.system('ln -s '+self.sepath+'/'+file+' .')
+    def clean_links(self):
+        # clean up symbolic links to sextractor files
+        # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
+        sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
+        for file in sextractor_files:
+            os.system('unlink '+file)
+
+    def read_se_cat(self):
+        sexout=fits.getdata('test.cat')
+        self.xsex=sexout['XWIN_IMAGE']
+        self.ysex=sexout['YWIN_IMAGE']
+        self.fwhm = sexout['FWHM_IMAGE']
+        dist=np.sqrt((self.yc-self.ysex)**2+(self.xc-self.xsex)**2)
+        #   find object ID
+        objIndex=np.where(dist == min(dist))
+        objNumber=sexout['NUMBER'][objIndex]
+        return objNumber[0] # not sure why above line returns a list
+
+    def runse(self,galaxy_id = None):
+        # TODO update this to implement running SE with two diff thresholds
+        # TODO make an alternate function that creates segmentation image from photutils
+        # this is already done in ell
+        print('using a deblending threshold = ',self.threshold)
+        print('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr_analysis)))
+        os.system('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr)))
+        self.maskdat = fits.getdata('segmentation.fits')
+        # grow masked areas
+        bool_array = np.array(self.maskdat.shape,'bool')
+        #for i in range(len(self.xsex)):
+        # check to see if the object is not centered in the cutout
+        if self.off_center_flag:
+            print('setting center object to objid ',self.galaxy_id)
+            self.center_object = self.galaxy_id
+        else:
+            self.center_object = self.read_se_cat()
+        self.maskdat[self.maskdat == self.center_object] = 0
+        self.update_mask()
+    def update_mask(self):
+        self.add_user_masks()
+        self.add_gaia_stars()
+        self.write_mask()
+    def add_user_masks(self):
+        """ this adds back in the objects that the user has masked out """
+        # add back the square masked areas that the user added
+        self.maskdat = self.maskdat + self.usr_mask
+        # remove objects that have already been deleted by user
+        if len(self.deleted_objects) > 0:
+            for objID in self.deleted_objects:
+                self.maskdat[self.maskdat == objID] = 0.
+    def write_mask(self):
+        """ write out mask image """
+        fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
+        invmask = self.maskdat > 0.
+        invmask = np.array(~invmask,'i')
+        fits.writeto(self.mask_inv_image,invmask,header = self.imheader,overwrite=True)
+        if not self.auto:
+            self.mask_saved.emit(self.mask_image)
+            self.display_mask()
+
+    def add_gaia_stars(self):
+        """ 
+        mask out bright gaia stars using the legacy dr9 catalog and magnitude-radius relation:  
+        https://github.com/legacysurvey/legacypipe/blob/6d1a92f8462f4db9360fb1a68ef7d6c252781027/py/legacypipe/reference.py#L314-L319
+
+
+
+        """
+        # read in gaia catalog
+        brightstar = Table.read(self.gaiapath)
+        
+        # find stars on cutout
+        starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')
+        x,y = self.image_wcs.world_to_pixel(starcoord)
+        pscalex,pscaley = self.image_wcs.proj_plane_pixel_scales()
+        flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)        
+        if np.sum(flag) > 0:
+            # set up fake mask
+            self.gaia_mask = np.zeros_like(self.maskdat)
+            # add stars to mask according to the magnitude-radius relation
+            mag = brightstar['mag'][flag]
+            xstar = x[flag]
+            ystar = y[flag]
+            rad = brightstar['radius'][flag] # in degrees
+            radpixels = rad*pscalex
+            # convert radius to pixels
+            
+            mask_value = np.max(self.maskdat) + 1
+            for i in range(len(mag)):
+                # mask stars
+                pixel_mask = circle_pixels(float(xstar[i]),float(ystar[i]),float(radpixels[i]),self.xmax,self.ymax)
+
+                #print('xcursor, ycursor = ',self.xcursor, self.ycursor)
+                self.gaia_mask[pixel_mask] = mask_value*np.ones_like(self.gaia_mask)[pixel_mask]
+            # add gaia stars to main mask                
+            self.maskdat = self.maskdat + self.gaia_mask
+            self.write_mask()
+        else:
+            print("No bright stars on image - woo hoo!")
+
+
+    def detect_objects_photutil(self, snrcut=1.5,npixels=10):
+        ''' 
+        run photutils detect_sources to find objects in fov.  
+        you can specify the snrcut, and only pixels above this value will be counted.
+        
+        this also measures the sky noise as the mean of the threshold image
+        '''
+        if self.mask_flag:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
+            self.cat = source_properties(self.image, self.segmentation)
+        else:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
+            self.cat = source_properties(self.image, self.segmentation)
+        # get average sky noise per pixel
+        # threshold is the sky noise at the snrcut level, so need to divide by this
+        self.sky_noise = np.mean(self.threshold)/snrcut
+        #self.tbl = self.cat.to_table()
+
+
+    
     def grow_mask(self, size=7):
 
         """
