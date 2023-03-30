@@ -42,17 +42,7 @@ import numpy as np
 #import argparse
 #import pyds9
 from scipy.stats import scoreatpercentile
-from PyQt5 import QtCore, QtGui, QtWidgets
-#from PyQt5 import  QtWidgets
-#from ginga.qtw.QtHelp import QtGui
-#from PyQt5 import QtCore
-from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.mplw.ImageViewMpl import ImageView
-from ginga import colors
-from ginga.canvas.CanvasObject import get_canvas_types
 
-from ginga.misc import log
-from ginga.util.loader import load_data
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -64,6 +54,18 @@ from halphaCommon import cutout_image, circle_pixels
 
 from photutils import detect_threshold, detect_sources
 from photutils import source_properties
+
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
+from ginga.mplw.ImageViewMpl import ImageView
+from ginga import colors
+from ginga.canvas.CanvasObject import get_canvas_types
+
+from ginga.misc import log
+from ginga.util.loader import load_data
+
+import timeit
 
 defaultcat='default.sex.HDI.mask'
 
@@ -114,7 +116,7 @@ class buildmask():
         self.update_mask()
     def update_mask(self):
         self.add_user_masks()
-        self.add_gaia_stars()
+        self.add_gaia_masks()
         self.write_mask()
     def add_user_masks(self):
         """ this adds back in the objects that the user has masked out """
@@ -133,7 +135,12 @@ class buildmask():
         if not self.auto:
             self.mask_saved.emit(self.mask_image)
             self.display_mask()
-
+    def add_gaia_masks(self):
+        # check to see if gaia stars were already masked
+        if self.gaia_mask is None:
+            self.add_gaia_stars()
+        else:
+            self.maskdat += self.gaia_mask
     def add_gaia_stars(self):
         """ 
         mask out bright gaia stars using the legacy dr9 catalog and magnitude-radius relation:  
@@ -142,6 +149,9 @@ class buildmask():
 
 
         """
+        # set up blank
+        self.gaia_mask = np.zeros_like(self.maskdat)
+         
         # read in gaia catalog
         brightstar = Table.read(self.gaiapath)
         
@@ -153,29 +163,29 @@ class buildmask():
         #pscale = pscalex.deg * 3600 # pixel scale in arcsec
         flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)        
         if np.sum(flag) > 0:
-            # set up fake mask
-            self.gaia_mask = np.zeros_like(self.maskdat)
             # add stars to mask according to the magnitude-radius relation
             mag = brightstar['mag'][flag]
             xstar = x[flag]
             ystar = y[flag]
             rad = brightstar['radius'][flag] # in degrees
-            radpixels = rad*pscalex.value
-            print(x,y,rad)
+            radpixels = rad/pscalex.value
+            print(xstar,ystar,rad)
 
 
             # convert radius to pixels
             
-            mask_value = np.max(self.maskdat) + 1
+            mask_value = np.max(self.maskdat) + 200 # use the same value for all gaia stars
+            print('mask value = ',mask_value)
             for i in range(len(mag)):
                 # mask stars
+                print(f"star {i}: {xstar[i]:.1f},{ystar[i]:.1f},{radpixels[i]:.1f}")
                 pixel_mask = circle_pixels(float(xstar[i]),float(ystar[i]),float(radpixels[i]),self.xmax,self.ymax)
-
+                #print(f"number of pixels masked for star {i} = {np.sum(pixel_mask)}")
                 #print('xcursor, ycursor = ',self.xcursor, self.ycursor)
                 self.gaia_mask[pixel_mask] = mask_value*np.ones_like(self.gaia_mask)[pixel_mask]
+
             # add gaia stars to main mask                
             self.maskdat = self.maskdat + self.gaia_mask
-            self.write_mask()
         else:
             print("No bright stars on image - woo hoo!")
 
@@ -187,19 +197,27 @@ class buildmask():
         
         this also measures the sky noise as the mean of the threshold image
         '''
-        if self.mask_flag:
-            self.threshold = detect_threshold(self.image, nsigma=snrcut)
-            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
-            self.cat = source_properties(self.image, self.segmentation)
-        else:
-            self.threshold = detect_threshold(self.image, nsigma=snrcut)
-            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
-            self.cat = source_properties(self.image, self.segmentation)
+        self.threshold = detect_threshold(self.image, nsigma=snrcut)
+        self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
+        self.cat = source_properties(self.image, self.segmentation)
         # get average sky noise per pixel
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
         #self.tbl = self.cat.to_table()
 
+        if self.off_center_flag:
+            print('setting center object to objid ',self.galaxy_id)
+            self.center_object = self.galaxy_id
+        else:
+            dist=np.sqrt((self.yc-self.ysex)**2+(self.xc-self.xsex)**2)
+            #   find object ID
+            objIndex=np.where(dist == min(dist))
+            objNumber=sexout['NUMBER'][objIndex]
+            objNumber[0] # not sure why above line returns a list
+
+            self.center_object = self.read_se_cat()
+        self.maskdat[self.maskdat == self.center_object] = 0
+        self.update_mask()
 
     
     def grow_mask(self, size=7):
@@ -229,6 +247,9 @@ class buildmask():
         #kernel = CustomKernel(mykernel)
         #self.maskdat = convolve(self.maskdat, kernel)
         #self.maskdat = np.ceil(self.maskdat)
+
+        # we don't want to grow the size of the gaia stars, do we???
+        self.maskdat -= self.gaia_mask
         nx,ny = self.maskdat.shape
         masked_pixels = np.where(self.maskdat > 0.)
         for i,j in zip(masked_pixels[0], masked_pixels[1]):
@@ -244,6 +265,8 @@ class buildmask():
                 continue
             #print(i,j,rowmin, rowmax, colmin, colmax)
             self.maskdat[rowmin:rowmax,colmin:colmax] = self.maskdat[i,j]*np.ones([rowmax-rowmin,colmax-colmin])
+        # add back in the gaia star masks
+        self.maskdat += self.gaia_mask
         if not self.auto:
             self.display_mask()
         # save convolved mask as new mask
@@ -375,6 +398,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         print(sepath)
         self.sepath = sepath
         self.gaiapath = gaiapath
+        self.gaia_mask = None
         self.config = config
         self.threshold = threshold
         self.snr = snr
@@ -413,7 +437,13 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.link_files()
         if not self.auto:
             self.add_cutout_frames()
+
+        # time how long it takes to run SE
+        t_0 = timeit.default_timer()        
         self.runse()
+        t_1 = timeit.default_timer()
+        print(f"\ttime to run se: {round((t_1-t_0),3)} sec")
+        
         if self.auto:
             # grow mask 3x when running in auto mode
             self.grow_mask()
@@ -704,6 +734,7 @@ if __name__ == "__main__":
         
     if args.image is not None:
         if not args.auto:
+            
             #print('got here 1')
             MainWindow = QtWidgets.QWidget()
             ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto)

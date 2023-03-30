@@ -1002,7 +1002,11 @@ if __name__ == '__main__':
     #mask = 'MKW8-18037-R-mask.fits'
     #image = 'r-18045-R.fits'
     #mask = 'r-18045-R-mask.fits'
-    e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter=myfilter, filter_ratio=myratio)
+    try:
+        e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter=myfilter, filter_ratio=myratio)
+    except FileNotFoundError:
+        print("so sorry, but no images were loaded")
+        print("try e = ellipse(imagename) to start")
     ## print('detect objects')
     ## e.detect_objects()
     ## print('find central')
