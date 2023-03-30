@@ -715,7 +715,7 @@ if __name__ == "__main__":
         ui = maskwindow(MainWindow, logger)
     #ui.setupUi(MainWindow)
     #ui.test()
-    if not args.auto:
+    if not args.auto: 
         MainWindow.show()
         sys.exit(app.exec_())
 
