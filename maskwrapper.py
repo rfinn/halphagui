@@ -358,15 +358,15 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
 
         ###  The lines below are for testing purposes
         ###  and should be removed before release.
-        if image == None:
+        if image is None:
             image='MKW8-18216-R.fits'
         #if haimage == None:
         #    haimage='MKW8-18216-CS.fits'
-        if sepath == None:
+        if sepath is None:
             sepath=os.getenv('HOME')+'/github/halphagui/astromatic/'
-        if gaiapath == None:
+        if gaiapath is None:
             gaiapath = os.getenv("HOME")+'/research/legacy/gaia-mask-dr9.virgo.fits'
-        if config == None:
+        if config is None:
             config='default.sex.HDI.mask'
         self.image_name = image
         self.haimage_name = haimage
@@ -706,10 +706,10 @@ if __name__ == "__main__":
         if not args.auto:
             #print('got here 1')
             MainWindow = QtWidgets.QWidget()
-            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
+            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto)
         else:
             #print('got here 2')
-            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,config=args.config,auto=args.auto)
+            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto)
     else:
         #print('got here 3')
         ui = maskwindow(MainWindow, logger)
