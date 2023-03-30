@@ -161,8 +161,8 @@ class buildmask():
             ystar = y[flag]
             rad = brightstar['radius'][flag] # in degrees
             radpixels = rad*pscalex.value
-            print(rad)
-            print(radpixels)
+            print(x,y,rad)
+
 
             # convert radius to pixels
             
