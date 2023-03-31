@@ -138,11 +138,12 @@ class buildmask():
             self.display_mask()
     def add_gaia_masks(self):
         # check to see if gaia stars were already masked
-        if self.gaia_mask is None:
-            self.add_gaia_stars()
-        else:
-            self.maskdat += self.gaia_mask
-    def add_gaia_stars(self):
+        if self.add_gaia_stars:
+            if self.gaia_mask is None :
+                self.get_gaia_stars()
+            else:
+                self.maskdat += self.gaia_mask
+    def get_gaia_stars(self):
         """ 
         mask out bright gaia stars using the legacy dr9 catalog and magnitude-radius relation:  
         https://github.com/legacysurvey/legacypipe/blob/6d1a92f8462f4db9360fb1a68ef7d6c252781027/py/legacypipe/reference.py#L314-L319
@@ -154,8 +155,13 @@ class buildmask():
         self.gaia_mask = np.zeros_like(self.maskdat)
          
         # read in gaia catalog
-        brightstar = Table.read(self.gaiapath)
-        
+        try:
+            brightstar = Table.read(self.gaiapath)
+        except FileNotFound:
+            print(f"WARNING: can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
+            self.add_gaia_stars = False
+            return
+            
         # find stars on cutout
         starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')
         x,y = self.image_wcs.world_to_pixel(starcoord)
@@ -370,7 +376,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.05,snr=2,cmap='gist_heat_r',auto=False):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',auto=False):
         self.auto = auto
         if MainWindow is None:
             self.auto = True
@@ -395,6 +401,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             sepath=os.getenv('HOME')+'/github/halphagui/astromatic/'
         if gaiapath is None:
             gaiapath = os.getenv("HOME")+'/research/legacy/gaia-mask-dr9.virgo.fits'
+
         if config is None:
             config='default.sex.HDI.mask'
         self.image_name = image
@@ -405,6 +412,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.sepath = sepath
         self.gaiapath = gaiapath
         self.gaia_mask = None
+        self.add_gaia_stars = True        
         self.config = config
         self.threshold = threshold
         self.snr = snr
