@@ -27,7 +27,7 @@ def circle_pixels(xc,yc,r,ximage,yimage):
     - return pixel values that lie within a for circular aperture within radius r of position (x,y)
     
     INPUT:
-    -enter the center xc,yc and radius of circle in pixels
+    - enter the center xc,yc and radius of circle in pixels
     - also enter x and y dimensions of parent image
 
     OUTPUT:
