@@ -54,6 +54,7 @@ from halphaCommon import cutout_image, circle_pixels
 
 from photutils import detect_threshold, detect_sources
 from photutils import source_properties
+from photutils.segmentation import deblend_sources
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -159,7 +160,7 @@ class buildmask():
         starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')
         x,y = self.image_wcs.world_to_pixel(starcoord)
         pscalex,pscaley = self.image_wcs.proj_plane_pixel_scales()
-        print("pscalex = ",pscalex)        
+        #print("pscalex = ",pscalex)        
         #pscale = pscalex.deg * 3600 # pixel scale in arcsec
         flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)        
         if np.sum(flag) > 0:
@@ -169,7 +170,7 @@ class buildmask():
             ystar = y[flag]
             rad = brightstar['radius'][flag] # in degrees
             radpixels = rad/pscalex.value
-            print(xstar,ystar,rad)
+            #print(xstar,ystar,rad)
 
 
             # convert radius to pixels
@@ -190,7 +191,7 @@ class buildmask():
             print("No bright stars on image - woo hoo!")
 
 
-    def detect_objects_photutil(self, snrcut=1.5,npixels=10):
+    def run_photutil(self, snrcut=1.5,npixels=10):
         ''' 
         run photutils detect_sources to find objects in fov.  
         you can specify the snrcut, and only pixels above this value will be counted.
@@ -198,7 +199,13 @@ class buildmask():
         this also measures the sky noise as the mean of the threshold image
         '''
         self.threshold = detect_threshold(self.image, nsigma=snrcut)
-        self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
+        segment_map = detect_sources(self.image, self.threshold, npixels=npixels)
+        # deblind sources a la source extractor
+        # tried this, and the deblending is REALLY slow
+        # going back to source extractor
+        self.segmentation = deblend_sources(self.image, segment_map,
+                               npixels=10, nlevels=32, contrast=0.001)        
+        self.maskdat = self.segmentation.data
         self.cat = source_properties(self.image, self.segmentation)
         # get average sky noise per pixel
         # threshold is the sky noise at the snrcut level, so need to divide by this
@@ -209,13 +216,12 @@ class buildmask():
             print('setting center object to objid ',self.galaxy_id)
             self.center_object = self.galaxy_id
         else:
-            dist=np.sqrt((self.yc-self.ysex)**2+(self.xc-self.xsex)**2)
-            #   find object ID
-            objIndex=np.where(dist == min(dist))
-            objNumber=sexout['NUMBER'][objIndex]
-            objNumber[0] # not sure why above line returns a list
+            distance = np.sqrt((self.cat.xcentroid.value - self.xc)**2 + (self.cat.ycentroid.value - self.yc)**2)
+            # save object ID as the row in table with source that is closest to center
+            objIndex = np.arange(len(distance))[(distance == min(distance))][0]
+            # the value in shown in the segmentation image is called 'label'
+            self.center_object = self.cat.label[objIndex]
 
-            self.center_object = self.read_se_cat()
         self.maskdat[self.maskdat == self.center_object] = 0
         self.update_mask()
 
@@ -381,8 +387,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
 
         ###  The lines below are for testing purposes
         ###  and should be removed before release.
-        if image is None:
-            image='MKW8-18216-R.fits'
+        #if image is None:
+        #    image='MKW8-18216-R.fits'
         #if haimage == None:
         #    haimage='MKW8-18216-CS.fits'
         if sepath is None:
@@ -395,7 +401,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.haimage_name = haimage
         print(self.image_name)
         print(self.haimage_name)
-        print(sepath)
+        #print(sepath)
         self.sepath = sepath
         self.gaiapath = gaiapath
         self.gaia_mask = None
@@ -411,7 +417,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         t = self.image_name.split('.fit')
         self.mask_image=t[0]+'-mask.fits'
         self.mask_inv_image=t[0]+'-inv-mask.fits'
-        print('saving image as: ',self.mask_image)
+        print('saving mask image as: ',self.mask_image)
         
         # read in image and define center coords
         self.image, self.imheader = fits.getdata(self.image_name,header = True)
@@ -434,16 +440,27 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         # keep track of extra objects that the user deletes from mask
 
         self.deleted_objects = []
-        self.link_files()
+
         if not self.auto:
             self.add_cutout_frames()
 
         # time how long it takes to run SE
-        t_0 = timeit.default_timer()        
-        self.runse()
-        t_1 = timeit.default_timer()
-        print(f"\ttime to run se: {round((t_1-t_0),3)} sec")
-        
+        self.runse_flag = True
+        runphot = False
+        if self.runse_flag:
+            self.link_files()
+            t_0 = timeit.default_timer()        
+            self.runse()
+            t_1 = timeit.default_timer()
+            print("HELLO!!!")
+            print(f"\ntime to run se: {round((t_1-t_0),3)} sec\n")
+        if runphot:
+            self.usephot = True
+            t_1 = timeit.default_timer()
+            self.run_photutil()
+            t_2 = timeit.default_timer()
+            print(f"\ntime to run photutils: {round((t_2-t_1),3)} sec\n")
+        #self.update_mask()
         if self.auto:
             # grow mask 3x when running in auto mode
             self.grow_mask()
@@ -643,7 +660,10 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         #t = raw_input('enter new threshold')
         try:
             self.threshold = float(t)
-            self.runse()
+            if self.runse_flag:
+                self.runse()
+            else:
+                self.run_photutil()
 
         except ValueError:
             pass
@@ -677,8 +697,10 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         t = input('enter object number for target galaxy\n')
         self.off_center_flag = True
         self.galaxy_id = int(t)
-        self.runse()
-
+        if self.runse_flag:
+            self.runse()
+        else:
+            self.run_photil()
     def quit_program(self):
         self.clean_links()
         self.close_window()
@@ -696,7 +718,10 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
 
 
     def edit_mask(self):
-        self.runse()
+        if self.runse_flag:
+            self.runse()
+        else:
+            self.run_photutil()
         while self.adjust_mask:    
             self.show_mask()
             self.print_menu()
