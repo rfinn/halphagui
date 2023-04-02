@@ -100,7 +100,7 @@ if __name__ == '__main__':
     cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --auto"
     print(cmd)
     print()
-    subprocess.call(cmd)
+    os.system(cmd)
 
     # define the mask name created by maskwrapper.py
 
@@ -120,5 +120,5 @@ if __name__ == '__main__':
     cmd = f"python {homedir}/github/halphagui/reproject_mask.py {mask} {wimage}"
     print(cmd)
     print()
-    subprocess.call(cmd)
+    os.system(cmd)
     print(f"done masking {vfid}")
