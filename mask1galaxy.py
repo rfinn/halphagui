@@ -93,18 +93,24 @@ if __name__ == '__main__':
         # get information from the image, like the image size and position of gal
         image = image.replace('.fz','')
         
+    # define the mask name created by maskwrapper.py
+    mask = image.replace('.fits','-mask.fits')
 
-
+    # check if the mask exists
+    if os.path.exists(mask):
+        print(f"mask already exists for {vfid}.")
+        print("moving to the next galaxy")
+        sys.exit()
 
     # call maskwrapper.py
     cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --auto"
-    print(cmd)
+    #print(cmd)
     print()
     os.system(cmd)
 
-    # define the mask name created by maskwrapper.py
 
-    mask = image.replace('.fits','-mask.fits')
+
+
     # reproject mask onto wise image
     
     # construct WISE W3 image name
@@ -118,7 +124,8 @@ if __name__ == '__main__':
         
     # call reproject_mask.py
     cmd = f"python {homedir}/github/halphagui/reproject_mask.py {mask} {wimage}"
-    print(cmd)
+    #print(cmd)
     print()
     os.system(cmd)
     print(f"done masking {vfid}")
+    print()

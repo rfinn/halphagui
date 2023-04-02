@@ -43,7 +43,7 @@ for line in dfile:
 
 # set up multiprocessing
 my_pool = mp.Pool(mp.cpu_count())
-myresults = [my_pool.apply_async(get_mask(dir)) for dir in dlist[0:1]]
+myresults = [my_pool.apply_async(get_mask(dir)) for dir in dlist[0:2]]
     
 my_pool.close()
 my_pool.join()
