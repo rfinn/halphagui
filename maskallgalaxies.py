@@ -21,7 +21,10 @@ def get_mask(dir):
     """ this is the worker function to call mask1galaxy.py  """
     homedir = os.getenv("HOME")
     cmd = f"python {homedir}/github/halphagui/mask1galaxy.py {dir}"
-    subprocess.call(cmd)
+    try:
+        subprocess.call(cmd)
+    except:
+        print(f"WARNING: trouble running mask for {dir}")
 
 
 topdir = '/mnt/astrophysics/rfinn/muchogalfit-output/'
@@ -39,7 +42,7 @@ for line in dfile:
 
 # set up multiprocessing
 my_pool = mp.Pool(mp.cpu_count())
-myresults = [my_pool.apply_async(get_mask(dir)) for dir in dlist[0:2]]
+myresults = [my_pool.apply_async(get_mask(dir)) for dir in dlist[0:1]]
     
 my_pool.close()
 my_pool.join()
