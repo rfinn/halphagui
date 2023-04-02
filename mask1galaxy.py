@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
 
     # call maskwrapper.py
-    cmd = f"python {homedir}+'/github/halphagui/maskwrapper.py --image {image} --auto"
+    cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --auto"
     print(cmd)
     print()
     subprocess.call(cmd)
