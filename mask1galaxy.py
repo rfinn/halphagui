@@ -115,5 +115,5 @@ if __name__ == '__main__':
         wimage = wimage.replace('.fz','')
         
     # call reproject_mask.py
-    cmd = f"python {homedir}+'/github/halphagui/reproject_mask.py {mask} {wimage}"
+    cmd = f"python {homedir}/github/halphagui/reproject_mask.py {mask} {wimage}"
     subprocess.call(cmd)
