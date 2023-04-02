@@ -21,7 +21,7 @@ def get_mask(dir):
     """ this is the worker function to call mask1galaxy.py  """
     homedir = os.getenv("HOME")
     cmd = f"python {homedir}/github/halphagui/mask1galaxy.py {dir}"
-    subprocess.run(cmd)
+    os.system(cmd)
     #try:
     #    subprocess.call(cmd)
     #except:
