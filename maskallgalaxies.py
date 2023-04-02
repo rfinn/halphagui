@@ -21,10 +21,11 @@ def get_mask(dir):
     """ this is the worker function to call mask1galaxy.py  """
     homedir = os.getenv("HOME")
     cmd = f"python {homedir}/github/halphagui/mask1galaxy.py {dir}"
-    try:
-        subprocess.call(cmd)
-    except:
-        print(f"WARNING: trouble running mask for {dir}")
+    subprocess.run(cmd)
+    #try:
+    #    subprocess.call(cmd)
+    #except:
+    #    print(f"WARNING: trouble running mask for {dir}")
 
 
 topdir = '/mnt/astrophysics/rfinn/muchogalfit-output/'
