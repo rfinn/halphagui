@@ -117,3 +117,4 @@ if __name__ == '__main__':
     # call reproject_mask.py
     cmd = f"python {homedir}/github/halphagui/reproject_mask.py {mask} {wimage}"
     subprocess.call(cmd)
+    print(f"done masking {vfid}")
