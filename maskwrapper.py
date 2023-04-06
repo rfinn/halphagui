@@ -59,7 +59,7 @@ try:
     
 except ModuleNotFoundError:
     print("Warning - photutils not found")
-except Import Error:
+except ImportError:
     print("got an import error with photutils - check your version number")
 
 from PyQt5 import QtCore, QtGui, QtWidgets
