@@ -58,14 +58,18 @@ from photutils.segmentation import deblend_sources
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.mplw.ImageViewMpl import ImageView
-from ginga import colors
-from ginga.canvas.CanvasObject import get_canvas_types
+try:
+    from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
+    from ginga.mplw.ImageViewMpl import ImageView
+    from ginga import colors
+    from ginga.canvas.CanvasObject import get_canvas_types
 
-from ginga.misc import log
-from ginga.util.loader import load_data
+    from ginga.misc import log
+    from ginga.util.loader import load_data
 
+except ModuleNotFoundError:
+    print("Warning - ginga was not found.  this will be a problem if running interactively")
+    
 import timeit
 
 defaultcat='default.sex.HDI.mask'
