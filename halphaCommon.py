@@ -6,15 +6,17 @@ from PyQt5 import QtCore,QtWidgets, QtGui
 #from ginga.qtw.QtHelp import QtGui, QtCore
 
 #from halphav3 import Ui_MainWindow
-from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-#from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
-from ginga.mplw.ImageViewMpl import ImageView
-from ginga import colors
-from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.misc import log
-from ginga.util.loader import load_data
-from astropy.wcs import WCS
-
+try:
+    from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
+    #from ginga.mplw.ImageViewCanvasMpl import ImageViewCanvas
+    from ginga.mplw.ImageViewMpl import ImageView
+    from ginga import colors
+    from ginga.canvas.CanvasObject import get_canvas_types
+    from ginga.misc import log
+    from ginga.util.loader import load_data
+    from astropy.wcs import WCS
+except ModuleNotFoundError:
+    print("Warning - ginga module not found.  ")
 ## filter information
 ## from https://www.noao.edu/kpno/mosaic/filters/
 central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28} # angstrom
