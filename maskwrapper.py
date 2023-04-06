@@ -56,9 +56,11 @@ try:
     from photutils import detect_threshold, detect_sources
     from photutils import source_properties
     from photutils.segmentation import deblend_sources
+    
 except ModuleNotFoundError:
     print("Warning - photutils not found")
-
+except Import Error:
+    print("got an import error with photutils - check your version number")
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 try:
