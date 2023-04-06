@@ -108,6 +108,7 @@ class buildmask():
         bool_array = np.array(self.maskdat.shape,'bool')
         #for i in range(len(self.xsex)):
         # check to see if the object is not centered in the cutout
+    def remove_center_object(self):
         if self.off_center_flag:
             print('setting center object to objid ',self.galaxy_id)
             self.center_object = self.galaxy_id
@@ -459,6 +460,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.link_files()
             t_0 = timeit.default_timer()        
             self.runse()
+            self.remove_center_object()
             t_1 = timeit.default_timer()
             print("HELLO!!!")
             print(f"\ntime to run se: {round((t_1-t_0),3)} sec\n")
