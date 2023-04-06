@@ -292,7 +292,7 @@ class buildmask():
         if not self.auto:
             self.display_mask()
         # save convolved mask as new mask
-        self.save_mask()
+        self.write_mask()
 
         # plot mpl figure
         # this was for debugging purposes
