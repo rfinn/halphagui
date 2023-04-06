@@ -52,9 +52,12 @@ import matplotlib.pyplot as plt
 from maskWidget import Ui_Form as Ui_maskWindow
 from halphaCommon import cutout_image, circle_pixels
 
-from photutils import detect_threshold, detect_sources
-from photutils import source_properties
-from photutils.segmentation import deblend_sources
+try:
+    from photutils import detect_threshold, detect_sources
+    from photutils import source_properties
+    from photutils.segmentation import deblend_sources
+except ModuleNotFoundError:
+    print("Warning - photutils not found")
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
