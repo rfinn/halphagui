@@ -30,6 +30,7 @@ import argparse
 parser = argparse.ArgumentParser(description ='Run buildpsf.py for all images in the specified directory')
 parser.add_argument('--coaddir',dest = 'coaddir', default ='/home/rfinn/data/reduced/virgo-coadds-feb2019-int/', help = 'directory for coadds. Default is /home/rfinn/data/reduced/virgo-coadds/feb2019-int/')
 parser.add_argument('--int', dest = 'int', default = False,action='store_true', help = 'set this for INT data')
+parser.add_argument('--bok', dest = 'bok', default = False,action='store_true', help = 'set this for BOK data')
 parser.add_argument('--ngc', dest = 'ngc', default = False,action='store_true', help = "set this for Becky's NGC5846 data")
 
 args = parser.parse_args()
@@ -45,7 +46,7 @@ filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4']
 for i,f in enumerate(filters):
     # get list of current directory
     # this will grab the coadds but not the weight images
-    if args.int:
+    if args.int or args.bok:
         flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
     elif args.ngc:
         flist1 = glob.glob(coadd_image_directory+'nNGC*'+f+'.fits')
@@ -70,6 +71,8 @@ for i,f in enumerate(filters):
         # this is in counts/sec
         if args.int:
             command_string = 'python ~/github/halphagui/buildpsf.py --image {} --int'.format(fimage)
+        elif args.bok:
+            command_string = 'python ~/github/halphagui/buildpsf.py --image {} --bok'.format(fimage)
         else:
             command_string = 'python ~/github/halphagui/buildpsf.py --image {} '.format(fimage)
         try:

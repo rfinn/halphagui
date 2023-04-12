@@ -287,7 +287,8 @@ if __name__ == '__main__':
     #parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
     parser.add_argument('--image',dest = 'image', help='input image')
     parser.add_argument('--saturate',default=None,dest = 'saturate', help='saturation limit')
-    parser.add_argument('--int',default=False,dest='int',action = 'store_true', help='set this for INT data')    
+    parser.add_argument('--int',default=False,dest='int',action = 'store_true', help='set this for INT data')
+    parser.add_argument('--bok',default=False,dest='bok',action = 'store_true', help='set this for BOK data')        
      
     args = parser.parse_args()
 
@@ -296,6 +297,8 @@ if __name__ == '__main__':
     #image = '/Users/rfinn/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-4_R.coadd.fits'
     if args.int:
         p = psf_parent_image(image=args.image, size=39, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.INT')
+    elif args.bok:
+        p = psf_parent_image(image=args.image, size=39, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.BOK')
     else:
         p = psf_parent_image(image=args.image, size=25, nstars=100, oversampling=2,saturate=args.saturate)
     p.runse()
