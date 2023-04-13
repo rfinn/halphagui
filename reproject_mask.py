@@ -7,7 +7,7 @@ GOAL:
 
 USEAGE:
 
-reproject_mask.py maskfilename wiseimage
+reproject_mask.py maskfilename_from_rband wiseimage
 
 
 """
@@ -16,22 +16,27 @@ import sys
 from astropy.io import fits
 from reproject import reproject_interp
 
-maskfile = sys.argv[1]
 
-reffile = sys.argv[2]
+def reproject_image(maskfile, reffile):
+    hmask = fits.open(maskfile)
+
+    href = fits.open(reffile)
+
+    # reproject r-band mask onto W3 header
+
+    wisemask,footprint = reproject_interp(hmask,href[0].header)
+
+    # all wise images have the same pixel scale, so we only need one wise mask
+    outname = maskfile.replace('r-mask','wise-mask')
+    fits.writeto(outname,wisemask,href[0].header,overwrite=True)
 
 
-hmask = fits.open(maskfile)
+if __name__ == '__main__':
+    maskfile = sys.argv[1]
 
-href = fits.open(reffile)
+    reffile = sys.argv[2]
+    reproject_image(maskfile,reffile)
 
-# reproject r-band mask onto W3 header
-
-wisemask,footprint = reproject_interp(hmask,href[0].header)
-
-# all wise images have the same pixel scale, so we only need one wise mask
-outname = maskfile.replace('r-mask','wise-mask')
-fits.writeto(outname,wisemask,href[0].header,overwrite=True)
 
 
 

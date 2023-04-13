@@ -52,20 +52,29 @@ import matplotlib.pyplot as plt
 from maskWidget import Ui_Form as Ui_maskWindow
 from halphaCommon import cutout_image, circle_pixels
 
-from photutils import detect_threshold, detect_sources
-from photutils import source_properties
-from photutils.segmentation import deblend_sources
-
+try:
+    from photutils import detect_threshold, detect_sources
+    from photutils import source_properties
+    from photutils.segmentation import deblend_sources
+    
+except ModuleNotFoundError:
+    print("Warning - photutils not found")
+except ImportError:
+    print("got an import error with photutils - check your version number")
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.mplw.ImageViewMpl import ImageView
-from ginga import colors
-from ginga.canvas.CanvasObject import get_canvas_types
+try:
+    from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
+    from ginga.mplw.ImageViewMpl import ImageView
+    from ginga import colors
+    from ginga.canvas.CanvasObject import get_canvas_types
 
-from ginga.misc import log
-from ginga.util.loader import load_data
+    from ginga.misc import log
+    from ginga.util.loader import load_data
 
+except ModuleNotFoundError:
+    print("Warning - ginga was not found.  this will be a problem if running interactively")
+    
 import timeit
 
 defaultcat='default.sex.HDI.mask'
@@ -108,6 +117,7 @@ class buildmask():
         bool_array = np.array(self.maskdat.shape,'bool')
         #for i in range(len(self.xsex)):
         # check to see if the object is not centered in the cutout
+    def remove_center_object(self):
         if self.off_center_flag:
             print('setting center object to objid ',self.galaxy_id)
             self.center_object = self.galaxy_id
@@ -282,7 +292,7 @@ class buildmask():
         if not self.auto:
             self.display_mask()
         # save convolved mask as new mask
-        self.save_mask()
+        self.write_mask()
 
         # plot mpl figure
         # this was for debugging purposes
@@ -459,6 +469,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.link_files()
             t_0 = timeit.default_timer()        
             self.runse()
+            self.remove_center_object()
             t_1 = timeit.default_timer()
             print("HELLO!!!")
             print(f"\ntime to run se: {round((t_1-t_0),3)} sec\n")
