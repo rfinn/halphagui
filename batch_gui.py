@@ -7,6 +7,9 @@ Run this from, e.g. /home/rfinn/research/Virgo/gui-output-2019
 - the gui will create a cutout folder in this directory that has a subdirectory for each pointing
 
 
+python ~/github/halphagui/batch_gui.py --coaddir /media/rfinn/hdata/coadds/BOK2021pipeline/ --bok --psfdir /media/rfinn/hdata/psf-images/
+
+
 '''
 
 import os
@@ -23,6 +26,7 @@ parser.add_argument('--hdi',dest = 'hdi', default =False, action='store_true', h
 parser.add_argument('--mosaic',dest = 'mosaic', default =False, action='store_true', help = "set this for Mosaic data.  it will grab the filenames according to Becky's naming convention for the coadded images.")
 parser.add_argument('--bok',dest = 'bok', default =False, action='store_true', help = "set this for Bok 90prime data.  it will grab the filenames according to naming convention for the 90Prime images.")
 parser.add_argument('--psfdir',dest = 'psfdir', default='/home/rfinn/data/reduced/psf-images/', help = "directory containing PSF images.  Default is /home/rfinn/data/reduced/psf-images/, which is for laptop.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
+#parser.add_argument('--getgalsonly',dest = 'psfdir', default='/home/rfinn/data/reduced/psf-images/', help = "directory containing PSF images.  Default is /home/rfinn/data/reduced/psf-images/, which is for laptop.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
 
 args = parser.parse_args()
 
@@ -118,6 +122,7 @@ for rimage in flist1: # loop through list
         # because sometimes the Halpha coordinates are slightly different
         # or the UT date changed between Halpha and r images
         pointing = rootname.split('-')[-1]
+        print(f"\nPointing name = {pointing}\n")
         dirname = os.path.dirname(rimage)
         coadds = glob.glob(dirname+'/VF*'+pointing+'*.fits')
     #print('rootname = ',rootname)
@@ -168,7 +173,9 @@ for rimage in flist1: # loop through list
             prefix = 'v19'+pointing
         print('prefix = ',prefix)
         #command_string = 'python ~/github/HalphaImaging/python3/INT_align_images.py --image1 {} --image2 {} --weight2 {}'.format(haimage,rimage,rweightimage)
-        command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
+        #command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
+
+        command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
 
         # check to see if shifted r-band image exists.  if 
         try:

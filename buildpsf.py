@@ -56,7 +56,7 @@ class psf_parent_image():
         self.sat_level = max_good
         self.size = size
         self.config = se_config
-        self.sextractor_files =['default.sex.HDI','default.param','default.conv','default.nnw','default.sex.INT']
+        self.sextractor_files =['default.sex.HDI','default.param','default.conv','default.nnw','default.sex.INT','default.sex.BOK']
         self.saturate = saturate
         # path to source extractor files
         # default is probably fine if you have github in ~/github

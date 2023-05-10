@@ -1000,6 +1000,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.nebula = nebula
         self.laptop = laptop
         self.virgo = virgo
+        # this is the oversampling that I use when creating the PSF images
         self.oversampling = 2        
         if sepath == None:
             self.sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
@@ -2027,15 +2028,17 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                     print(o)
                     if len(o.split()) > 1:
                         split_string=' '
+                        pnumber = int(o.split(split_string)[1])
                         #print('object names contain ',split_string)        
                     elif len(o.split('-')) > 1:
                         split_string='-'
+                        pnumber = int(o.split(split_string)[1])
                         #print('object names contain ',split_string)
                     elif len(o.split('_')) > 1:
                         split_string='_'
                         #print('object names contain ',split_string)                     
-                    pnumber = int(o.split(split_string)[1])
-                    print('testing')
+                        pnumber = int(o.split(split_string)[1])
+                        print('testing')
                 if (o.find('lm') > -1)| (o.find('LM') > -1):
                     # low-mass pointing
                     prefix = "lmp"
@@ -2046,6 +2049,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
             except ValueError:
                 pointing=self.rcoadd_fname.replace('R.fits','')
+            except UnboundLocalError:
+                pointing = o
+
 
             if self.rcoadd_fname.find('nNGC5846') > -1:
                 pointing = os.path.basename(self.rcoadd_fname.replace('R.fits',''))
@@ -2176,6 +2182,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # alternatively, we could fix it right after running swarp
         newfile.header['EXPTIME']=1.0
 
+        
+
+        # add PSF image
+
+        # add coadded image
+
+        
         print('saving r-band cutout')
         fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
 
