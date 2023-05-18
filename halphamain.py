@@ -581,11 +581,13 @@ class create_output_table():
         ##############################################3
 
         fields = ['XC','YC','MAG','RE','N','BA','PA']
-        units = ['pixel','pixel','mag','pixel',None,'deg',None]
+        units = ['pixel','pixel','mag','arcsec',None,'deg',None]
         descriptions = ['R-band center from galfit (pix)',\
                         'R-band center from galfit (pix)',\
                         'R-band mag from galfit',\
-                        'R-band effective radius from galfit',\
+                        # this is currently written in pixels - need to write out in arcsec
+                        #'R-band effective radius from galfit (pix)',\
+                        'R-band effective radius from galfit (arcsec)',\                        
                         'R-band sersic index from galfit',\
                         'R-band axis ratio from galfit',\
                         'R-band position angle from galfit']
@@ -630,11 +632,13 @@ class create_output_table():
         ##############################################
 
         fields = ['XC','YC','MAG','RE','N','BA','PA']
-        units = ['pixel','pixel','mag','pixel',None,'deg',None]
+        units = ['pixel','pixel','mag','arcsec',None,'deg',None]
         descriptions = ['HA center from galfit (pix)',\
                         'HA center from galfit (pix)',\
                         'HA mag from galfit',\
-                        'HA effective radius from galfit',\
+                        # currently written in pixels
+                        # need to convert to arcsec
+                        'HA effective radius from galfit (arcsec)',\
                         'HA sersic index from galfit',\
                         'HA axis ratio from galfit',\
                         'HA position angle from galfit']
@@ -2443,12 +2447,18 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             values = np.array(self.galfit.galfit_results[:-2])[:,0].tolist()
             for i,f in enumerate(fields):
                 colname = prefix+f
-                self.table[colname][self.igal]=values[i]
+                if i == 3: # multiply radius by pixel scale
+                    self.table[colname][self.igal]=values[i]*self.pixelscale
+                else:
+                    self.table[colname][self.igal]=values[i]
             fields = ['XC','YC','MAG','RE','N','BA','PA']
             values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
             for i,f in enumerate(fields):
                 colname = prefix+f+'_ERR'
-                self.table[colname][self.igal]=values[i]
+                if i == 3: # convert radius from pixels to arcsec
+                    self.table[colname][self.igal]=values[i]*self.pixelscale
+                else:
+                    self.table[colname][self.igal]=values[i]
             fields = ['SKY','CHISQ']
             values = [self.galfit.galfit_results[-2],self.galfit.galfit_results[-1]]
             for i,f in enumerate(fields):
@@ -2569,8 +2579,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.gini2,\
-                  self.e.cat[self.e.objectIndex].area.value,\
-
+                  self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
