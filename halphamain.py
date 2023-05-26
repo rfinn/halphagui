@@ -1815,9 +1815,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         current_dir = os.getcwd()
         image_dir = os.path.dirname(self.rcoadd_fname)
         #os.chdir(image_dir)
-        
+
         runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
-        ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, image_dir = current_dir)
+        ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
         print(ave,std)
         #plt.show()
         #os.chdir(current_dir)
@@ -1832,6 +1832,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #if not self.auto:
         #    self.setup_ratio_slider()
         self.clean_links()
+
+        # the following lines remove the SE files, but we shouldn't do this
+        # it takes a while to run SE.  Should keep the catalogs
         images = [self.rcoadd_fname, self.hacoadd_fname]
         for im in images:
             catfile = os.path.basename(im).split('.fits')[0]+'.cat'

@@ -55,6 +55,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
 
     secatalog1 = froot1+'.cat'
     secatalog2 = froot2+'.cat'
+    print(secatalog1,secatalog2)
     if os.path.exists(secatalog1) and os.path.exists(secatalog2):
         print("FOUND SE CATALOGS - NOT RERUNNING")
     else:
@@ -70,7 +71,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
             os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat')
 
 
-def make_plot(image1, image2, return_flag = False, image_dir = './'):
+def make_plot(image1, image2, return_flag = False, plotdir = './'):
     from matplotlib import pyplot as plt
     from scipy.stats import scoreatpercentile
     base = os.path.basename(image1)
@@ -88,10 +89,22 @@ def make_plot(image1, image2, return_flag = False, image_dir = './'):
     plt.subplot(2,1,1)
 
     # cut out extreme outliers using scoreatpercentile
+    # May 2023 - changing apertures to APERTURE magnitudes
+    # note - this will be a problem
+    #
+    # from getzp.py - I am using aperture mags here
+    # y = self.matchedarray1['MAG_APER'][:,self.naper][flag]
+    # yerr = self.matchedarray1['MAGERR_APER'][:,self.naper][flag]
+    
     xmax = scoreatpercentile(cat1.FLUX_AUTO,95)
     ymax = scoreatpercentile(cat2.FLUX_AUTO,95)
 
-    keepflag = (cat1.FLUX_AUTO < xmax) & (cat1.FLUX_AUTO > 0) & (cat2.FLUX_AUTO < ymax) & (cat2.FLUX_AUTO > 0)  
+    keepflag = (cat1.FLUX_AUTO < xmax) & (cat1.FLUX_AUTO > 0) & (cat2.FLUX_AUTO < ymax) & (cat2.FLUX_AUTO > 0)
+
+    # TODO - need to use SE flags to avoid things that are contaminated by nearby neighbors
+    # also, use bright unsaturated sources to fit the filter ratio
+    # also, compare measured ratio to diff in ZP
+    
     plt.plot(cat1.FLUX_AUTO[keepflag],cat2.FLUX_AUTO[keepflag],'k.',alpha=.4)
     c = np.polyfit(cat1.FLUX_AUTO[keepflag],cat2.FLUX_AUTO[keepflag],1,cov=True)
     print("results from polyfit = ",c)
@@ -138,19 +151,20 @@ def make_plot(image1, image2, return_flag = False, image_dir = './'):
 
     #plt.show()
     #plt.axis([0,5000,-.06,.06])
-    plt.savefig(image_dir+'/'+t+'-filter-ratio.png')
+    plt.savefig(plotdir+'/'+t+'-filter-ratio.png')
 
     if return_flag:
         return ave, std
+    
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description ="Run sextractor in two-image mode.  \n To run from within ipython:\n %run ~/github/HalphaImaging/uat_sextractor_2image.py --image1 pointing-1_R.coadd.fits --image2 pointing-1_ha4.coadd.fits --plot --imagedir './' ")
+    parser = argparse.ArgumentParser(description ="Run sextractor in two-image mode.  \n To run from within ipython:\n %run ~/github/HalphaImaging/uat_sextractor_2image.py --image1 pointing-1_R.coadd.fits --image2 pointing-1_ha4.coadd.fits --plot --plotdir './' ")
     #parser.add_argument('--s', dest = 's', default = False, action = 'store_true', help = 'Run sextractor to create object catalogs')
     parser.add_argument('--d',dest = 'd', default =' ~/github/HalphaImaging/astromatic', help = 'Locates path of default config files')
     parser.add_argument('--image1',dest = 'image1', default = None,  help = 'image used to define apertures (R-band)')
     parser.add_argument('--image2',dest = 'image2', default = None,  help = 'image used to for measuring phot based on image1 (typically this is the Halpha image)')
     parser.add_argument('--plot',dest = 'plot', default = False, action = 'store_true', help = 'make diagnostic plots')
-    parser.add_argument('--imagedir',dest = 'imagedir', default = '.', help = 'directory for saving plots')
+    parser.add_argument('--plotdir',dest = 'plotdir', default = '.', help = 'directory for saving plots')
 
     args = parser.parse_args()
 
@@ -163,6 +177,6 @@ if __name__ == '__main__':
     i = 1
     run_sextractor(args.image1, args.image2, default_se_dir=args.d)
     if args.plot:
-        make_plot(args.image1, args.image2, image_dir = args.imagedir)
+        make_plot(args.image1, args.image2, plotdir = args.plotdir)
 
     
