@@ -49,6 +49,7 @@ def collect_results(result):
 
 
 def runone(image,int=False,bok=False):
+    print("hello ",image)
     basename = os.path.basename(image).split('.fits')[0]
     psf_image_name = basename+'-psf.fits'
     print()
