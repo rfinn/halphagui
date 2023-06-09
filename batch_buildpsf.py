@@ -60,22 +60,22 @@ def runone(image,int=False,bok=False):
 
     print('##########################################')
     print('##########################################')        
-    print('BUILDING PSF FOR: ',fimage)
+    print('BUILDING PSF FOR: ',image)
     print('##########################################')
     print('##########################################')
     
     if int:
-        command_string = 'python ~/github/halphagui/buildpsf.py --image {} --int'.format(fimage)
+        command_string = 'python ~/github/halphagui/buildpsf.py --image {} --int'.format(image)
     elif bok:
-        command_string = 'python ~/github/halphagui/buildpsf.py --image {} --bok'.format(fimage)
+        command_string = 'python ~/github/halphagui/buildpsf.py --image {} --bok'.format(image)
     else:
-        command_string = 'python ~/github/halphagui/buildpsf.py --image {} '.format(fimage)
+        command_string = 'python ~/github/halphagui/buildpsf.py --image {} '.format(image)
     try:
         print('running : ',command_string)
         os.system(command_string)
     except:
         print('##########################################')
-        print('WARNING: problem running buildpsf.py for ',fimage)
+        print('WARNING: problem running buildpsf.py for ',image)
         print('##########################################')
     
 
