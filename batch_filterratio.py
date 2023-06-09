@@ -78,6 +78,7 @@ if not os.path.exists(plotdir):
 inames = ["INT","BOK","HDI"]
 inames = ["BOK","HDI"]
 inames = ["HDI"]
+inames = ["BOK"]
 
 
 for i,f in enumerate(inames):
