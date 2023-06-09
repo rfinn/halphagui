@@ -91,7 +91,7 @@ def getoneratio(fname,instrument):
             print()
             print('Warning: no halpha image found for ',rimage)
             print('moving to the next image...')
-            continue
+            return
     elif f == 'BOK':
         # should end in Ha4.fits
         testname = rimage.replace('-r.fits','-Ha4.fits')
@@ -101,7 +101,7 @@ def getoneratio(fname,instrument):
             print()
             print('Warning: no halpha image found for ',rimage)
             print('moving to the next image...')
-            continue
+            return
     elif f == 'HDI':
         # should end in ha4.fits
         testname = rimage.replace('-r.fits','-ha4.fits').replace('-R.fits','-ha4.fits')
@@ -131,7 +131,7 @@ def getoneratio(fname,instrument):
                 print()
                 print('Warning: no halpha image found for ',rimage)
                 print('moving to the next image...')
-                continue
+                return
 
 
     print()
