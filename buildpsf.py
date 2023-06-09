@@ -52,6 +52,7 @@ class psf_parent_image():
     def __init__(self, image=None, max_good=None, size=25, se_config = 'default.sex.HDI', sepath=None,nstars=100, pixelscale=0.43,oversampling=None,saturate=None):
         self.image_name = image
         self.basename = os.path.basename(self.image_name).split('.fits')[0]
+        self.psf_image_name = self.basename+'-psf.fits'        
         self.data, self.header = fits.getdata(self.image_name, header=True)
         self.sat_level = max_good
         self.size = size
@@ -256,7 +257,7 @@ class psf_parent_image():
         # this will have the effect of saving the psf image in the current directory,
         # rather than the directory where the image is
 
-        self.psf_image_name = self.basename+'-psf.fits'
+
         print('PSF image name = ',self.psf_image_name)
         fits.writeto(self.psf_image_name,self.epsf.data, overwrite=True)
 
@@ -295,6 +296,13 @@ if __name__ == '__main__':
     
     #image = '/Users/rfinn/research/HalphaGroups/reduced_data/HDI/20150418/MKW8_R.coadd.fits'
     #image = '/Users/rfinn/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-4_R.coadd.fits'
+
+    basename = os.path.basename(args.image).split('.fits')[0]
+    psf_image_name = basename+'-psf.fits'        
+    if os.path.exists(psf_image_name):
+        print("found psf image for ",args.image)
+        sys.exit()
+    
     if args.int:
         p = psf_parent_image(image=args.image, size=39, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.INT')
     elif args.bok:
