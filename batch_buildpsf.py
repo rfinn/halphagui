@@ -55,7 +55,7 @@ def runone(image,int=False,bok=False):
     print("PSF image name = ",psf_image_name)
     print()
     if os.path.exists(psf_image_name):
-        print("found psf image for ",args.image)
+        print("found psf image for ",image)
         return
 
     print('##########################################')
