@@ -298,7 +298,10 @@ if __name__ == '__main__':
     #image = '/Users/rfinn/research/VirgoFilaments/Halpha/virgo-coadds-2017/pointing-4_R.coadd.fits'
 
     basename = os.path.basename(args.image).split('.fits')[0]
-    psf_image_name = basename+'-psf.fits'        
+    psf_image_name = basename+'-psf.fits'
+    print()
+    print("PSF image name = ",psf_image_name)
+    print()
     if os.path.exists(psf_image_name):
         print("found psf image for ",args.image)
         sys.exit()

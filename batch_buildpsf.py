@@ -38,8 +38,43 @@ args = parser.parse_args()
 
 coadd_image_directory = args.coaddir
 
+image_results = []
+def collect_results(result):
+
+    global results
+    image_results.append(result)
 
 
+def runone(image,int=False,bok=False):
+    basename = os.path.basename(image).split('.fits')[0]
+    psf_image_name = basename+'-psf.fits'
+    print()
+    print("PSF image name = ",psf_image_name)
+    print()
+    if os.path.exists(psf_image_name):
+        print("found psf image for ",args.image)
+        return
+
+    print('##########################################')
+    print('##########################################')        
+    print('BUILDING PSF FOR: ',fimage)
+    print('##########################################')
+    print('##########################################')
+    
+    if int:
+        command_string = 'python ~/github/halphagui/buildpsf.py --image {} --int'.format(fimage)
+    elif bok:
+        command_string = 'python ~/github/halphagui/buildpsf.py --image {} --bok'.format(fimage)
+    else:
+        command_string = 'python ~/github/halphagui/buildpsf.py --image {} '.format(fimage)
+    try:
+        print('running : ',command_string)
+        os.system(command_string)
+    except:
+        print('##########################################')
+        print('WARNING: problem running buildpsf.py for ',fimage)
+        print('##########################################')
+    
 
 filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4']
 #saturate_level = [100,30,30]
@@ -59,32 +94,24 @@ for i,f in enumerate(filters):
     #flistp26 = glob.glob(coadd_image_directory+'VF-*p072*-'+f+'.fits')
     #flist1 = flistp20+flistp26
     flist1.sort()
+
+    #for rimage in rimages: # loop through list
+    image_pool = mp.Pool(mp.cpu_count())
+    myresults = [image_pool.apply_async(runone,args=(im,args.int,args.bok),callback=collect_results) for im in flist1]
+    
+    image_pool.close()
+    image_pool.join()
+    image_results = [r.get() for r in myresults]
+
+    '''
     for fimage in flist1: # loop through list
 
-        print('##########################################')
-        print('##########################################')        
-        print('BUILDING PSF FOR: ',fimage)
-        print('##########################################')
-        print('##########################################')
         start_time = time.perf_counter()
         # adding saturation limit for normalized images
         # I estimated this from the r-band image for p001
         # this is in counts/sec
         #if not overwrite:
             # check if psf image exists
-        if args.int:
-            command_string = 'python ~/github/halphagui/buildpsf.py --image {} --int'.format(fimage)
-        elif args.bok:
-            command_string = 'python ~/github/halphagui/buildpsf.py --image {} --bok'.format(fimage)
-        else:
-            command_string = 'python ~/github/halphagui/buildpsf.py --image {} '.format(fimage)
-        try:
-            print('running : ',command_string)
-            os.system(command_string)
-        except:
-            print('##########################################')
-            print('WARNING: problem running buildpsf.py for ',fimage)
-            print('##########################################')
 
         # clock time to run buildpsf
         end_time = time.perf_counter()
@@ -94,5 +121,5 @@ for i,f in enumerate(filters):
         #break
     #break
 
-
+    '''
 
