@@ -62,8 +62,9 @@ if not os.path.exists(plotdir):
     os.mkdir(plotdir)
 
 
-def getoneratio(fname,instrument):
+def getoneratio(rimage,instrument):
     # find the corresponding Halpha image
+    f = instrument
     if f == 'INT':
         # could end in Halpha or Ha6657
         t = rimage.split('-')
