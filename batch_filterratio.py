@@ -21,7 +21,7 @@ from astropy.io import fits
 import matplotlib
 import time
 import filterratio as runse
-
+import multiprocessing as mp
 
 matplotlib.use("Qt5agg")
 homedir = os.getenv("HOME")
@@ -31,6 +31,11 @@ overwrite = False
 
 import argparse
 
+image_results = []
+def collect_results(result):
+
+    global results
+    image_results.append(result)
 
 
 def subtract_images(rimage,himage,filter_ratio):
@@ -56,6 +61,104 @@ plotdir = os.path.join(os.getcwd(),args.plotdir)
 if not os.path.exists(plotdir):
     os.mkdir(plotdir)
 
+
+def getoneratio(fname,instrument):
+    # find the corresponding Halpha image
+    if f == 'INT':
+        # could end in Halpha or Ha6657
+        t = rimage.split('-')
+        #print(t)
+        if rimage[10] == '+':
+            dateobs = t[3]
+            pointing = t[4]
+        else:
+            dateobs = t[4]
+            pointing = t[5]
+        if dateobs == '20190531': # ugh - new month too!
+            newdate = '20190601'
+        else:
+            newdate = dateobs[:-2]
+        hastring = 'VF-*INT-'+newdate+'*-'+pointing+'*-Halpha.fits'
+        hfiles = glob.glob(hastring)
+        if len(hfiles) < 1:
+            hastring = 'VF-*INT-'+newdate+'*-'+pointing+'*-Ha6657.fits'
+            hfiles = glob.glob(hastring)
+
+        #print("found these ",hfiles)
+        if len(hfiles) > 0:
+            himage = hfiles[0]
+        else:
+            print()
+            print('Warning: no halpha image found for ',rimage)
+            print('moving to the next image...')
+            continue
+    elif f == 'BOK':
+        # should end in Ha4.fits
+        testname = rimage.replace('-r.fits','-Ha4.fits')
+        if os.path.exists(testname):
+            himage = testname
+        else:
+            print()
+            print('Warning: no halpha image found for ',rimage)
+            print('moving to the next image...')
+            continue
+    elif f == 'HDI':
+        # should end in ha4.fits
+        testname = rimage.replace('-r.fits','-ha4.fits').replace('-R.fits','-ha4.fits')
+
+        print('testname = ',testname)
+        if os.path.exists(testname):
+            himage = testname
+
+        else:
+            # halpha image could have a different date
+            t = rimage.split('-')
+
+            if rimage[10] == '+':
+                dateobs = t[3]
+                pointing = t[4]
+            else:
+                dateobs = t[4]
+                pointing = t[5]
+            hastring = 'VF-*'+f+'-*'+dateobs[:-2]+'*-'+pointing+'*-ha4.fits'
+            hfiles = glob.glob(hastring)
+
+            #print("found these ",hfiles)
+            if len(hfiles) > 0:
+                himage = hfiles[0]
+                print('halpha image = ',himage)                
+            else:
+                print()
+                print('Warning: no halpha image found for ',rimage)
+                print('moving to the next image...')
+                continue
+
+
+    print()
+    print('##########################################')        
+    print('GETTING FILTER RATIO FOR: ',rimage,himage)
+    print('##########################################')
+
+    start_time = time.perf_counter()
+
+    runse.run_sextractor(rimage, himage)
+    ave, std = runse.make_plot(rimage, himage, return_flag = True, plotdir = plotdir)
+    #print(ave,std)
+
+    subtract_images(rimage,himage,ave)
+
+    # add ratio to r-band image headers
+    r,header = fits.getdata(rimage,header=True)
+    header.set('FLTRATIO',ave)
+    header.set('FLTR_ERR',std)
+    header.set('HAIMAGE',os.path.basename(himage))
+    fits.writeto(rimage,r,header=header,overwrite=True)        
+    # clock time to get filter ratio
+    end_time = time.perf_counter()
+    print('\t total time = ',end_time - start_time)
+
+
+    
 ########################################################
 # loop through telescopes and get r-band images
 ########################################################
@@ -97,105 +200,15 @@ for i,f in enumerate(inames):
 
     # sort the file list
     rimages.sort()
-    for rimage in rimages: # loop through list
+    
+    #for rimage in rimages: # loop through list
+    image_pool = mp.Pool(mp.cpu_count())
+    myresults = [image_pool.apply_async(getoneratio,args=(im,f),callback=collect_results) for im in rimages]
+    
+    image_pool.close()
+    image_pool.join()
+    image_results = [r.get() for r in myresults]
 
-        # find the corresponding Halpha image
-        if f == 'INT':
-            # could end in Halpha or Ha6657
-            t = rimage.split('-')
-            #print(t)
-            if rimage[10] == '+':
-                dateobs = t[3]
-                pointing = t[4]
-            else:
-                dateobs = t[4]
-                pointing = t[5]
-            if dateobs == '20190531': # ugh - new month too!
-                newdate = '20190601'
-            else:
-                newdate = dateobs[:-2]
-            hastring = 'VF-*INT-'+newdate+'*-'+pointing+'*-Halpha.fits'
-            hfiles = glob.glob(hastring)
-            if len(hfiles) < 1:
-                hastring = 'VF-*INT-'+newdate+'*-'+pointing+'*-Ha6657.fits'
-                hfiles = glob.glob(hastring)
-                
-            #print("found these ",hfiles)
-            if len(hfiles) > 0:
-                himage = hfiles[0]
-            else:
-                print()
-                print('Warning: no halpha image found for ',rimage)
-                print('moving to the next image...')
-                continue
-        elif f == 'BOK':
-            # should end in Ha4.fits
-            testname = rimage.replace('-r.fits','-Ha4.fits')
-            if os.path.exists(testname):
-                himage = testname
-            else:
-                print()
-                print('Warning: no halpha image found for ',rimage)
-                print('moving to the next image...')
-                continue
-        elif f == 'HDI':
-            # should end in ha4.fits
-            testname = rimage.replace('-r.fits','-ha4.fits').replace('-R.fits','-ha4.fits')
-            
-            print('testname = ',testname)
-            if os.path.exists(testname):
-                himage = testname
-        
-            else:
-                # halpha image could have a different date
-                t = rimage.split('-')
-
-                if rimage[10] == '+':
-                    dateobs = t[3]
-                    pointing = t[4]
-                else:
-                    dateobs = t[4]
-                    pointing = t[5]
-                hastring = 'VF-*'+f+'-*'+dateobs[:-2]+'*-'+pointing+'*-ha4.fits'
-                hfiles = glob.glob(hastring)
-                
-                #print("found these ",hfiles)
-                if len(hfiles) > 0:
-                    himage = hfiles[0]
-                    print('halpha image = ',himage)                
-                else:
-                    print()
-                    print('Warning: no halpha image found for ',rimage)
-                    print('moving to the next image...')
-                    continue
-                
-
-        print()
-        print('##########################################')        
-        print('GETTING FILTER RATIO FOR: ',rimage,himage)
-        print('##########################################')
-
-        start_time = time.perf_counter()
-
-        runse.run_sextractor(rimage, himage)
-        ave, std = runse.make_plot(rimage, himage, return_flag = True, plotdir = plotdir)
-        #print(ave,std)
-
-        subtract_images(rimage,himage,ave)
-
-        # add ratio to r-band image headers
-        r,header = fits.getdata(rimage,header=True)
-        header.set('FLTRATIO',ave)
-        header.set('FLTR_ERR',std)
-        header.set('HAIMAGE',os.path.basename(himage))
-        fits.writeto(rimage,r,header=header,overwrite=True)        
-        # clock time to get filter ratio
-        end_time = time.perf_counter()
-        print('\t total time = ',end_time - start_time)
-
-        # just running on one directory for testing purposes
-        #break
-    #break
 
 
 
