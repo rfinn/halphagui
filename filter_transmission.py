@@ -96,7 +96,7 @@ class filter_trace():
         else:
             # function = return transmission for a given wavelength
             return interpolate.splev(wave,self.spline_fit), True
-    def get_trans_correction(self, redshift):
+    def get_trans_correction(self, redshift,outfile=None):
         # return ratio of max filter transmission
         # to transmission at that wavelength
         # wave can be a single value or an array
@@ -114,7 +114,10 @@ class filter_trace():
         titlestring = 'Halpha Filter = {}'.format(self.hafilter)
         plt.title(titlestring)
         #plt.show()
-        plt.savefig('galaxies_in_filter.png')
+        if prefix is not None:
+            plt.savefig(outfile)
+        else:
+            plt.savefig('galaxies_in_filter.png')
         return correction
 
 
