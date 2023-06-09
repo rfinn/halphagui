@@ -17,6 +17,9 @@ import glob
 from astropy.io import fits
 import matplotlib
 import time
+import multiprocessing as mp
+
+
 matplotlib.use("Qt5agg")
 homedir = os.getenv("HOME")
 telescope = 'INT'
