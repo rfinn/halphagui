@@ -114,7 +114,7 @@ class filter_trace():
         titlestring = 'Halpha Filter = {}'.format(self.hafilter)
         plt.title(titlestring)
         #plt.show()
-        if prefix is not None:
+        if outfile is not None:
             plt.savefig(outfile)
         else:
             plt.savefig('galaxies_in_filter.png')
