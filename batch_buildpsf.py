@@ -49,7 +49,7 @@ def collect_results(result):
 
 
 def runone(image,int=False,bok=False):
-    print("hello ",image)
+    #print("hello ",image)
     basename = os.path.basename(image).split('.fits')[0]
     psf_image_name = basename+'-psf.fits'
     print()
@@ -98,7 +98,7 @@ for i,f in enumerate(filters):
     #flistp26 = glob.glob(coadd_image_directory+'VF-*p072*-'+f+'.fits')
     #flist1 = flistp20+flistp26
     flist1.sort()
-    print(flist1[0:3])
+    #print(flist1[0:3])
     #for rimage in rimages: # loop through list
     image_pool = mp.Pool(mp.cpu_count())
     myresults = [image_pool.apply_async(runone,args=(im,args.int,args.bok),callback=collect_results) for im in flist1[0:3]]
