@@ -69,9 +69,9 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
             os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
         else:
             os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat')
+    return ZP1, zp1flag, ZP2, zp2flag
 
-
-def make_plot(image1, image2, return_flag = False, plotdir = './'):
+def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     from matplotlib import pyplot as plt
     from scipy.stats import scoreatpercentile
     base = os.path.basename(image1)
@@ -139,11 +139,21 @@ def make_plot(image1, image2, return_flag = False, plotdir = './'):
     ave = np.ma.median(clipped_data)
     # use the MAD instead
     std = np.ma.std(clipped_data)
-
-    
-    plt.axhline(y=ave,ls='--')
+    plt.axhline(y=ave,ls='--',label='SE flux ratios')
     plt.ylim(-0.5*ave,3*ave)
     print('%.4f (%.4f)'%(ave,std))
+
+    ##
+    # Add line for ratio of zps 
+    ##
+    if zps is not None:
+        # we are plotting f2/f1 - ratio of Halpha to r
+        ZP1,ZP2 = zps
+        # get expected flux ratio from difference in ZP
+        dm = ZP1-ZP2
+        fratiozp = 10**(dm/2.5) # f2/f1
+        plt.axhline(y = fratiozp,ls=':',c='c',label='ZP ratios')
+    
     plt.ylabel('Flux(Halpha)/Flux(R)')
     plt.xlabel('Flux(Halpha) (ADU)')
     plt.text(0.05,.9,'$med ratio = %.4f (%.4f)$'%(ave,std),transform=plt.gca().transAxes,fontsize=8)
@@ -154,7 +164,10 @@ def make_plot(image1, image2, return_flag = False, plotdir = './'):
     plt.savefig(plotdir+'/'+t+'-filter-ratio.png')
 
     if return_flag:
-        return ave, std
+        if zps is not None:
+            return ave, std,fratiozp
+        else:
+            return ave, std
     
 
 if __name__ == '__main__':
@@ -175,8 +188,10 @@ if __name__ == '__main__':
 
     #nfiles = len(files)
     i = 1
-    run_sextractor(args.image1, args.image2, default_se_dir=args.d)
+    ZP1,zp1flag,ZP2,zp2flag = run_sextractor(args.image1, args.image2, default_se_dir=args.d)
+    if zp1flag and zp2flag:
+        zpargs = (ZP1,ZP2)
     if args.plot:
-        make_plot(args.image1, args.image2, plotdir = args.plotdir)
+        make_plot(args.image1, args.image2, plotdir = args.plotdir, zps = zpargs)
 
     

@@ -38,11 +38,13 @@ def collect_results(result):
     image_results.append(result)
 
 
-def subtract_images(rimage,himage,filter_ratio):
+def subtract_images(rimage,himage,filter_ratio,zpflag=False):
     r = fits.open(rimage)
     ha = fits.open(himage)
     halpha_cs = ha[0].data - filter_ratio*r[0].data
     hacoadd_cs_fname = himage.split('.fits')[0]+'-CS.fits'
+    if zpflag:
+        hacoadd_cs_fname = himage.split('.fits')[0]+'-CS-ZP.fits'
     print("subtracting images: ",himage," -> ",hacoadd_cs_fname)
     fits.writeto(hacoadd_cs_fname,halpha_cs,header=ha[0].header,overwrite=True)
     r.close()
@@ -143,16 +145,27 @@ def getoneratio(rimage,instrument):
     start_time = time.perf_counter()
 
     runse.run_sextractor(rimage, himage)
-    ave, std = runse.make_plot(rimage, himage, return_flag = True, plotdir = plotdir)
+    t = runse.make_plot(rimage, himage, return_flag = True, plotdir = plotdir)
+    if len(t) == 2:
+        ave, std = t
+        fzpratio = None
+    elif len(t) == 3:
+        ave, std, fzpratio = t
     #print(ave,std)
 
     subtract_images(rimage,himage,ave)
+
+    if zpratio is not None:
+        subtract_images(rimage,himage,fzpratio,zpflag=True)
 
     # add ratio to r-band image headers
     r,header = fits.getdata(rimage,header=True)
     header.set('FLTRATIO',ave)
     header.set('FLTR_ERR',std)
     header.set('HAIMAGE',os.path.basename(himage))
+    if zpratio is not None:
+        header.set('FRATIOZP',zpratio)
+        
     fits.writeto(rimage,r,header=header,overwrite=True)        
     # clock time to get filter ratio
     end_time = time.perf_counter()
@@ -180,10 +193,10 @@ def getoneratio(rimage,instrument):
 
 # telescope/instrument names
 inames = ["INT","BOK","HDI"]
-inames = ["BOK","HDI"]
-inames = ["HDI"]
-inames = ["BOK"]
-inames = ["INT","HDI"]
+#inames = ["BOK","HDI"]
+#inames = ["HDI"]
+#inames = ["BOK"]
+#inames = ["INT","HDI"]
 
 for i,f in enumerate(inames):
     # get list of current directory
