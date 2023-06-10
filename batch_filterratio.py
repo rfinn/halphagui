@@ -183,7 +183,7 @@ inames = ["INT","BOK","HDI"]
 inames = ["BOK","HDI"]
 inames = ["HDI"]
 inames = ["BOK"]
-
+inames = ["INT","HDI"]
 
 for i,f in enumerate(inames):
     # get list of current directory
