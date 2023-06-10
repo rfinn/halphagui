@@ -23,7 +23,10 @@ import time
 import filterratio as runse
 import multiprocessing as mp
 
-matplotlib.use("Qt5agg")
+try:
+    matplotlib.use("Qt5agg")
+except ImportError:
+    print("WARNING: could not use Qt5agg backend")
 homedir = os.getenv("HOME")
 
 # overwrite output files if they exist

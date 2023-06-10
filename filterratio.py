@@ -71,7 +71,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
             os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
         else:
             os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat')
-    print('in run_sextractor, returning for ZP and flags: ',ZP1, zp1flag, ZP2, zp2flag)
+    #print('in run_sextractor, returning for ZP and flags: ',ZP1, zp1flag, ZP2, zp2flag)
     return ZP1, zp1flag, ZP2, zp2flag
 
 def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
@@ -89,7 +89,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     try:
         cat2 = fits.getdata(froot2+'.cat',2)
     except IndexError:
-        print("problem getting SE catalog for ",image2, " aborting make_plot")
+        print("problem getting SE catalog for ",image2, " and catalog ",froot2," aborting make_plot")
         return None
     plt.figure(figsize=(6,6))
     plt.subplots_adjust(bottom=.2,left=.15,right=.95,hspace=.5)
