@@ -140,14 +140,15 @@ def getoneratio(rimage,instrument,plotdir):
     else:
         zpargs = None
     t = runse.make_plot(rimage, himage, return_flag = True, plotdir = plotdir,zps = zpargs)
+    if t == -1:
+        print("no CS images make for ",rimage,himage)
+        return
+
     if len(t) == 2:
         ave, std = t
         fzpratio = None
     elif len(t) == 3:
         ave, std, fzpratio = t
-    elif t == -1:
-        print("no CS images make for ",rimage,himage)
-        return
     #print(ave,std)
 
     subtract_images(rimage,himage,ave)
