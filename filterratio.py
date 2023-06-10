@@ -37,6 +37,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
         print('no PHOTZP found in image 1 header.  Too bad :(')
         print('did you run getzp.py?')
         zp1flag = False
+        ZP1 = None
     try:
         ZP2 = header2['PHOTZP']
         print('got ZP = ',ZP2)
@@ -45,6 +46,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
         print('no PHOTZP found in image 2 header.  Too bad :(')
         print('did you run getzp.py?')
         zp2flag = False
+        ZP2 = None
 
     base = os.path.basename(image1)
     froot1 = os.path.splitext(base)[0]
@@ -69,6 +71,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
             os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
         else:
             os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat')
+    print('in run_sextractor, returning for ZP and flags: ',ZP1, zp1flag, ZP2, zp2flag)
     return ZP1, zp1flag, ZP2, zp2flag
 
 def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
@@ -113,6 +116,18 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     xline = np.linspace(0,xmax,100)
     plt.plot(xline,np.polyval(c[0],xline),ls='--')
 
+
+    if zps is not None:
+        print("adding zp line to filter ratio plot!")
+        # we are plotting f2/f1 - ratio of Halpha to r
+        ZP1,ZP2 = zps
+        # get expected flux ratio from difference in ZP
+        dm = ZP2-ZP1
+        fratiozp = 10**(dm/2.5) # f2/f1
+        print('fratiozp = ',fratiozp)
+        plt.plot(xline,fratiozp*xline,ls='--',c='r')
+        plt.text(0.05,.8,'$ZP\ fratio = %.4f$'%(fratiozp),transform=plt.gca().transAxes,fontsize=8)
+    
     print()
     #plt.xlim(0,xmax)
     #plt.ylim(0,ymax)
@@ -123,6 +138,8 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     t = filename.replace('.fits','')    
     plt.title(t,fontsize=12)
     plt.text(0.05,.9,'$med ratio = %.4f (%.4f)$'%(c[0][0],np.sqrt(c[1][0][0])),transform=plt.gca().transAxes,fontsize=8)    
+
+
     
     plt.subplot(2,1,2)
     x = cat2.FLUX_AUTO
@@ -147,16 +164,12 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     # Add line for ratio of zps 
     ##
     if zps is not None:
-        # we are plotting f2/f1 - ratio of Halpha to r
-        ZP1,ZP2 = zps
-        # get expected flux ratio from difference in ZP
-        dm = ZP1-ZP2
-        fratiozp = 10**(dm/2.5) # f2/f1
-        plt.axhline(y = fratiozp,ls=':',c='c',label='ZP ratios')
-    
+        plt.axhline(y = fratiozp,ls='--',c='r',label='ZP ratios')
+        plt.text(0.05,.8,'$ZP\ fratio = %.4f$'%(fratiozp),transform=plt.gca().transAxes,fontsize=8)
     plt.ylabel('Flux(Halpha)/Flux(R)')
     plt.xlabel('Flux(Halpha) (ADU)')
     plt.text(0.05,.9,'$med ratio = %.4f (%.4f)$'%(ave,std),transform=plt.gca().transAxes,fontsize=8)
+    plt.legend()
     #plt.gca().set_xscale('log')
 
     #plt.show()
@@ -189,7 +202,10 @@ if __name__ == '__main__':
     #nfiles = len(files)
     i = 1
     ZP1,zp1flag,ZP2,zp2flag = run_sextractor(args.image1, args.image2, default_se_dir=args.d)
+    print()
+    print("in filterratio main, zpflag = ",zp1flag,zp2flag,(zp1flag and zp2flag))
     if zp1flag and zp2flag:
+        print("got ZP ratio")
         zpargs = (ZP1,ZP2)
     if args.plot:
         make_plot(args.image1, args.image2, plotdir = args.plotdir, zps = zpargs)
