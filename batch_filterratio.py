@@ -135,7 +135,7 @@ def getoneratio(rimage,instrument,plotdir):
 
     ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage)
     if zp1flag and zp2flag:
-        print("got ZP ratio")
+        #print("got ZP ratio")
         zpargs = (ZP1,ZP2)
     else:
         zpargs = None
@@ -145,6 +145,9 @@ def getoneratio(rimage,instrument,plotdir):
         fzpratio = None
     elif len(t) == 3:
         ave, std, fzpratio = t
+    elif t == -1:
+        print("no CS images make for ",rimage,himage)
+        return
     #print(ave,std)
 
     subtract_images(rimage,himage,ave)

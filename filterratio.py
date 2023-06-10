@@ -85,8 +85,12 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
 
     base = os.path.basename(image2)
     froot2 = os.path.splitext(base)[0]
-    
-    cat2 = fits.getdata(froot2+'.cat',2)
+
+    try:
+        cat2 = fits.getdata(froot2+'.cat',2)
+    except IndexError:
+        print("problem getting SE catalog for ",image2, " aborting make_plot")
+        return None
     plt.figure(figsize=(6,6))
     plt.subplots_adjust(bottom=.2,left=.15,right=.95,hspace=.5)
     plt.subplot(2,1,1)
@@ -124,7 +128,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
         # get expected flux ratio from difference in ZP
         dm = ZP2-ZP1
         fratiozp = 10**(dm/2.5) # f2/f1
-        print('fratiozp = ',fratiozp)
+        #print('fratiozp = ',fratiozp)
         plt.plot(xline,fratiozp*xline,ls='--',c='r')
         plt.text(0.05,.8,'$ZP\ fratio = %.4f$'%(fratiozp),transform=plt.gca().transAxes,fontsize=8)
     
@@ -158,7 +162,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     std = np.ma.std(clipped_data)
     plt.axhline(y=ave,ls='--',label='SE flux ratios')
     plt.ylim(-0.5*ave,3*ave)
-    print('%.4f (%.4f)'%(ave,std))
+    #print('%.4f (%.4f)'%(ave,std))
 
     ##
     # Add line for ratio of zps 
@@ -205,7 +209,7 @@ if __name__ == '__main__':
     print()
     print("in filterratio main, zpflag = ",zp1flag,zp2flag,(zp1flag and zp2flag))
     if zp1flag and zp2flag:
-        print("got ZP ratio")
+        #print("got ZP ratio")
         zpargs = (ZP1,ZP2)
     if args.plot:
         make_plot(args.image1, args.image2, plotdir = args.plotdir, zps = zpargs)
