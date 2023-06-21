@@ -54,20 +54,42 @@ working_dir = os.getcwd()
 overwrite = True
 
 flist1.sort()
+##
+# update for draco - stealing from build_web_coadds2.py
+##
+coadd_dir = '/media/rfinn/hdata/coadds/all-virgo-coadds/'
+coadd_dir = '/data-pool/Halpha/coadds/all-virgo-coadds/'                        
+zpdir = coadd_dir+'/plots/'
+fratiodir = coadd_dir+'/plots-filterratio/'
+vtabledir = homedir+'/research/Virgo/tables-north/v2/'
+vmain = fits.getdata(vtabledir+'vf_v2_main.fits')
+#homedir = '/mnt/qnap_home/rfinn/'
+VFFIL_PATH = vtabledir+'/vf_v2_environment.fits'
+vffil = fits.getdata(VFFIL_PATH)
+#psfdir = homedir+'/data/reduced/psf-images/'
+
+outpathbase = '/data-pool/Halpha/'        
+psfdir = outpathbase+'psf-images/'
+outdir = outpathbase+'/html_dev/coadds/'
+
+# get list of r-band coadded images
+a = glob.glob(coadd_dir+'VF*INT*-r-shifted.fits')
+b = glob.glob(coadd_dir+'VF*HDI*-r.fits')
+c = glob.glob(coadd_dir+'VF*HDI*-R.fits')
+d = glob.glob(coadd_dir+'VF*BOK*-r.fits')         
+flist1 = a + b + c + d
+
+flist1.sort()
 
 
 i = 0
 for rimage in flist1: # loop through list
 
     print()
-    print('##########################################')
-    print('##########################################')
-    print('##########################################')
     print('##########################################')        
     print('WORKING ON IMAGE: ',rimage)
-    print('##########################################')
     print('##########################################')        
-    
+    print()
     # read in r-band images
     # find matching Halpha image
 
@@ -172,8 +194,6 @@ for rimage in flist1: # loop through list
         else:
             prefix = 'v19'+pointing
         print('prefix = ',prefix)
-        #command_string = 'python ~/github/HalphaImaging/python3/INT_align_images.py --image1 {} --image2 {} --weight2 {}'.format(haimage,rimage,rweightimage)
-        #command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
 
         command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
 

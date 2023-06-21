@@ -71,10 +71,10 @@ try:
 
     from ginga.misc import log
     from ginga.util.loader import load_data
-
+    gingaflag = True
 except ModuleNotFoundError:
     print("Warning - ginga was not found.  this will be a problem if running interactively")
-    
+    gingaflag = False
 import timeit
 
 defaultcat='default.sex.HDI.mask'
@@ -771,8 +771,8 @@ if __name__ == "__main__":
     parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')        
         
     args = parser.parse_args()
-    
-    logger = log.get_logger("masklog", log_stderr=True, level=40)
+    if gingaflag:
+        logger = log.get_logger("masklog", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     #MainWindow = QtWidgets.QMainWindow()
         

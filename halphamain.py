@@ -991,19 +991,21 @@ class uco_table():
 
 class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     ''' Main class for the halpha image analysis  '''
-    def __init__(self,MainWindow, logger, sepath=None, testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None,rimage=None,haimage=None,filter=None,tabledir=None):
+    def __init__(self,MainWindow, logger, sepath=None, args=None):
+        #testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None,rimage=None,haimage=None,csimage=None,filter=None,tabledir=None):
         super(hafunctions, self).__init__()
-        self.auto = auto
+        self.auto = args.auto
         #if self.auto:
         #    matplotlib.use('TkAgg')
-        self.obsyear = obsyear
+        self.obsyear = args.obsyear
         if not(self.auto):
             self.setup_gui()
-        self.prefix = prefix
-        self.testing = testing
-        self.nebula = nebula
-        self.laptop = laptop
-        self.virgo = virgo
+        self.prefix = args.prefix
+        self.testing = args.testing
+        self.draco = args.draco
+        self.nebula = args.nebula        
+        self.laptop = args.laptop
+        self.virgo = args.virgo
         # this is the oversampling that I use when creating the PSF images
         self.oversampling = 2        
         if sepath == None:
@@ -1013,26 +1015,31 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if psfdir is None:
             self.psfdirectory = os.getcwd()
         else:
-            self.psfdirectory = psfdir
+            self.psfdirectory = args.psfdir
         self.igal = None
         ############################################################
         ### CHECK TO SEE IF IMAGE NAMES ARE SPECIFIED
         ############################################################
-        if rimage is not None:
-            self.rcoadd_fname = rimage
-        if haimage is not None:
-            self.hacoadd_fname = haimage
-        if filter is not None:
-            self.filter = filter
-        if tabledir is not None:
-            self.tabledir = tabledir
+        if args.rimage is not None:
+            self.rcoadd_fname = args.rimage
+        if args.haimage is not None:
+            self.hacoadd_fname = args.haimage
+        if args.csimage is not None:
+            self.cscoadd_fname = args.csimage
+        if args.filter is not None:
+            self.filter = args.filter
+        if args.tabledir is not None:
+            self.tabledir = args.tabledir
 
-        if (rimage is None):
+        if (args.rimage is None):
             ############################################################
             ### CONFIGURATION SETUP FOR RUNNING ON DIFFERENT COMPUTERS
             ############################################################
         
-            if self.laptop & self.virgo:
+            if self.draco & self.virgo:
+                self.setup_draco_virgo()
+                self.setup_virgo(pointing=pointing)
+            elif self.laptop & self.virgo:
                 self.setup_laptop_virgo()
                 self.setup_virgo(pointing=pointing)
             elif self.nebula & self.virgo: 
@@ -1046,7 +1053,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                 self.setup_nebula()
             elif self.testing:
                 self.setup_testing()
-        elif (rimage is not None and self.auto):
+        elif (args.rimage is not None and self.auto):
             pass
         else:
             # load Halpha
@@ -1068,6 +1075,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             
             self.defcat = self.vf
             self.def_label = 'VF.v1.'
+            self.def_label = 'VF.v2.'            
             self.radius_label = 'radius'
             self.global_min_cutout_size = 60*u.arcsec
             self.global_max_cutout_size = 480*u.arcsec # 9 arcmin
@@ -1089,24 +1097,28 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def auto_run(self):
         # run the analysis without starting the gui
         # read in coadded images
-        self.read_rcoadd()
-        self.read_hacoadd()
+        if self.cscoadd_fname is not None:
+            self.set_hafilter(self.filter)
+            pass
+        else:
+            self.read_rcoadd()
+            self.read_hacoadd()
         
-        # set filter
-        # doing this automatically for HDI Virgo data for now
-        self.set_hafilter(self.filter)
+            # set filter
+            # doing this automatically for HDI Virgo data for now
+            self.set_hafilter(self.filter)
         
-        # get filter ratio
-        self.get_filter_ratio()
+            # get filter ratio
+            self.get_filter_ratio()
 
-        # subtract images
-        self.subtract_images() # checks out ok
+            # subtract images
+            self.subtract_images() # checks out ok
         
-        # measure psf
-        # function will check if psf image already exists
-        self.build_psf()
+            # measure psf
+            # function will check if psf image already exists
+            self.build_psf()
 
-        # get galaxies
+            # get galaxies
         self.find_galaxies()
 
         self.write_fits_table()
@@ -1272,6 +1284,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         else:
             self.imagedir =  '/home/rfinn/data/reduced/virgo-coadds-2017/'
         self.tabledir= '/home/rfinn/research/Virgo/tables-north/v1/'
+    def setup_draco_virgo(self):
+        self.imagedir =  '/data-pool/Halpha/coadds/all-virgo-coadds/'
+        self.tabledir= '/home/rfinn/research/Virgo/tables-north/v2/'
     def setup_virgo(self,pointing=None):
         ''' construct image names from input.  only works for data reduced before 2021 '''
         if pointing is None:
@@ -2830,13 +2845,15 @@ if __name__ == "__main__":
     
     parser.add_argument('--rimage',dest = 'rimage', default=None,help='r-band image')
     parser.add_argument('--haimage',dest = 'haimage', default=None,help='Halpha image')
+    parser.add_argument('--csimage',dest = 'csimage', default=None,help='Continuum-subtracted Halpha image')    
     parser.add_argument('--filter',dest = 'filter', default=None,help='filter.  should be ha4, inthalpha, or intha6657.')
     parser.add_argument('--tabledir',dest = 'tabledir', default=None,help='table directory. something like /home/rfinn/research/Virgo/tables-north/v1/')
     parser.add_argument('--psfdir',dest = 'psfdir', default=None,help='set this to the directory containing PSF images')        
     parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Should be vYYpNN for virgo pointings.  default is v17p03. required when running auto.')
     parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')
     
-    parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.')    
+    parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.') 
+    parser.add_argument('--draco',dest = 'draco', action='store_true',default=False,help='set this if running on draco.')   
     parser.add_argument('--nebula',dest = 'nebula', action='store_true',default=False,help='set this if running on open nebula virtual machine.  catalog paths will be set accordingly.')
     parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
     
@@ -2877,7 +2894,7 @@ if __name__ == "__main__":
     ## UPDATED TO USE ARGPARSE
     #################################
     if not args.auto:
-        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
+        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,csimage=args.csimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
         if os.getenv("HOME").find('/home/') > -1: # special case for when running on linux laptop
             x = MainWindow.width()*.7
             y = MainWindow.height()*.7
@@ -2886,5 +2903,6 @@ if __name__ == "__main__":
         sys.exit(app.exec_())
     else:
         # run functions non-interactively
-        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix,obsyear=args.obsyear,rimage=args.rimage,haimage=args.haimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)        
+        #ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix,obsyear=args.obsyear,rimage=args.rimage,haimage=args.haimage,csimage=args.csimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
+        ui = hafunctions(MainWindow, logger, sepath = sepath, args)                
         pass

@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 """
+NOTE: 
+this is superceded by ~/github/mucho-galfit/mksbatchfilemask.py
+
 GOAL: 
 run mask1galaxy.py on ALL galaxies!
 
