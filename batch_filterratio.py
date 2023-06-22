@@ -180,8 +180,8 @@ def getoneratio(rimage,instrument,plotdir):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description ='Run filterratio.py for all images in the specified directory')
     parser.add_argument('--plotdir',dest = 'plotdir', default ='plots-filterratio', help = 'directory for to store the plots in')
-    parser.add_argument('--prefix', dest = 'prefx', default = 'VF-',help = "prefix for coadds.  the default is VF-")
-
+    parser.add_argument('--prefix', dest = 'prefix', default = 'VF-',help = "prefix for coadds.  the default is VF-")
+    parser.add_argument('--oneimage',dest = 'oneimage',default=None, help='give full path to the r-band image name to run on just one image')    
     args = parser.parse_args()
 
 
@@ -209,31 +209,47 @@ if __name__ == '__main__':
     #inames = ["HDI"]
     #inames = ["BOK"]
     #inames = ["INT","HDI"]
+    if args.oneimage is not None:
+        # make sure that the image exists
+        if not os.path.exists(args.oneimage):
+            print(f"Could not find {args.oneimage} - please check the r-band coadd name you provided")
+            sys.exit()
+        rfiles = [args.oneimage]
 
-    for i,f in enumerate(inames):
-        # get list of current directory
-        # this will grab the coadds but not the weight images
-        if f == 'INT':
-            #print("match string = ",'VF-*'+f+'*r-shifted.fits')
-            rimages = glob.glob('VF-*'+f+'*r-shifted.fits')
-        elif f == 'BOK':
-            rimages = glob.glob('VF-*'+f+'*r.fits')
-        elif f == 'HDI':
-            rimages1 = glob.glob('VF-*'+f+'*r.fits')
-            rimages2 = glob.glob('VF-*'+f+'*R.fits')
-            rimages = rimages1 + rimages2
-        print(f"found {len(rimages)} rband images for {f}")
+        if 'HDI' in args.oneimage:
+            f = 'HDI'
+        elif 'INT' in args.oneimage:
+            f = 'INT'
+        elif 'BOK' in args.oneimage:
+            f = 'BOK'
+        getoneratio(args.oneimage,f,plotdir)
 
-        # sort the file list
-        rimages.sort()
+    else:
+        for i,f in enumerate(inames):
+            # get list of current directory
+            # this will grab the coadds but not the weight images
+            if f == 'INT':
+                #print("match string = ",'VF-*'+f+'*r-shifted.fits')
+                rimages = glob.glob('VF-*'+f+'*r-shifted.fits')
+            elif f == 'BOK':
+                rimages = glob.glob('VF-*'+f+'*r.fits')
+            elif f == 'HDI':
+                rimages1 = glob.glob('VF-*'+f+'*r.fits')
+                rimages2 = glob.glob('VF-*'+f+'*R.fits')
+                rimages = rimages1 + rimages2
+            print(f"found {len(rimages)} rband images for {f}")
+
+            # sort the file list
+            rimages.sort()
+
+        
+            #for rimage in rimages: # loop through list
+            image_pool = mp.Pool(mp.cpu_count())
+            myresults = [image_pool.apply_async(getoneratio,args=(im,f,plotdir),callback=collect_results) for im in rimages]
     
-        #for rimage in rimages: # loop through list
-        image_pool = mp.Pool(mp.cpu_count())
-        myresults = [image_pool.apply_async(getoneratio,args=(im,f,plotdir),callback=collect_results) for im in rimages]
-    
-        image_pool.close()
-        image_pool.join()
-        image_results = [r.get() for r in myresults]
+            image_pool.close()
+            image_pool.join()
+            image_results = [r.get() for r in myresults]
 
 
 
