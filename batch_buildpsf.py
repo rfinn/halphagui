@@ -86,7 +86,9 @@ filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4']
 for i,f in enumerate(filters):
     # get list of current directory
     # this will grab the coadds but not the weight images
-    if args.int or args.bok or args.hdi:
+    if args.bok:
+        flist1 = glob.glob(coadd_image_directory+'VF-*BOK*-'+f+'.fits')
+    elif args.int or args.hdi:
         flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
     elif args.ngc:
         flist1 = glob.glob(coadd_image_directory+'nNGC*'+f+'.fits')
