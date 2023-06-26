@@ -142,7 +142,12 @@ def getoneratio(rimage,instrument,plotdir):
 
     start_time = time.perf_counter()
 
-    ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage)
+    # TODO - we should use the himage as a reference b/c it's lower snr
+    # we don't want extra noise
+    #ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage)
+    # this line might do the job, but should check to make sure I'm not missing something
+    ZP2,zp2flag,ZP1,zp1flag = runse.run_sextractor(himage, rimage)
+    
     if zp1flag and zp2flag:
         #print("got ZP ratio")
         zpargs = (ZP1,ZP2)
