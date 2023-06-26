@@ -56,6 +56,7 @@ def subtract_images(rimage,himage,filter_ratio,zpflag=False):
 
 
 
+
 def getoneratio(rimage,instrument,plotdir):
     # find the corresponding Halpha image
     f = instrument
@@ -92,11 +93,17 @@ def getoneratio(rimage,instrument,plotdir):
         testname = rimage.replace('-r.fits','-Ha4.fits')
         if os.path.exists(testname):
             himage = testname
-        else:
-            print()
-            print('Warning: no halpha image found for ',rimage)
-            print('moving to the next image...')
-            return
+        elif:
+            # check for images that were taken on different dates
+            if rimage == 'VF-266.477+58.350-BOK-20220423-VFID0783-r.fits':
+                himage = 'VF-266.477+58.350-BOK-20220428-VFID0783-Ha4.fits'
+            elif rimage == 'VF-246.890+21.523-BOK-20220426-VFID3598-r.fits':
+                himage = 'VF-246.890+21.523-BOK-20220425-VFID3598-Ha4.fits'
+            else:
+                print()
+                print('Warning: no halpha image found for ',rimage)
+                print('moving to the next image...')
+                return
     elif f == 'HDI':
         # should end in ha4.fits
         testname = rimage.replace('-r.fits','-ha4.fits').replace('-R.fits','-ha4.fits')
@@ -207,7 +214,7 @@ if __name__ == '__main__':
     inames = ["INT","BOK","HDI"]
     #inames = ["BOK","HDI"]
     #inames = ["HDI"]
-    #inames = ["BOK"]
+    inames = ["BOK"]
     #inames = ["INT","HDI"]
     if args.oneimage is not None:
         # make sure that the image exists
