@@ -53,6 +53,8 @@ class filter_trace():
         # calculate min and max redshifts that correspond to transmission cut
         self.minz_trans10 = (self.wave[ids[0][0]]/wave_halpha -1.)
         self.maxz_trans10 = (self.wave[ids[0][-1]]/wave_halpha -1.)
+
+        # repeat for 30 and 50
         ids = np.where(self.trans > 30.)
         self.minz_trans30 = (self.wave[ids[0][0]]/wave_halpha -1.)
         self.maxz_trans30 = (self.wave[ids[0][-1]]/wave_halpha -1.)
@@ -60,6 +62,14 @@ class filter_trace():
         self.minz_trans50 = (self.wave[ids[0][0]]/wave_halpha -1.)
         self.maxz_trans50 = (self.wave[ids[0][-1]]/wave_halpha -1.)
         self.spline_fit()
+
+        # calculate again to find where transmission is 10% of max transmission
+        # get wavelengths where transmission crosses 10 percent level
+        ids = np.where(self.trans/self.maxtrans > 10.)
+        # calculate min and max redshifts that correspond to transmission cut
+        self.minz_trans10max = (self.wave[ids[0][0]]/wave_halpha -1.)
+        self.maxz_trans10max = (self.wave[ids[0][-1]]/wave_halpha -1.)
+        
     def spline_fit(self):
         
         # create spline fit
@@ -70,7 +80,7 @@ class filter_trace():
         INTPUT:
         - wavelength, either individual value or array
 
-        OUTPUT:
+        RETURNS:
         - transmission (spline fit to transmission curve at each wavelength
         - fitflag - True if wavelength is within the filter trace, false otherwise
         '''
@@ -97,9 +107,19 @@ class filter_trace():
             # function = return transmission for a given wavelength
             return interpolate.splev(wave,self.spline_fit), True
     def get_trans_correction(self, redshift,outfile=None):
-        # return ratio of max filter transmission
-        # to transmission at that wavelength
-        # wave can be a single value or an array
+        """
+        calculate ratio of max filter transmission to transmission at obs wavelength of Halpha
+        at the provided redhifts.
+
+        This also generates a plot galaxies_in_filter.png of the filter transmission with histogram of redshifts overlaid.
+
+        INPUT:
+        redshift : float, can be a single value or an array
+
+        RETURNS:
+        correction : float, ratio of max filter transmission to transmission at that wavelength
+
+        """
         wave = (redshift+1)*wave_halpha
         transmission, flag = self.get_transmission(wave)
         #self.test = transmission
@@ -107,7 +127,12 @@ class filter_trace():
         correction = self.maxtrans/transmission
         plt.figure()
         plt.plot(self.wave, self.trans/10,'k-')
-        plt.hist(wave, bins=5)
+        ##
+        # set bin size to some constant range of min/max wavelength
+        ##
+        mybins = np.linspace(self.minz_trans10max,self.maxz_trans10max,20)
+        
+        plt.hist(wave, bins=mybins)
         plt.xlim((self.minz_trans10+1)*wave_halpha-50,(self.maxz_trans10+1)*wave_halpha+50)
         plt.xlabel('Wavelength (Angstrom)')
         plt.ylabel('Transmission %/10')
