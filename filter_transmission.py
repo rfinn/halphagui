@@ -129,6 +129,7 @@ class filter_trace():
         plt.plot(self.wave, self.trans/10,'k-')
         ##
         # set bin size to some constant range of min/max wavelength
+        # this now fixes the odd behavior of the redshift histogram
         ##
         minwave = (self.minz_trans10max +1)*wave_halpha
         maxwave = (self.maxz_trans10max +1)*wave_halpha
