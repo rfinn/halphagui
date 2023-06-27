@@ -62,10 +62,10 @@ vffil = fits.getdata(VFFIL_PATH)
 
 
 # get list of r-band coadded images
-a = glob.glob(coadd_dir+'VF*INT*-r-shifted.fits')
-b = glob.glob(coadd_dir+'VF*HDI*-r.fits')
-c = glob.glob(coadd_dir+'VF*HDI*-R.fits')
-d = glob.glob(coadd_dir+'VF*BOK*-r.fits')         
+a = glob.glob(args.coadd_dir+'VF*INT*-r-shifted.fits')
+b = glob.glob(args.coadd_dir+'VF*HDI*-r.fits')
+c = glob.glob(args.coadd_dir+'VF*HDI*-R.fits')
+d = glob.glob(args.coadd_dir+'VF*BOK*-r.fits')         
 flist1 = a + b + c + d
 
 flist1.sort()
