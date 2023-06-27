@@ -1011,6 +1011,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None,rimage=None,haimage=None,csimage=None,filter=None,tabledir=None):
         super(hafunctions, self).__init__()
         self.auto = args.auto
+        self.cscoadd_fname = None
         #if self.auto:
         #    matplotlib.use('TkAgg')
         self.obsyear = args.obsyear
@@ -1113,7 +1114,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def auto_run(self):
         # run the analysis without starting the gui
         # read in coadded images
-        if self.cscoadd_fname is not None:
+        if self.cscoadd_fname is not None: # was trying to have this pick up from coadd web pages
             self.set_hafilter(self.filter)
             pass
         else:
