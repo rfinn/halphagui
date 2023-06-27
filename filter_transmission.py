@@ -65,7 +65,7 @@ class filter_trace():
 
         # calculate again to find where transmission is 10% of max transmission
         # get wavelengths where transmission crosses 10 percent level
-        ids = np.where(self.trans/self.maxtrans > 10.)
+        ids = np.where(self.trans/self.maxtrans > .1)
         # calculate min and max redshifts that correspond to transmission cut
         self.minz_trans10max = (self.wave[ids[0][0]]/wave_halpha -1.)
         self.maxz_trans10max = (self.wave[ids[0][-1]]/wave_halpha -1.)
