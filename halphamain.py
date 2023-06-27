@@ -1855,6 +1855,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             hZP = header['PHOTZP']
             dm = hZP-rZP
             ave = 10**(dm/2.5) # f2/f1
+            runse = False
         except:
             self.link_files()
             current_dir = os.getcwd()
@@ -1864,6 +1865,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
             ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
             print(ave,std)
+            runse = True
             #plt.show()
             #os.chdir(current_dir)
         self.filter_ratio = ave
@@ -1876,14 +1878,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.ui.filterRatioLineEdit.setText(str(self.filter_ratio))
         #if not self.auto:
         #    self.setup_ratio_slider()
-        self.clean_links()
+        if runse:
+            self.clean_links()
 
-        # the following lines remove the SE files, but we shouldn't do this
-        # it takes a while to run SE.  Should keep the catalogs
-        images = [self.rcoadd_fname, self.hacoadd_fname]
-        for im in images:
-            catfile = os.path.basename(im).split('.fits')[0]+'.cat'
-            os.remove(catfile)
+            # the following lines remove the SE files, but we shouldn't do this
+            # it takes a while to run SE.  Should keep the catalogs
+            images = [self.rcoadd_fname, self.hacoadd_fname]
+            for im in images:
+                catfile = os.path.basename(im).split('.fits')[0]+'.cat'
+                os.remove(catfile)
     def subtract_images(self):
         try:
             self.halpha_cs = self.ha - self.filter_ratio*self.r
