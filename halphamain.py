@@ -592,13 +592,12 @@ class create_output_table():
 
         fields = ['XC','YC','MAG','RE','N','BA','PA']
         units = ['pixel','pixel','mag','arcsec',None,'deg',None]
-        # this is currently written in pixels - need to write out in arcsec
-        #'R-band effective radius from galfit (pix)',\
-                            
         descriptions = ['R-band center from galfit (pix)',\
                         'R-band center from galfit (pix)',\
                         'R-band mag from galfit',\
-                        'R-band effective radius from galfit (arcsec)',\                        
+                        # this is currently written in pixels - need to write out in arcsec
+                        #'R-band effective radius from galfit (pix)',\
+                        'R-band effective radius from galfit (arcsec)',\
                         'R-band sersic index from galfit',\
                         'R-band axis ratio from galfit',\
                         'R-band position angle from galfit']
