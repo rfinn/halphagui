@@ -79,8 +79,18 @@ from filter_transmission import filter_trace
 from join_catalogs import join_cats, make_new_cats
 #from uat_mask import mask_image
 # filter information
-lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6540.5}
-lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5}
+
+# INT filters from https://astro.ing.iac.es/filter/list.php?instrument=WFC
+# lmin is center - 0.5 FWHM
+# lmin is center + 0.5 FWHM
+#
+# Filter # 197 is INT197 = (6568, 95)
+# Filter # 227 is INT227 = (6657, 80)
+#
+# BOK using the NOAO filter, so Halpha 4
+# 
+lmin={'4':6573., '8':6606.,'12':6650.,'16':6682.,'INT197':6520.5, 'INT227':6617}
+lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5, 'INT227':6697}
 
 # Force a specific toolkit on mac
 macos_ver = platform.mac_ver()[0]
