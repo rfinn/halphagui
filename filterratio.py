@@ -80,14 +80,21 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     base = os.path.basename(image1)
     froot1 = os.path.splitext(base)[0]
     #cat1 = fits.getdata(froot1+'.cat')
-    cat1 = fits.getdata(froot1+'.cat',2)
-    print(froot1+'.cat')
+    cat1name = froot1+'.cat'
+    #print(froot1+'.cat')    
+    # updating for draco - not sure what else this will break
+    if not os.path.exists(cat1name):
+        cat1name = image1.replace('.fits','.cat')
+    cat1 = fits.getdata(cat1name,2)
 
     base = os.path.basename(image2)
     froot2 = os.path.splitext(base)[0]
-
+    cat2name = froot2+'.cat'
+    if not os.path.exists(cat2name):
+        cat2name = image1.replace('.fits','.cat')
+    
     try:
-        cat2 = fits.getdata(froot2+'.cat',2)
+        cat2 = fits.getdata(cat2name,2)
     except IndexError:
         print("problem getting SE catalog for ",image2, " and catalog ",froot2," aborting make_plot")
         return None
