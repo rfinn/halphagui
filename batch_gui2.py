@@ -95,10 +95,11 @@ for rimage in flist1: # loop through list
     header = fits.getheader(rimage)
     try:
         haimage = header['HAIMAGE']
+        haimage = os.path.join(os.path.dirname(rimage),haimage)
     except KeyError:
         print("can't find halpha image for ",rimage)
         print("moving to next image...")
-
+    
     ##
     # get filter based on the image name
     ##

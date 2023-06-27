@@ -1380,6 +1380,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.rweight_flag = False
         self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
     def read_hacoadd(self):
+        print(self.hacoadd_fname)
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS.fits'
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
