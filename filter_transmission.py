@@ -130,8 +130,11 @@ class filter_trace():
         ##
         # set bin size to some constant range of min/max wavelength
         ##
-        mybins = np.linspace(self.minz_trans10max,self.maxz_trans10max,20)
-        
+        minwave = (self.minz_trans10max +1)*wave_halpha
+        maxwave = (self.maxz_trans10max +1)*wave_halpha
+        mybins = np.linspace(minwave,maxwave,20)
+
+
         plt.hist(wave, bins=mybins)
         plt.xlim((self.minz_trans10+1)*wave_halpha-50,(self.maxz_trans10+1)*wave_halpha+50)
         plt.xlabel('Wavelength (Angstrom)')
