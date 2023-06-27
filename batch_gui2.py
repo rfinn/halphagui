@@ -123,18 +123,18 @@ for rimage in flist1: # loop through list
     command_string = f'python  ~/github/halphagui/halphamain.py --virgo --rimage {rimage} --haimage {haimage} --filter {hfilter} --psfdir {args.psfdir} --tabledir {args.tabledir} --prefix {prefix} --auto'
 
     # check to see if shifted r-band image exists.  if 
-    #try:
-    #    print('running : ',command_string)
-    #    # testing
-    #    os.system(command_string)
-    #except:
-    #    print('##########################################')
-    #    print('WARNING: problem running auto gui on ',rimage)
-    #    print('##########################################')
+    try:
+        print('running : ',command_string)
+        # testing
+        os.system(command_string)
+    except:
+        print('##########################################')
+        print('WARNING: problem running auto gui on ',rimage)
+        print('##########################################')
 
     #just running on one directory for testing purposes
-    #i += 1
-    #if i > 0:
-    #    break
+    i += 1
+    if i > 0:
+        break
 
 
