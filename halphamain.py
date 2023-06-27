@@ -2914,5 +2914,5 @@ if __name__ == "__main__":
     else:
         # run functions non-interactively
         #ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,auto=args.auto,prefix=args.prefix,obsyear=args.obsyear,rimage=args.rimage,haimage=args.haimage,csimage=args.csimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
-        ui = hafunctions(MainWindow, logger, sepath = sepath, args)                
+        ui = hafunctions(MainWindow, logger, sepath = sepath, args)
         pass
