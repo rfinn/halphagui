@@ -109,9 +109,9 @@ for rimage in flist1: # loop through list
         hfilter = 4
     elif 'INT' in rimage:
         if 'Ha6657' in rimage:
-            hfilter = 'INT227'
+            hfilter = 'inthalpha6657'
         else:
-            hfilter = 'INT197'
+            hfilter = 'inthalpha'
     else:
         print("could not guess filter for ",rimage)
         print("moving to the next image")
