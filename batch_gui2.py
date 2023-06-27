@@ -139,8 +139,8 @@ for rimage in flist1: # loop through list
         print('##########################################')
 
     #just running on one directory for testing purposes
-    i += 1
-    if i > 0:
-        break
+    #i += 1
+    #if i > 0:
+    #    break
 
 
