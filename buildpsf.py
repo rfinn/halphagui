@@ -28,6 +28,7 @@ https://photutils.readthedocs.io/en/stable/epsf.html#build-epsf
 
 '''
 import os
+import sys
 import numpy as np
 
 from photutils import EPSFBuilder
