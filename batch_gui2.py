@@ -98,14 +98,14 @@ for rimage in flist1: # loop through list
     # get filter based on the image name
     ##
     if 'BOK' in rimage:
-        filter = 4
+        hfilter = 4
     elif 'HDI' in rimage:
-        filter = 4
+        hfilter = 4
     elif 'INT' in rimage:
         if 'Ha6657' in rimage:
-            filter = 'INT227'
+            hfilter = 'INT227'
         else:
-            filter = 'INT197'
+            hfilter = 'INT197'
     else:
         print("could not guess filter for ",rimage)
         print("moving to the next image")
@@ -115,9 +115,9 @@ for rimage in flist1: # loop through list
     ##
     t = rimage.split('-')
     prefix = t[-2]
-    print(rimage, haimage,filter, prefix)
+    print(rimage, haimage,hfilter, prefix)
     
-    command_string = f'python  ~/github/halphagui/halphamain.py --virgo --rimage {rimage} --haimage {haimage} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
+    command_string = f'python  ~/github/halphagui/halphamain.py --virgo --rimage {rimage} --haimage {haimage} --filter {hfilter} --psfdir {args.psfdir} --tabledir {args.tabledir} --prefix {prefix} --auto'
 
     # check to see if shifted r-band image exists.  if 
     try:
