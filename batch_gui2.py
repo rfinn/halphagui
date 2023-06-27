@@ -6,8 +6,13 @@ GOAL:
 Run this from, e.g. /home/rfinn/research/Virgo/gui-output-2019
 - the gui will create a cutout folder in this directory that has a subdirectory for each pointing
 
+cd github/halphagui
 
-python ~/github/halphagui/batch_gui.py --coaddir /media/rfinn/hdata/coadds/BOK2021pipeline/ --bok --psfdir /media/rfinn/hdata/psf-images/
+source venv/bin/activate
+
+cd /data-pool/Halpha/halphagui-output-20230626
+
+python ~/github/halphagui/batch_gui2.py --coaddir /media/rfinn/hdata/coadds/BOK2021pipeline/ --bok --psfdir /media/rfinn/hdata/psf-images/
 
 
 NOTES:

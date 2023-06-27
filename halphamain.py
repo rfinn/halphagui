@@ -5,6 +5,12 @@ USAGE:
 
 Virgo 2019 INT data, running on laptop
 
+cd github/halphagui
+
+source venv/bin/activate
+
+cd /data-pool/Halpha/halphagui-output-20230626
+
 %run ~/github/halphagui/testing/halphamain.py --virgo --rimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-r-shifted.fits --haimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-Halpha.fits --filter inthalpha --psfdir /home/rfinn/data/reduced/psf-images/ --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --auto
 
 '''
@@ -1022,7 +1028,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.sepath = os.getenv('HOME')+'/github/halphagui/astromatic/'
         else:
             self.sepath = sepath
-        if psfdir is None:
+        if args.psfdir is None:
             self.psfdirectory = os.getcwd()
         else:
             self.psfdirectory = args.psfdir
