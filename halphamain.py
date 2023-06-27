@@ -1844,16 +1844,28 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # 
         # cannabalizing HalphaImaging/uat_find_filter_ratio.py
         #
-        self.link_files()
-        current_dir = os.getcwd()
-        image_dir = os.path.dirname(self.rcoadd_fname)
-        #os.chdir(image_dir)
 
-        runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
-        ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
-        print(ave,std)
-        #plt.show()
-        #os.chdir(current_dir)
+        ##
+        # Look for ZP info in headers
+        ##
+        try:
+            header = fits.getheader(self.rcoadd_fname)
+            rZP = header['PHOTZP']
+            header = fits.getheader(self.hacoadd_fname)
+            hZP = header['PHOTZP']
+            dm = hZP-rZP
+            ave = 10**(dm/2.5) # f2/f1
+        except:
+            self.link_files()
+            current_dir = os.getcwd()
+            image_dir = os.path.dirname(self.rcoadd_fname)
+            #os.chdir(image_dir)
+
+            runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
+            ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
+            print(ave,std)
+            #plt.show()
+            #os.chdir(current_dir)
         self.filter_ratio = ave
         self.reset_ratio = ave
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
