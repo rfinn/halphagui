@@ -133,7 +133,7 @@ def getoneratio(rimage,instrument,plotdir):
                 print('Warning: no halpha image found for ',rimage)
                 print('moving to the next image...')
                 return
-    else f == 'MOS':
+    elif f == 'MOS':
         testname = rimage.replace('-R.fits','-Ha4.fits')
         if os.path.exists(testname):
             himage = testname
@@ -142,6 +142,7 @@ def getoneratio(rimage,instrument,plotdir):
             print('Warning: no halpha image found for ',rimage)
             print('moving to the next image...')
             return
+
         
 
     print()
