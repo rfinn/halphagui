@@ -63,7 +63,9 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
     else:
         print('RUNNING SOURCE EXTRACTOR')
 
-        if zp1flag:
+        if zp1flag: # why do I need to run image 1 in two image mode???
+            s ='sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1)
+            print(s)
             os.system('sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
         else:
             os.system('sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat')
