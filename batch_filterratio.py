@@ -133,7 +133,16 @@ def getoneratio(rimage,instrument,plotdir):
                 print('Warning: no halpha image found for ',rimage)
                 print('moving to the next image...')
                 return
-
+    else f == 'MOS':
+        testname = rimage.replace('-R.fits','-Ha4.fits')
+        if os.path.exists(testname):
+            himage = testname
+        else:
+            print()
+            print('Warning: no halpha image found for ',rimage)
+            print('moving to the next image...')
+            return
+        
 
     print()
     print('##########################################')        
@@ -234,6 +243,8 @@ if __name__ == '__main__':
             f = 'INT'
         elif 'BOK' in args.oneimage:
             f = 'BOK'
+        elif 'BOK' in args.oneimage:
+            f = 'MOS'
         getoneratio(args.oneimage,f,plotdir)
 
     else:
