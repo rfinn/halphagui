@@ -244,7 +244,7 @@ if __name__ == '__main__':
             f = 'INT'
         elif 'BOK' in args.oneimage:
             f = 'BOK'
-        elif 'BOK' in args.oneimage:
+        elif 'MOS' in args.oneimage:
             f = 'MOS'
         getoneratio(args.oneimage,f,plotdir)
 
