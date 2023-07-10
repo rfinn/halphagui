@@ -89,6 +89,7 @@ for rimage in flist1: # loop through list
     rfilter = hdu[0].header['FILTER']
     try:
         haimage = hdu[0].header['HAIMAGE']
+        haimage = os.path.join(os.path.dirname(rimage),haimage)
     except KeyError:
         print()
         print("WARNING: no halpha image in header of ",rimage)
