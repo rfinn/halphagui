@@ -128,7 +128,7 @@ for rimage in flist1: # loop through list
         print('WARNING: problem running auto gui on ',rimage)
         print('##########################################')
 
-    just running on one directory for testing purposes
+    #just running on one directory for testing purposes
     i += 1
     if i > 0:
         break
