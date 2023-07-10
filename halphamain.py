@@ -114,10 +114,10 @@ cutout_scale = 2.5
 def get_tel_date_from_name(image_name):
     t = os.path.basename(image_name).split('-')
     print(t)
-    if len(t) == 6:
+    if len(t) == 5:
         telescope = t[2]
         dateobs = t[3]
-    elif len(t) == 7:
+    elif len(t) == 6: # meant to catch negative declinations
         telescope = t[3]
         dateobs = t[4]
     return telescope,dateobs
@@ -975,7 +975,7 @@ class create_output_table():
                 self.update_gui_table_cell(self.igal, 'COMMENT',t)
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
         if self.prefix is not None:
-            telescope,dateobs = get_tel_date_from_name(self.rcoadd_fname)
+            telescope,dateobs = get_tel_date_from_name(self.prefix)
             for i in range(len(self.table)):
                 self.table['POINTING'][i] = self.prefix
                 self.table['TEL'][i] = telescope
