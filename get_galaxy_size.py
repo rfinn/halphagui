@@ -56,12 +56,14 @@ def getsegmentation_se(image):
     os.system('ln -s ~/github/halphagui/astromatic/default.conv .')
     os.system('ln -s ~/github/halphagui/astromatic/default.nnw .')            
     #files = sorted(glob.glob(args.filestring))
-    # making output files have the 
-    command = f'sex {image} -c default.se.objsize -CHECKIMAGE_TYPE SEGMENTATION -CHECKIMAGE_NAME {os.path.basename(image)}-segmentation.fits -CATALOG_NAME {os.path.basename(image)}_cat.fits -CATALOG_TYPE FITS_LDAC'
+    # making output files have the
+    segim = os.path.basename(image).replace('.fits','-segmentation.fits')
+    cat = os.path.basename(image).replace('.fits','_cat.fits')
+    command = f"sex {image} -c default.se.objsize -CHECKIMAGE_TYPE SEGMENTATION -CHECKIMAGE_NAME {segim} -CATALOG_NAME {cat} -CATALOG_TYPE FITS_LDAC"
     print(command)
     os.system(command)
-    segm = fits.getdata(f'{image}-segmentation.fits')
-    tbl = fits.getdata(f'{image}_cat.fits',2)
+    segm = fits.getdata(segim)
+    tbl = fits.getdata(cat,2)
     return segm,tbl
 
 def getobjectsize(image,xobj,yobj,scale=1.75,plotflag=False,usese=True):
