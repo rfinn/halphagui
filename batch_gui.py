@@ -70,6 +70,7 @@ d = glob.glob(args.coadd_dir+'VF*BOK*-r.fits')
 e = glob.glob(args.coadd_dir+'VF*MOS*-R.fits')         
 flist1 = a + b + c + d + e
 
+print("number of r-band images = ",len(flist1))
 
 flist1.sort()
 
