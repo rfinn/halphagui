@@ -113,6 +113,7 @@ cutout_scale = 2.5
 
 def get_tel_date_from_name(image_name):
     t = image_name.split('-')
+    print(t)
     if len(t) == 6:
         telescope = t[2]
         dateobs = t[3]
@@ -2843,7 +2844,7 @@ class galaxy_catalog():
             return None
 
         px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
-        print('in galaxies_in_fov: px={},py={}'.format(px,py))
+        #print('in galaxies_in_fov: px={},py={}'.format(px,py))
         onimageflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
         print('number of galaxies on image, before z cut = ',sum(onimageflag))
         try:
