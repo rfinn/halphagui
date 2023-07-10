@@ -112,7 +112,7 @@ cutout_scale = 14
 cutout_scale = 2.5
 
 def get_tel_date_from_name(image_name):
-    t = image_name.split('-')
+    t = os.path.basename(image_name).split('-')
     print(t)
     if len(t) == 6:
         telescope = t[2]
