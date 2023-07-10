@@ -116,7 +116,7 @@ for rimage in flist1: # loop through list
     pointing = rootname.split('-')[-1]
     dirname = os.path.dirname(rimage)
         
-    prefix = os.path.basename(rootname)
+    prefix = os.path.basename(rootname).replace("-r-shifted.fits","").replace("-r.fits","").replace("-R.fits","")
 
     command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
 
