@@ -49,6 +49,7 @@ def subtract_images(rimage,himage,filter_ratio,zpflag=False):
     if zpflag:
         hacoadd_cs_fname = himage.split('.fits')[0]+'-CS-ZP.fits'
     print("subtracting images: ",himage," -> ",hacoadd_cs_fname)
+    # ratio is already written to r-band image header
     fits.writeto(hacoadd_cs_fname,halpha_cs,header=ha[0].header,overwrite=True)
     r.close()
     ha.close()

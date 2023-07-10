@@ -111,6 +111,15 @@ cutout_scale = 14
 # now in terms of R25 for
 cutout_scale = 2.5
 
+def get_tel_date_from_name(image_name):
+    t = image_name.split('-')
+    if len(t) == 6:
+        telescope = t[2]
+        dateobs = t[3]
+    elif len(t) == 7:
+        telescope = t[3]
+        dateobs = t[4]
+    return telescope,dateobs
 class psfimage():
     def __init__(self):
         fwhm = 5.6
@@ -571,9 +580,11 @@ class create_output_table():
         c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
         c11 = Column(np.zeros(self.ngalaxies,'f'),name='R_FWHM',unit=u.arcsec, description='R FWHM in arcsec')
         c12 = Column(np.zeros(self.ngalaxies,'f'),name='H_FWHM',unit=u.arcsec, description='HA FWHM in arcsec')
-        c13 = Column(np.zeros(self.ngalaxies,dtype='|S23'),name='POINTING', description='string specifying year and pointing, like v17p01.  most recently like VF-2017-05-20-HDI-p004')                
+        c13 = Column(np.zeros(self.ngalaxies,dtype='|S23'),name='POINTING', description='string specifying year and pointing')
+        c14 = Column(np.zeros(self.ngalaxies,dtype='|S3'),name='TEL', description='telescope/instrument')
+        c15 = Column(np.zeros(self.ngalaxies,dtype='i'),name='DATE-OBS', description='string specifying date of observation')                        
 
-        self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10,c11,c12,c13])
+        self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10,c11,c12,c13,c14,c15])
     def add_nsa(self):
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
         r = 22.5 - 2.5*np.log10(self.nsa2['NMGY'][:,4])
@@ -963,8 +974,11 @@ class create_output_table():
                 self.update_gui_table_cell(self.igal, 'COMMENT',t)
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
         if self.prefix is not None:
+            telescope,dateobs = get_tel_date_from_name(self.rcoadd_fname)
             for i in range(len(self.table)):
                 self.table['POINTING'][i] = self.prefix
+                self.table['TEL'][i] = telescope
+                self.table['DATE-OBS'] = dateobs
         self.table.write(self.output_table, format='fits', overwrite=True)
 
 class uco_table():
@@ -1114,28 +1128,26 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
     def auto_run(self):
         # run the analysis without starting the gui
         # read in coadded images
-        if self.cscoadd_fname is not None: # was trying to have this pick up from coadd web pages
-            self.set_hafilter(self.filter)
-            pass
-        else:
-            self.read_rcoadd()
-            self.read_hacoadd()
+        self.read_rcoadd()
+        self.read_hacoadd()
+        # set filter
+        self.set_hafilter(self.filter)
         
-            # set filter
-            # doing this automatically for HDI Virgo data for now
-            self.set_hafilter(self.filter)
+        # get filter ratio
+        # this will look for filter ratio in r-band image header
+        # will run SE if ratio is not found in header
+        self.get_filter_ratio()
         
-            # get filter ratio
-            self.get_filter_ratio()
+        # subtract images
+        # this will look for CS-ZP.fits image
+        # if not found, it will subtract images according to the ZP ratio of r and halpha images
+        self.subtract_images() # checks out ok
+        
+        # measure psf
+        # function will check if psf image already exists
+        self.build_psf()
 
-            # subtract images
-            self.subtract_images() # checks out ok
-        
-            # measure psf
-            # function will check if psf image already exists
-            self.build_psf()
-
-            # get galaxies
+        # get galaxies
         self.find_galaxies()
 
         self.write_fits_table()
@@ -1850,13 +1862,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         ##
         try:
             header = fits.getheader(self.rcoadd_fname)
-            rZP = header['PHOTZP']
-            header = fits.getheader(self.hacoadd_fname)
-            hZP = header['PHOTZP']
-            dm = hZP-rZP
-            ave = 10**(dm/2.5) # f2/f1
+            #rZP = header['PHOTZP']
+            #header = fits.getheader(self.hacoadd_fname)
+            #hZP = header['PHOTZP']
+            #dm = hZP-rZP
+            #ave = 10**(dm/2.5) # f2/f1
+
+            ave = header['FRATIOZP']
             runse = False
-        except:
+        except KeyError:
             self.link_files()
             current_dir = os.getcwd()
             image_dir = os.path.dirname(self.rcoadd_fname)
@@ -1887,19 +1901,25 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             for im in images:
                 catfile = os.path.basename(im).split('.fits')[0]+'.cat'
                 os.remove(catfile)
-    def subtract_images(self):
-        try:
-            self.halpha_cs = self.ha - self.filter_ratio*self.r
-        except AttributeError:
-            print('WARNING: no filter ratio')
+    def subtract_images(self,overwrite=False):
+        # use the ZP subtracted images
+        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS-ZP.fits'
+        
+        if os.path.exists(self.hacoadd_cs_fname) and not overwrite:
+            # don't need to subtract images
+            self.halpha_cs = fits.getdata(self.hacoadd_cs_fname)
+        else:
+            try:
+                self.halpha_cs = self.ha - self.filter_ratio*self.r
+                fits.writeto(self.hacoadd_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)           
+            except AttributeError:
+                print('WARNING: no filter ratio')
 
         if not self.auto:
             # display continuum subtracted Halpha image in the large frame
             self.coadd.fitsimage.set_autocut_params('zscale')
             self.coadd.fitsimage.set_data(self.halpha_cs)
-        # save continuum subtracted image?
-        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS.fits'
-        fits.writeto(self.hacoadd_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)
+        
     def key_press_func(self,key):
         print(key)
         if key == 'r':
@@ -1968,7 +1988,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.filter_ratio = self.minfilter_ratio + (delta)/100.*self.ui.ratioSlider.value()
         #print(value,' ratio slider changed to', round(self.filter_ratio,4))
         try:
-            self.subtract_images()
+            self.subtract_images(overwrite=True)
             self.display_cutouts()
         except:
             print('Trouble plotting cutouts')
@@ -2195,7 +2215,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.update_images()
         #self.ui.ratioSlider.setValue(50)
     def update_images(self):
-        self.subtract_images()
+        self.subtract_images(overwrite=True)
         self.display_cutouts()
 
         
