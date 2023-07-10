@@ -56,13 +56,14 @@ def getsegmentation_se(image):
     os.system('ln -s ~/github/halphagui/astromatic/default.conv .')
     os.system('ln -s ~/github/halphagui/astromatic/default.nnw .')            
     #files = sorted(glob.glob(args.filestring))
-    command = 'sex {} -c default.se.objsize -CHECKIMAGE_TYPE SEGMENTATION -CHECKIMAGE_NAME segmentation.fits -CATALOG_NAME test_cat.fits -CATALOG_TYPE FITS_LDAC'.format(image)
+    # making output files have the 
+    command = f'sex {image} -c default.se.objsize -CHECKIMAGE_TYPE SEGMENTATION -CHECKIMAGE_NAME {image}-segmentation.fits -CATALOG_NAME {image}_cat.fits -CATALOG_TYPE FITS_LDAC'
     print(command)
     os.system(command)
-    segm = fits.getdata('segmentation.fits')
-    tbl = fits.getdata('test_cat.fits',2)
-    
+    segm = fits.getdata(f'{image}-segmentation.fits')
+    tbl = fits.getdata(f'{image}_cat.fits',2)
     return segm,tbl
+
 def getobjectsize(image,xobj,yobj,scale=1.75,plotflag=False,usese=True):
     if usese:
         segm, tbl = getsegmentation_se(image)
@@ -92,10 +93,10 @@ def getobjectsize(image,xobj,yobj,scale=1.75,plotflag=False,usese=True):
     xmin = tbl[xminkey][objids-1]
     xmax = tbl[xmaxkey][objids-1]
     dx = xmax-xmin
-    #print(xmin,xmax)
-    #print(dx)
-    #print(ymin,ymax)
-    #print(dy)
+    print(xmin,xmax)
+    print(dx)
+    print(ymin,ymax)
+    print(dy)
     objsize = np.zeros(len(dx),'i')
     for i in range(len(objsize)):
         if usese:
