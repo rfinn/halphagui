@@ -113,7 +113,7 @@ cutout_scale = 2.5
 
 def get_params_from_name(image_name):
     t = os.path.basename(image_name).split('-')
-    print(t)
+    #print(t)
     if len(t) == 5:
 
         telescope = t[2]
