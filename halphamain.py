@@ -111,16 +111,19 @@ cutout_scale = 14
 # now in terms of R25 for
 cutout_scale = 2.5
 
-def get_tel_date_from_name(image_name):
+def get_params_from_name(image_name):
     t = os.path.basename(image_name).split('-')
     print(t)
     if len(t) == 5:
+
         telescope = t[2]
         dateobs = t[3]
+        pointing = t[4]
     elif len(t) == 6: # meant to catch negative declinations
         telescope = t[3]
         dateobs = t[4]
-    return telescope,dateobs
+        pointing = t[5]        
+    return telescope,dateobs,pointing
 class psfimage():
     def __init__(self):
         fwhm = 5.6
@@ -975,7 +978,7 @@ class create_output_table():
                 self.update_gui_table_cell(self.igal, 'COMMENT',t)
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
         if self.prefix is not None:
-            telescope,dateobs = get_tel_date_from_name(self.prefix)
+            telescope,dateobs,p = get_params_from_name(self.prefix)
             for i in range(len(self.table)):
                 self.table['POINTING'][i] = self.prefix
                 self.table['TEL'][i] = telescope
@@ -2061,7 +2064,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # add date and pointing
 
         header = self.ha_header
+
         # date is stored in epoch for HDI data
+
+
         
         try:
             # store time 
@@ -2076,7 +2082,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                 # putting in a place holder b/c older (2017)
                 # HDI coadds don't have epoch in the header.
                 t = Time('2017-05-20T00:00:00.0',format='isot')
-        dateobs = t.iso.split()[0]
+        dateobs = t.iso.split()[0].replace('-','')
 
         # get instrument
         try:
@@ -2086,7 +2092,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             elif instrument.find('Mosaic') > -1:
                 instrument='MOSAIC'
         except KeyError:
-            instrument='WFC'
+            instrument='INT'
 
         # read in object
         o = header['OBJECT']
@@ -2138,7 +2144,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             nedname = self.NEDname[self.igal].replace(" ","")
             nedname = nedname.replace("[","")
             nedname = nedname.replace("]","")
-            nedname = nedname.replace("/","")                        
+            nedname = nedname.replace("/","")
+
+            telescope,dateobs,pointing = get_params_from_name(self.prefix)
+            
             
             cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,dateobs,instrument,pointing)
             
