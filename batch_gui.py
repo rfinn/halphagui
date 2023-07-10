@@ -88,7 +88,7 @@ for rimage in flist1: # loop through list
     hdu = fits.open(rimage)
     rfilter = hdu[0].header['FILTER']
     try:
-        himage = hdu[0].header['HAIMAGE']
+        haimage = hdu[0].header['HAIMAGE']
     except KeyError:
         print()
         print("WARNING: no halpha image in header of ",rimage)
@@ -100,9 +100,9 @@ for rimage in flist1: # loop through list
     ##
     # get the halpha filter name
     ##
-    if '-Halpha.fits' in himage:
+    if '-Halpha.fits' in haimage:
         hfilter = 'inthalpha'
-    elif '-Ha6657.fits' in himage:
+    elif '-Ha6657.fits' in haimage:
         hfilter = 'intha6657'
     else: # includes BOK, HDI, MOSAIC
         hfilter = '4'
