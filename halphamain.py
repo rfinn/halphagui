@@ -580,7 +580,7 @@ class create_output_table():
         c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
         c11 = Column(np.zeros(self.ngalaxies,'f'),name='R_FWHM',unit=u.arcsec, description='R FWHM in arcsec')
         c12 = Column(np.zeros(self.ngalaxies,'f'),name='H_FWHM',unit=u.arcsec, description='HA FWHM in arcsec')
-        c13 = Column(np.zeros(self.ngalaxies,dtype='|S23'),name='POINTING', description='string specifying year and pointing')
+        c13 = Column(np.zeros(self.ngalaxies,dtype='|S40'),name='POINTING', description='string specifying year and pointing')
         c14 = Column(np.zeros(self.ngalaxies,dtype='|S3'),name='TEL', description='telescope/instrument')
         c15 = Column(np.zeros(self.ngalaxies,dtype='i'),name='DATE-OBS', description='string specifying date of observation')                        
 

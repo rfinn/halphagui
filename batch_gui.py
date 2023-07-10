@@ -122,7 +122,7 @@ for rimage in flist1: # loop through list
 
     try:
         print('running : ',command_string)
-        #os.system(command_string)
+        os.system(command_string)
     except:
         print('##########################################')
         print('WARNING: problem running auto gui on ',rimage)
