@@ -39,33 +39,11 @@ homedir = os.getenv("HOME")
 # get list of current directory
 imagedir = args.coadd_dir
 
-# this is all outdated - the next block reflects the new
-# naming convention
-if args.hdi:
-    # HDI has rband images taken in r and R, so grab both
-    flista = glob.glob(imagedir+'VF-*r-noback-coadd.fits')
-    flistb = glob.glob(imagedir+'VF-*R-noback-coadd.fits')
-    flist1 = flista + flistb
-elif args.mosaic:
-    flist1 = glob.glob(imagedir+'n*R.fits')
-elif args.bok:
-    flist1 = glob.glob(imagedir+'VF-*r.fits')
-else: # assume INT
-    flist1 = glob.glob(imagedir+'VF-*r-shifted.fits')
 working_dir = os.getcwd()
 # overwrite output files if they exist
 overwrite = True
 
 
-# get list of r-band coadded images
-a = glob.glob(args.coadd_dir+'VF*INT*-r-shifted.fits')
-b = glob.glob(args.coadd_dir+'VF*HDI*-r.fits')
-c = glob.glob(args.coadd_dir+'VF*HDI*-R.fits')
-d = glob.glob(args.coadd_dir+'VF*BOK*-r.fits')         
-flist1 = a + b + c + d
-
-
-flist1.sort()
 ##
 # update for draco - stealing from build_web_coadds2.py
 ##
@@ -83,12 +61,15 @@ outpathbase = '/data-pool/Halpha/'
 psfdir = outpathbase+'psf-images/'
 outdir = outpathbase+'/html_dev/coadds/'
 
+# updating for new naming convention and for the setup on draco
 # get list of r-band coadded images
-a = glob.glob(coadd_dir+'VF*INT*-r-shifted.fits')
-b = glob.glob(coadd_dir+'VF*HDI*-r.fits')
-c = glob.glob(coadd_dir+'VF*HDI*-R.fits')
-d = glob.glob(coadd_dir+'VF*BOK*-r.fits')         
-flist1 = a + b + c + d
+a = glob.glob(args.coadd_dir+'VF*INT*-r-shifted.fits')
+b = glob.glob(args.coadd_dir+'VF*HDI*-r.fits')
+c = glob.glob(args.coadd_dir+'VF*HDI*-R.fits')
+d = glob.glob(args.coadd_dir+'VF*BOK*-r.fits')
+e = glob.glob(args.coadd_dir+'VF*MOS*-R.fits')         
+flist1 = a + b + c + d + e
+
 
 flist1.sort()
 
@@ -102,120 +83,49 @@ for rimage in flist1: # loop through list
     print('##########################################')        
     print()
     # read in r-band images
-    # find matching Halpha image
-
-    # grab other coadds
-
-    if args.hdi:
+    # find matching Halpha image    
+    hdu = fits.open(rimage)
+    rfilter = hdu[0].header['FILTER']
+    try:
+        himage = hdu[0].header['HAIMAGE']
+    except KeyError:
         print()
-        print('#######  HDI DATA #########')
-        print()        
-        if rimage.find('-R-') > -1:
-            rfilter = 'R'
-        elif rimage.find('-r-') > -1:
-            rfilter = 'r'
-        print(rimage)
-        rootname = rimage.split('-'+rfilter+'-')[0] # should be VF-2018-03-16-HDI-p054
-        print(rootname)        
-        rweightimage = rimage.split('.fits')[0]+'.weight.fits'
-        pointing = rootname.split('-')[-1]
-        dirname = os.path.dirname(rimage)
-        coadds = glob.glob(rootname+'*.fits')
+        print("WARNING: no halpha image in header of ",rimage)
+        print("\t moving to next image")
+        hdu.close()
+        continue
+    hdu.close()
 
-    elif args.mosaic:
-        print()
-        print('#######  MOSAIC DATA #########')
-        print()        
-        if rimage.find('R.fits') > -1:
-            rfilter = 'R'
-        elif rimage.find('r.fits') > -1:
-            rfilter = 'r'
-        print(rimage)
-        rootname = rimage.split(rfilter+'.')[0] # should be VF-2018-03-16-HDI-p054
-        print(rootname)        
-        rweightimage = None
-        pointing = rootname.split('_')[-1].replace('R','')
-        dirname = os.path.dirname(rimage)
-        coadds = glob.glob(rootname+'*.fits')
+    ##
+    # get the halpha filter name
+    ##
+    if '-Halpha.fits' in himage:
+        hfilter = 'inthalpha'
+    elif '-Ha6657.fits' in himage:
+        hfilter = 'intha6657'
+    else: # includes BOK, HDI, MOSAIC
+        hfilter = '4'
 
-    elif args.bok:
-        rootname = rimage.split('-r')[0]
-        rweightimage = rootname+'-r.weight.fits'
-
-        # last entry is the pointing name - VFIDXXXX for the case of the Bok data
-        pointing = rootname.split('-')[-1]
-        dirname = os.path.dirname(rimage)
-        coadds = glob.glob(dirname+'/VF*'+pointing+'*.fits')
-    else:
-        rootname = rimage.split('-r')[0]
-        rweightimage = rootname+'-r.weight.fits'
-        rweightimage = rweightimage.replace('-shifted','')
-
-        # last entry is the pointing name - match on this
-        # because sometimes the Halpha coordinates are slightly different
-        # or the UT date changed between Halpha and r images
-        pointing = rootname.split('-')[-1]
-        print(f"\nPointing name = {pointing}\n")
-        dirname = os.path.dirname(rimage)
-        coadds = glob.glob(dirname+'/VF*'+pointing+'*.fits')
-    #print('rootname = ',rootname)
-    #print(coadds)
-    #print(coadds)
-    haimage = None
-    print(coadds)
-    for c in coadds:
-        #print(c)
-        if c.find('CS') > -1:
-            print('skipping CS image')
-            continue
-        if (c.find('-Halpha.fits') > -1) & (c.find('weight') < 0):
-            haimage = c
-            hfilter = 'inthalpha'
-            print('haimage = ',c)
-        elif (c.find('-Ha6657') > -1) & (c.find('weight') < 0):
-            haimage = c
-            hfilter = 'intha6657'
-            print('haimage = ',c)            
-        elif (c.find('-ha4') > -1) & (c.find('weight') < 0):
-            haimage = c
-            hfilter = '4'
-            print('haimage = ',c)            
-            #print('matching ha image: ',haimage)
+    ##
+    # get rootname of the image
+    ##
+    rootname = rimage.split('-'+rfilter+'-')[0] # should be VF-2018-03-16-HDI-p054
+    print(rootname)        
+    rweightimage = rimage.replace('.fits','.weight.fits')
+    pointing = rootname.split('-')[-1]
+    dirname = os.path.dirname(rimage)
         
-        elif (c.find('-Ha4') > -1) & (c.find('weight') < 0):
-            haimage = c
-            hfilter = '4'
-            print('haimage = ',c)            
-            
-        elif (c.find('Ha.fits') > -1) & (c.find('weight') < 0):
-            haimage = c
-            hfilter = '4'
-            print('haimage = ',c)            
-            #print('matching ha image: ',haimage)
-    if haimage is not None:
-        #print(rootname)
-        if args.hdi:
-            prefix = os.path.basename(rootname)
-            #prefix = None
-        elif args.mosaic:
-            prefix = os.path.basename(rootname)
-        elif args.bok:
-            prefix = os.path.basename(rootname)
-            #prefix = None
-        else:
-            prefix = 'v19'+pointing
-        print('prefix = ',prefix)
+    prefix = os.path.basename(rootname)
 
-        command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
+    command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
 
-        # check to see if shifted r-band image exists.  if 
-        try:
-            print('running : ',command_string)
-            os.system(command_string)
-        except:
-            print('##########################################')
-            print('WARNING: problem running auto gui on ',rimage)
-            print('##########################################')
+    try:
+        print('running : ',command_string)
+        #os.system(command_string)
+    except:
+        print('##########################################')
+        print('WARNING: problem running auto gui on ',rimage)
+        print('##########################################')
 
     #just running on one directory for testing purposes
     #i += 1
