@@ -2149,10 +2149,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             telescope,dateobs,pointing = get_params_from_name(self.prefix)
             
             
-            cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,dateobs,instrument,pointing)
+            cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,instrument,dateobs,pointing)
             
         else:
-            cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],dateobs,instrument,pointing)
+            cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
             
     
 
