@@ -28,6 +28,7 @@ parser.add_argument('--coadd_dir',dest = 'coadd_dir', default ='/data-pool/Halph
 parser.add_argument('--psfdir',dest = 'psfdir', default='/data-pool/Halpha/psf-images/', help = "directory containing PSF images.  Default is for draco /data-pool/Halpha/psf-images/.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
 #parser.add_argument('--getgalsonly',dest = 'psfdir', default='/home/rfinn/data/reduced/psf-images/', help = "directory containing PSF images.  Default is /home/rfinn/data/reduced/psf-images/, which is for laptop.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
 parser.add_argument('--oneimage',dest = 'oneimage', default=None, help = "use this to run on one image only.  Specify the full path to the r-band image. ")
+parser.add_argument('--testing',dest = 'testing', default=False,action='store_true', help = "use this to run on the first image only for testing purposes. ")
 args = parser.parse_args()
 
 
@@ -143,7 +144,7 @@ for rimage in flist1: # loop through list
 
     #just running on one directory for testing purposes
     i += 1
-    if i > 0:
+    if (i > 0) and args.testing:
         break
 
 
