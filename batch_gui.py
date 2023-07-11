@@ -69,9 +69,10 @@ if args.oneimage is not None:
     # easiest is to cut the flist1 to include the image
     
     # make sure that the image exists
-    print(args.oneimage)
     print()
-    print(str(os.path.exists(args.oneimage)))
+    print(args.oneimage)
+    #print()
+    print(str(os.path.exists(args.oneimage.rstrip())))
     if not os.path.exists(args.oneimage):
         print(f"Could not find {args.oneimage} - please check the r-band coadd name you provided")
         sys.exit()
