@@ -27,7 +27,7 @@ parser.add_argument('--coadd_dir',dest = 'coadd_dir', default ='/data-pool/Halph
 #parser.add_argument('--bok',dest = 'bok', default =False, action='store_true', help = "set this for Bok 90prime data.  it will grab the filenames according to naming convention for the 90Prime images.")
 parser.add_argument('--psfdir',dest = 'psfdir', default='/data-pool/Halpha/psf-images/', help = "directory containing PSF images.  Default is for draco /data-pool/Halpha/psf-images/.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
 #parser.add_argument('--getgalsonly',dest = 'psfdir', default='/home/rfinn/data/reduced/psf-images/', help = "directory containing PSF images.  Default is /home/rfinn/data/reduced/psf-images/, which is for laptop.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
-
+parser.add_argument('--oneimage',dest = 'oneimage', default=None, help = "use this to run on one image only.  Specify the full path to the r-band image. ")
 args = parser.parse_args()
 
 
@@ -35,6 +35,7 @@ args = parser.parse_args()
 matplotlib.use("Qt5agg")
 homedir = os.getenv("HOME")
 #telescope = 'INT'
+
 
 # get list of current directory
 imagedir = args.coadd_dir
@@ -61,18 +62,29 @@ outpathbase = '/data-pool/Halpha/'
 psfdir = outpathbase+'psf-images/'
 outdir = outpathbase+'/html_dev/coadds/'
 
-# updating for new naming convention and for the setup on draco
-# get list of r-band coadded images
-a = glob.glob(args.coadd_dir+'VF*INT*-r-shifted.fits')
-b = glob.glob(args.coadd_dir+'VF*HDI*-r.fits')
-c = glob.glob(args.coadd_dir+'VF*HDI*-R.fits')
-d = glob.glob(args.coadd_dir+'VF*BOK*-r.fits')
-e = glob.glob(args.coadd_dir+'VF*MOS*-R.fits')         
-flist1 = a + b + c + d + e
-
+if args.oneimage is not None:
+    # add code to run on the one image image
+    # easiest is to cut the flist1 to include the image
+    
+    # make sure that the image exists
+    if not os.path.exists(args.oneimage):
+        print(f"Could not find {args.oneimage} - please check the r-band coadd name you provided")
+        sys.exit()
+        
+    # redefine the list to include the one image only
+    flist1 = [args.oneimage]
+    
+else:
+    # updating for new naming convention and for the setup on draco
+    # get list of r-band coadded images
+    a = glob.glob(args.coadd_dir+'VF*INT*-r-shifted.fits')
+    b = glob.glob(args.coadd_dir+'VF*HDI*-r.fits')
+    c = glob.glob(args.coadd_dir+'VF*HDI*-R.fits')
+    d = glob.glob(args.coadd_dir+'VF*BOK*-r.fits')
+    e = glob.glob(args.coadd_dir+'VF*MOS*-R.fits')         
+    flist1 = a + b + c + d + e
+    flist1.sort()
 print("number of r-band images = ",len(flist1))
-
-flist1.sort()
 
 
 i = 0
@@ -131,7 +143,7 @@ for rimage in flist1: # loop through list
 
     #just running on one directory for testing purposes
     i += 1
-    #if i > 0:
-    #    break
+    if i > 0:
+        break
 
 

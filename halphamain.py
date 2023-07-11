@@ -501,8 +501,15 @@ class create_output_table():
         self.galid = self.table['VFID']
         self.NEDname = self.table['NEDname']                
         self.gredshift = self.defcat.cat['vr']/3.e5
-        self.gzdist = self.defcat.cat['vr']/3.e5        
-        self.gradius = self.defcat.cat['radius']/self.pixelscale
+        self.gzdist = self.defcat.cat['vr']/3.e5
+
+        ##
+        # update this to use the SMA_SB24
+        ##
+        #self.gradius = self.defcat.cat['radius']/self.pixelscale
+        self.gradius = self.radius_arcsec/self.pixelscale
+
+        
         self.ra = self.defcat.cat['RA']
         self.dec = self.defcat.cat['DEC']        
         c1 = Column(self.haflag, name='HAflag', description='Halpha flag')
@@ -1355,6 +1362,18 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.vf = galaxy_catalog(self.vf_fname,virgo=True)
 
         self.nsa = galaxy_catalog(self.nsa_fname,virgo=True)
+
+        ##
+        # get sizes for galaxies
+        ##
+        ephot_fname = os.path.join(self.tabledir,'vf_v2_legacy_ephot.fits')
+        ephot = Table.read(ephot_fname)
+        self.radius_arcsec = ephot['SMA_SB24']
+        noradius_flag = self.radius_arcsec == 0
+        # set radius to value in main table for these sources
+        self.radius_arcsec[noradius_flag] = self.vf['radius'][noradius_flag]
+
+        
         self.agcflag = False
         self.nsaflag = False
 
@@ -1644,31 +1663,43 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         flag = self.get_gal_list()
         if flag == False:
             return
-        start_time = time.perf_counter()
-        print('getting object sizes from segmentation image')
-        if 'HDI' is in self.rcoadd_fname:
-            scale = 3.5
-        else:
-            scale = 1.75
-        self.cutout_sizes = getobjectsize(self.rcoadd_fname,np.array(self.gximage,'i'),np.array(self.gyimage,'i'),scale=scale)
-        print('...done with segmentation image in {:2f} sec'.format(time.perf_counter()-start_time))
-        print('...sorry for the wait')
-        print('\t cutout sizes = ',self.cutout_sizes)
+
+
+        ##
+        # rewrite to get the size from JM's ephot, +/- 3*SMA_SB24
+        ##
+        scale = 3
+        self.cutout_sizes = self.radius_arcsec*scale/self.pixelscale
+        
+        #start_time = time.perf_counter()        
+        #print('getting object sizes from segmentation image')
+        #if 'HDI' is in self.rcoadd_fname:
+        #    scale = 3.5
+        #else:
+        #    scale = 1.75
+        #self.cutout_sizes = getobjectsize(self.rcoadd_fname,np.array(self.gximage,'i'),np.array(self.gyimage,'i'),scale=scale)
+        #print('...done with segmentation image in {:2f} sec'.format(time.perf_counter()-start_time))
+        #print('...sorry for the wait')
+        #print('\t cutout sizes = ',self.cutout_sizes)
               
         # convert to arcsec
         self.cutout_sizes_arcsec = self.cutout_sizes*self.pixelscale*u.arcsec
-        print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)
+        #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)
         # check to see if any are outside the allowed range
 
-        for i,s in enumerate(self.cutout_sizes_arcsec):
-            if s > self.global_max_cutout_size:
-                self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
-                self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
-            elif s < self.global_min_cutout_size:
-                self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
-                self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale                
-        print('after comparing with max/min size limits:')
-        print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
+
+        ##
+        # SKIPPING MIN/MAX RESET - would rather correct values in source catalogs
+        ##
+        #for i,s in enumerate(self.cutout_sizes_arcsec):
+        #    if s > self.global_max_cutout_size:
+        #        self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
+        #        self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
+        #    elif s < self.global_min_cutout_size:
+        #        self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
+        #        self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale                
+        #print('after comparing with max/min size limits:')
+        #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
         # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
 
@@ -1685,14 +1716,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.ui.wgalid.activated.connect(self.select_galaxy)
 
         # get transmission correction for each galaxy
-        self.filter_correction= self.filter_trace.get_trans_correction(self.table['REDSHIFT'])
+        # add prefix to figure that is created by filter_trace.get_trans_correction        
+        figfile = f"{self.prefix}-galaxies_in_filter.png"        
+        self.filter_correction= self.filter_trace.get_trans_correction(self.table['REDSHIFT'],outfile=figfile)
         #print(self.filter_correction)
         self.table['FILT_COR'] = self.filter_correction
 
-        # add prefix to figure that is created by filter_trace.get_trans_correction
 
-        figfile = "galaxies_in_filter.png"
-        os.rename(figfile,self.prefix+'-'+figfile)
         
     def get_gal_list(self):
         #
@@ -1752,8 +1782,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             print('try again!')
             return
         self.defcat.cull_catalog(keepflag,self.prefix)
+    
         if self.virgo:
             self.nsa.cull_catalog(keepflag,self.prefix)
+            self.radius_arcsec = self.radius_arcsec[keepflag]
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
         #self.gradius=self.nsa.cat.SERSIC_TH50
@@ -2896,7 +2928,8 @@ class galaxy_catalog():
             outfile = prefix+'_virgo_cat.fits'
             print('culled catalog = ',outfile)
             self.cat.write(outfile,format='fits',overwrite=True)
-        
+            # cull ephot
+            
         
 if __name__ == "__main__":
     ## RUNNING AS THE MAIN PROGRAM
