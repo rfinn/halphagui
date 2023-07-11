@@ -66,7 +66,7 @@ def getsegmentation_se(image):
     tbl = fits.getdata(cat,2)
     return segm,tbl
 
-def getobjectsize(image,xobj,yobj,scale=1.5,plotflag=False,usese=True):
+def getobjectsize(image,xobj,yobj,scale=1.75,plotflag=False,usese=True):
     if usese:
         segm, tbl = getsegmentation_se(image)
     else:

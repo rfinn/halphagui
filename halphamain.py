@@ -1646,7 +1646,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             return
         start_time = time.perf_counter()
         print('getting object sizes from segmentation image')
-        self.cutout_sizes = getobjectsize(self.rcoadd_fname,np.array(self.gximage,'i'),np.array(self.gyimage,'i'))
+        if 'HDI' is in self.rcoadd_fname:
+            scale = 3.5
+        else:
+            scale = 1.75
+        self.cutout_sizes = getobjectsize(self.rcoadd_fname,np.array(self.gximage,'i'),np.array(self.gyimage,'i'),scale=scale)
         print('...done with segmentation image in {:2f} sec'.format(time.perf_counter()-start_time))
         print('...sorry for the wait')
         print('\t cutout sizes = ',self.cutout_sizes)
@@ -2099,6 +2103,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if instrument == '90prime':
             # this should be the VFID of the primary target
             pointing = o.split('_')[0]
+            instrument = 'BOK'
         else:
             try:
 
@@ -2146,7 +2151,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             nedname = nedname.replace("]","")
             nedname = nedname.replace("/","")
 
-            telescope,dateobs,pointing = get_params_from_name(self.prefix)
+            instrument,dateobs,pointing = get_params_from_name(self.prefix)
             
             
             cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,instrument,dateobs,pointing)
