@@ -13,6 +13,7 @@ python ~/github/halphagui/batch_gui.py --coaddir /media/rfinn/hdata/coadds/BOK20
 '''
 
 import os
+import sys
 import shutil
 import glob
 from astropy.io import fits
