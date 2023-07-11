@@ -1371,7 +1371,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.radius_arcsec = ephot['SMA_SB24']
         noradius_flag = self.radius_arcsec == 0
         # set radius to value in main table for these sources
-        self.radius_arcsec[noradius_flag] = self.vf['radius'][noradius_flag]
+        self.radius_arcsec[noradius_flag] = self.vf.cat['radius'][noradius_flag]
 
         
         self.agcflag = False
