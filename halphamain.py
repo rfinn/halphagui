@@ -2400,11 +2400,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             # if psf is in another directory, create a link to the current directory
             # this will avoid having a long filename b/c galfit does not handle long filenames
             
-            
-            command = 'cp {} r-psf.fits'.format(psf_image_name)
-            print('running: ',command)
-            os.system(command)
-            self.psf_image_name = 'r-psf.fits'
+            self.psf_image_name = psf_image_name
+
+            ##
+            # changing to use the psf without copying to current directory
+            ##
+            #command = 'cp {} r-psf.fits'.format(psf_image_name)
+            #print('running: ',command)
+            #os.system(command)
+            #self.psf_image_name = 'r-psf.fits'
 
 
             
@@ -2428,10 +2432,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             # if psf is in another directory, create a link to the current directory
             # this will avoid having a long filename b/c galfit does not handle long filenames
 
-            command = 'cp {} ha-psf.fits'.format(psf_image_name)
-            print('running: ',command)
-            os.system(command)
-            self.psf_haimage_name = 'ha-psf.fits'
+            self.psf_haimage_name = psf_image_name
+            #command = 'cp {} ha-psf.fits'.format(psf_image_name)
+            #print('running: ',command)
+            #os.system(command)
+            #self.psf_haimage_name = 'ha-psf.fits'
 
             
         else:
