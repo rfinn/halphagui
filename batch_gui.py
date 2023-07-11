@@ -70,6 +70,8 @@ if args.oneimage is not None:
     
     # make sure that the image exists
     print(args.oneimage)
+    print()
+    print(os.path.exists(args.oneimage))
     if not os.path.exists(args.oneimage):
         print(f"Could not find {args.oneimage} - please check the r-band coadd name you provided")
         sys.exit()
