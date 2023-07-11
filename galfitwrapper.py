@@ -93,7 +93,17 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
 
         # get pixel scale from image header
         # convert from degrees/pix to arcsec/pix
-        self.pscale = abs(float(self.image_header['CD1_1'])*3600)
+
+        ## making more general - not all images have CD1_1 keyword
+        #self.pscale = abs(float(self.image_header['CD1_1'])*3600)        
+        try:
+            self.pscale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
+        except KeyError:
+            try:
+                self.pscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
+            except KeyError:
+                self.pscale = np.abs(float(self.r_header['PC1_1']))*3600. # Siena pipel        
+
         
         self.sigma_image = sigma_image
         self.psf_image = psf
