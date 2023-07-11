@@ -74,6 +74,8 @@ if args.oneimage is not None:
     #print()
     print(str(os.path.exists(args.oneimage.rstrip())))
     if not os.path.exists(args.oneimage):
+        teststring = '/data-pool/Halpha/coadds/all-virgo-coadds/VF-118.182+20.982-INT-20190205-p001-r-shifted.fits'
+        print('test string = ',os.path.exists(teststring))
         print(f"Could not find {args.oneimage} - please check the r-band coadd name you provided")
         sys.exit()
         
