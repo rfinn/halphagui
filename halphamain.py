@@ -2446,11 +2446,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             #os.system(command)
             #self.psf_haimage_name = 'ha-psf.fits'
 
-            outname = os.path.basename(psf_image_name)
-            command = f'ln -s {psf_image_name} {outname}'
+            outname = os.path.basename(psf_image_name_ha)
+            command = f'ln -s {psf_image_name_ha} {outname}'
             #print('running: ',command)
             os.system(command)
-            #self.psf_image_name = 'r-psf.fits'
             self.psf_haimage_name = outname
             
         else:
