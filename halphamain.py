@@ -2399,16 +2399,24 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.oversampling = float(header['OVERSAMP'])
             # if psf is in another directory, create a link to the current directory
             # this will avoid having a long filename b/c galfit does not handle long filenames
-            
-            self.psf_image_name = psf_image_name
+
+            ##
+            # GALFIT does not handle the long image name - it craps out
+            #
+            # that must be why I copied the psf image to r-psf.fits
+            # need to figure out another way so that I can run them in parallel
+            ##
+            #self.psf_image_name = psf_image_name
 
             ##
             # changing to use the psf without copying to current directory
             ##
-            #command = 'cp {} r-psf.fits'.format(psf_image_name)
+            outname = os.path.basename(psf_image_name)
+            command = f'ln -s {psf_image_name} {outname}'
             #print('running: ',command)
-            #os.system(command)
+            os.system(command)
             #self.psf_image_name = 'r-psf.fits'
+            self.psf_image_name = outname
 
 
             
@@ -2432,12 +2440,18 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             # if psf is in another directory, create a link to the current directory
             # this will avoid having a long filename b/c galfit does not handle long filenames
 
-            self.psf_haimage_name = psf_image_name
+            #self.psf_haimage_name = psf_image_name
             #command = 'cp {} ha-psf.fits'.format(psf_image_name)
             #print('running: ',command)
             #os.system(command)
             #self.psf_haimage_name = 'ha-psf.fits'
 
+            outname = os.path.basename(psf_image_name)
+            command = f'ln -s {psf_image_name} {outname}'
+            #print('running: ',command)
+            os.system(command)
+            #self.psf_image_name = 'r-psf.fits'
+            self.psf_haimage_name = outname
             
         else:
             print('PSF RESULTS FOR HA COADDED IMAGE')
