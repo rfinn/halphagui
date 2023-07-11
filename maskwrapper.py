@@ -95,7 +95,7 @@ class buildmask():
             os.system('unlink '+file)
 
     def read_se_cat(self):
-        sexout=fits.getdata('test.cat')
+        sexout=fits.getdata(self.catname)
         self.xsex=sexout['XWIN_IMAGE']
         self.ysex=sexout['YWIN_IMAGE']
         self.fwhm = sexout['FWHM_IMAGE']
@@ -110,9 +110,13 @@ class buildmask():
         # TODO make an alternate function that creates segmentation image from photutils
         # this is already done in ell
         print('using a deblending threshold = ',self.threshold)
-        print('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr_analysis)))
-        os.system('sex %s -c %s -CATALOG_NAME test.cat -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT %f -DETECT_THRESH %f -ANALYSIS_THRESH %f'%(self.image_name,self.config,float(self.threshold),float(self.snr),float(self.snr)))
-        self.maskdat = fits.getdata('segmentation.fits')
+        
+        self.catname = self.image_name.replace('.fits','.cat')
+        self.segmentation = self.image_name.replace('.fits','-segmentation.fits')
+        sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation}"
+        print(sestring)
+        os.system(sestring)
+        self.maskdat = fits.getdata(self.segmentation)
         # grow masked areas
         bool_array = np.array(self.maskdat.shape,'bool')
         #for i in range(len(self.xsex)):
