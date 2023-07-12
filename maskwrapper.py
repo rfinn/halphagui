@@ -101,9 +101,18 @@ class buildmask():
         self.fwhm = sexout['FWHM_IMAGE']
         dist=np.sqrt((self.yc-self.ysex)**2+(self.xc-self.xsex)**2)
         #   find object ID
-        objIndex=np.where(dist == min(dist))
-        objNumber=sexout['NUMBER'][objIndex]
-        return objNumber[0] # not sure why above line returns a list
+
+        # some objects are rturning an empty sequence - how to handle this?
+        # I guess this means that the object itself wasn't detected?
+        # or nothing was detected?
+        if len(dist) < 1:
+            # set objnumb to nan
+            objnumb = np.nan
+        else:
+            objIndex=np.where(dist == min(dist))
+            objNumber=sexout['NUMBER'][objIndex]
+            objnumb = objNumber[0] # not sure why above line returns a list
+        return objnumb
 
     def runse(self,galaxy_id = None):
         # TODO update this to implement running SE with two diff thresholds
@@ -127,7 +136,8 @@ class buildmask():
             self.center_object = self.galaxy_id
         else:
             self.center_object = self.read_se_cat()
-        self.maskdat[self.maskdat == self.center_object] = 0
+        if self.center_object is not np.nan:
+            self.maskdat[self.maskdat == self.center_object] = 0
         self.update_mask()
     def update_mask(self):
         self.add_user_masks()
