@@ -2856,8 +2856,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #print(self.sfr[0], self.sfr[1])
         self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
         self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
-        self.table[colname+'_FLAG'][self.igal]=detect_flag[0]
-
+        try:
+            self.table[colname+'_FLAG'][self.igal]=detect_flag[0]
+        except KeyError:
+            print(self.table.colnames)
+            sys.exit()
         # inner ssfr
         a = self.hafit.flux_30r24
         b = self.rfit.flux_30r24
