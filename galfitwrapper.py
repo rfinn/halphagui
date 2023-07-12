@@ -43,6 +43,9 @@ from maskwrapper import my_cutout_image
 
 import rungalfit as rg
 
+# import imutils to get pixel scale
+import imutils
+
 # add a frame on top to show
 # cutout, mask, model, residual
 
@@ -94,15 +97,8 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         # get pixel scale from image header
         # convert from degrees/pix to arcsec/pix
 
-        ## making more general - not all images have CD1_1 keyword
-        #self.pscale = abs(float(self.image_header['CD1_1'])*3600)
 
-        # found a better way to get the pixel scale
-
-        image_wcs = WCS(self.image_header)        
-        pscalex,pscaley = image_wcs.proj_plane_pixel_scales()
-
-        self.pscale = pscalex*3600 # convert deg/pix to arcsec/pix
+        self.pscale = imutils.get_pixel_scale(self.image_header)
 
         
         self.sigma_image = sigma_image
