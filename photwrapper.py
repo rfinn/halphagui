@@ -490,9 +490,9 @@ class ellipse():
         self.ycenter = obj.ycentroid
         self.position = (obj.xcentroid, obj.ycentroid)
 
-        self.sma = obj.semimajor_axis_sigma.value * r
+        self.sma = obj.semimajor_sigma.value * r
         self.start_size = self.sma
-        self.b = obj.semiminor_axis_sigma.value * r
+        self.b = obj.semiminor_sigma.value * r
         self.eps = 1 - self.b/self.sma
         self.gini = obj.gini
         self.source_sum = self.cat[self.objectIndex].source_sum
