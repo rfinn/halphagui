@@ -408,6 +408,9 @@ class ellipse():
             sum_diff = np.zeros((grid_size,grid_size),'f')
             source_sum = np.zeros((grid_size,grid_size),'f')
 
+
+            # looks like I am measuring asymmetry myself here?
+            # doesn't statmorph do this? - looks like I am not using it
             for dxc in np.arange(int(-1*(grid_size/2)),int(grid_size/2)+1):
                 for dyc in np.arange(int(-1*(grid_size/2)),int(grid_size/2)+1):
                     drow = np.array((row-(yc+dyc)),'i')
