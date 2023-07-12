@@ -17,7 +17,11 @@ https://photutils.readthedocs.io/en/stable/segmentation.html
 '''
 
 from photutils import detect_threshold, detect_sources
-from photutils import source_properties
+
+# changing to remove deprecated function source_properties
+#from photutils import source_properties
+from photutils.segmentation import SourceCatalog
+
 from photutils import Background2D, MedianBackground
 from photutils import EllipticalAperture
 from photutils.utils import calc_total_error
@@ -251,11 +255,13 @@ class ellipse():
         if self.mask_flag:
             self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
-            self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+            #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+            self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)            
         else:
             self.threshold = detect_threshold(self.image, nsigma=snrcut)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
-            self.cat = source_properties(self.image, self.segmentation)
+            #self.cat = source_properties(self.image, self.segmentation)
+            self.cat = SourceCatalog(self.image, self.segmentation)
         # get average sky noise per pixel
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
@@ -346,11 +352,13 @@ class ellipse():
         if self.mask_flag:
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut, mask=self.boolmask)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10,mask=self.boolmask)
-            self.cat2 = source_properties(self.image2, self.segmentation2, mask=self.boolmask)
+            #self.cat2 = source_properties(self.image2, self.segmentation2, mask=self.boolmask)
+            self.cat2 = SourceCatalog(self.image2, self.segmentation2, mask=self.boolmask)            
         else:
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10)
-            self.cat2 = source_properties(self.image2, self.segmentation2)
+            #self.cat2 = source_properties(self.image2, self.segmentation2)
+            self.cat2 = SourceCatalog(self.image2, self.segmentation2)            
 
         '''
         select pixels associated with rband image in the segmentation
