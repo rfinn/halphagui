@@ -48,6 +48,11 @@ start_time = time.time()
 
 import matplotlib
 matplotlib.use('Qt5Agg')
+
+
+# modules in halphagui
+import imutils
+
 ## filter information
 ## from https://www.noao.edu/kpno/mosaic/filters/
 central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28,'inthalpha':6568.,'intha6657':6657,'intr':6240} # angstrom
@@ -682,19 +687,8 @@ class ellipse():
         ### FROM ADU/S TO PHYSICAL UNITS
         ###########################################################
         '''
-        ## making more general - not all images have CD1_1 keyword
-        #self.pscale = abs(float(self.image_header['CD1_1'])*3600)        
-        try:
-            self.pixel_scale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
-        except KeyError:
-            try:
-                self.pixel_scale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
-            except KeyError:
-                self.pixel_scale = np.abs(float(self.r_header['PC1_1']))*3600. # Siena pipel           
-        #try:
-        #    self.pixel_scale = abs(float(self.header['PIXSCAL1'])) # in deg per pixel
-        #except KeyError:
-        #    self.pixel_scale = abs(float(self.header['CD1_1']))*3600. # in deg per pixel
+
+        self.pixel_scale = imutils.get_pixel_scale(self.header)
         try:
             self.magzp = float(self.header['PHOTZP'])
 
