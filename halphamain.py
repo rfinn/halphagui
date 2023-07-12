@@ -1891,7 +1891,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # set up symbolic links from sextractor directory to the current working directory
         sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
         for file in sextractor_files:
-            os.system('ln -s '+self.sepath+'/'+file+' .')
+            if not os.path.exists(file):
+                os.system('ln -s '+self.sepath+'/'+file+' .')
     def clean_links(self):
         # clean up symbolic links to sextractor files
         # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
