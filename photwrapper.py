@@ -306,7 +306,7 @@ class ellipse():
         '''
         xdim,ydim = self.image.shape
         distance = np.sqrt((self.cat.xcentroid - xdim/2.)**2 + (self.cat.ycentroid - ydim/2.)**2)        
-        distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
+        #distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
         #print(self.objectIndex)
@@ -386,8 +386,10 @@ class ellipse():
 
         self.object_pixels = self.segmentation.data == self.cat.id[self.objectIndex]
 
-        xc = self.cat.xcentroid[self.objectIndex].value
-        yc = self.cat.ycentroid[self.objectIndex].value
+        #xc = self.cat.xcentroid[self.objectIndex].value
+        #yc = self.cat.ycentroid[self.objectIndex].value
+        xc = self.cat.xcentroid[self.objectIndex]
+        yc = self.cat.ycentroid[self.objectIndex]
         row,col = np.where(self.object_pixels)
 
         grid_size = 3
@@ -414,8 +416,10 @@ class ellipse():
         if self.image2_flag:
             self.object_pixels2 = (self.segmentation.data == self.cat.id[self.objectIndex]) & (self.segmentation2.data > 0.)
 
-            xc = self.cat.xcentroid[self.objectIndex].value
-            yc = self.cat.ycentroid[self.objectIndex].value
+            #xc = self.cat.xcentroid[self.objectIndex].value
+            #yc = self.cat.ycentroid[self.objectIndex].value
+            xc = self.cat.xcentroid[self.objectIndex]
+            yc = self.cat.ycentroid[self.objectIndex]
             row,col = np.where(self.object_pixels2)
             sum_diff = np.zeros((grid_size,grid_size),'f')
             source_sum = np.zeros((grid_size,grid_size),'f')
