@@ -305,6 +305,7 @@ class ellipse():
         object is stored as self.objectIndex
         '''
         xdim,ydim = self.image.shape
+        distance = np.sqrt((self.cat.xcentroid - xdim/2.)**2 + (self.cat.ycentroid - ydim/2.)**2)        
         distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
