@@ -1199,11 +1199,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         
         # run phot util ellip phot
         # use try in case fit fails
-        #self.photutils_ellip_phot()        
-        try:
-            self.photutils_ellip_phot()
-        except:
-            print('WARNING: problem running photutils ellip phot')
+        self.photutils_ellip_phot()        
+        #try:
+        #    self.photutils_ellip_phot()
+        #except:
+        #    print('WARNING: problem running photutils ellip phot')
             
     def setup_gui(self):
         #print(MainWindow)
