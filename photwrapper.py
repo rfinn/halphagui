@@ -322,7 +322,7 @@ class ellipse():
         #plt.figure()
         #plt.imshow(self.segmentation.data)
         # need segmentation map of object only
-        segmap = self.segmentation.data == self.cat.id[self.objectIndex]
+        segmap = self.segmentation.data == self.cat.label[self.objectIndex]
         segmap_float = ndi.uniform_filter(np.float64(segmap), size=10)
         segmap = segmap_float > 0.5
         #plt.figure()
@@ -366,7 +366,7 @@ class ellipse():
         AND
         pixels that are above the SNR cut in the Halpha image (image2)
         '''
-        self.gini_pixels = (self.segmentation.data == self.cat.id[self.objectIndex]) & (self.segmentation2.data > 0.)
+        self.gini_pixels = (self.segmentation.data == self.cat.label[self.objectIndex]) & (self.segmentation2.data > 0.)
 
         #self.tbl = self.cat.to_table()
         self.gini2 = gini(self.image2[self.gini_pixels])
@@ -384,7 +384,7 @@ class ellipse():
         # (can't figure out a way to do this without looping
         # calculate delta_x and delta_y from centroid
 
-        self.object_pixels = self.segmentation.data == self.cat.id[self.objectIndex]
+        self.object_pixels = self.segmentation.data == self.cat.label[self.objectIndex]
 
         #xc = self.cat.xcentroid[self.objectIndex].value
         #yc = self.cat.ycentroid[self.objectIndex].value
@@ -414,7 +414,7 @@ class ellipse():
         print('asymmetry = {:.3f}+/-{:.3f}'.format(self.asym,self.asym_err))
         
         if self.image2_flag:
-            self.object_pixels2 = (self.segmentation.data == self.cat.id[self.objectIndex]) & (self.segmentation2.data > 0.)
+            self.object_pixels2 = (self.segmentation.data == self.cat.label[self.objectIndex]) & (self.segmentation2.data > 0.)
 
             #xc = self.cat.xcentroid[self.objectIndex].value
             #yc = self.cat.ycentroid[self.objectIndex].value
