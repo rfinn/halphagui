@@ -2844,11 +2844,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         print(len(self.hafit.total_flux),len(self.gzdist))
         L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.gzdist[self.igal]).cgs.value**2)
         #print(L)
-        detect_flag = False
-        self.sfr = 0
-        if L > 0:
-            self.sfr= np.log10(L) - logCx
-            detect_flag = True
+        detect_flag = L > 0
+        self.sfr = np.zeros(len(L),'d')
+        self.sfr[detect_flag] = np.log10(L[detect_flag]) - logCx
         if prefix is None:
             colname='LOG_SFR_HA'
         else:
@@ -2857,7 +2855,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #print(self.sfr[0], self.sfr[1])
         self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
         self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
-        self.table[colname+'_FLAG'][self.igal]=detect_flag        
+        self.table[colname+'_FLAG'][self.igal]=detect_flag[0]
 
         # inner ssfr
         a = self.hafit.flux_30r24
