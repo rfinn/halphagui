@@ -831,8 +831,10 @@ class create_output_table():
         f='GAL_'+'LOG_SFR_HA'
         c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr,description='log10 of HA SFR in Msun/yr')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr,description='error in log10 of HA SFR in Msun/yr')
+        c3 = Column(np.zeros(self.ngalaxies,'bool'),name=f+'_FLAG')        
         self.table.add_column(c1)
         self.table.add_column(c2)
+        self.table.add_column(c3)        
         
         f='GAL_'+'SSFR_IN'
         c1 = Column(np.zeros(self.ngalaxies,'f'),name=f,description='F(HA)/F(r) within 0.3 R24')
@@ -881,7 +883,8 @@ class create_output_table():
         f='LOG_SFR_HA'
         c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr,description='log10 of HA SFR in Msun/yr')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
-        self.table.add_columns([c1,c2])
+        c3 = Column(np.zeros(self.ngalaxies,'bool'),name=f+'_FLAG')        
+        self.table.add_columns([c1,c2,c3])
 
         ######################################################################
         ### LAST TWO QUANTITIES, I SWEAR!
@@ -2841,17 +2844,20 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         print(len(self.hafit.total_flux),len(self.gzdist))
         L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.gzdist[self.igal]).cgs.value**2)
         #print(L)
-        detect_flag = L > 0
-        self.sfr = np.zeros(len(L),'d')
-        self.sfr[detect_flag] = np.log10(L[detect_flag]) - logCx
+        detect_flag = False
+        self.sfr = 0
+        if L > 0:
+            self.sfr= np.log10(L) - logCx
+            detect_flag = True
         if prefix is None:
             colname='LOG_SFR_HA'
         else:
             colname=prefix+'LOG_SFR_HA'
-        print('sfr = ',self.sfr)
+        #print('sfr = ',self.sfr)
         #print(self.sfr[0], self.sfr[1])
         self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
         self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
+        self.table[colname+'_FLAG'][self.igal]=detect_flag        
 
         # inner ssfr
         a = self.hafit.flux_30r24
