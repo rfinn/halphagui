@@ -179,7 +179,10 @@ class ellipse():
         self.calc_sb()
         self.convert_units()
         self.get_image2_gini()
-        self.get_asymmetry()
+        try:
+            self.get_asymmetry()
+        except:
+            print("WARNING: problem measuring asymmetry")
         self.write_phot_tables()
         self.write_phot_fits_tables()
         self.get_sky_noise()

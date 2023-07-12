@@ -407,7 +407,25 @@ class profile():
             self.petroflux_erg = np.zeros(2,'f')
             return
         else:
-            self.petrorad= petrorat_int(0.2)
+            try:
+                self.petrorad= petrorat_int(0.2)
+            except ValueError:
+                print("WARNING: problem getting petrorad; setting it to zero")
+                self.petrorad = 0
+                # set the rest of the parameters to zero and return
+                self.petroflux = 0
+                self.petroflux_erg = 0
+                self.petroradn = [0,0]
+                self.petrocon=0
+                self.petromag= 0
+
+                self.petromag = np.array([self.petromag,0.],'f')
+                self.petrorad = np.array([self.petrorad,0.],'f')
+                self.petror50 = np.array([self.petroradn[0],0.],'f')
+                self.petror90 = np.array([self.petroradn[1],0.],'f')
+                self.petrocon = np.array([self.petrocon,0.],'f')
+                return
+                
         print('petrosian radius = %.2f arcsec (max = %.2f)'%(self.petrorad,np.max(self.tab.sma_arcsec)))
         twopetrorad=2*self.petrorad
         # Petrosian Flux
