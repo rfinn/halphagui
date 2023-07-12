@@ -484,9 +484,11 @@ class ellipse():
         this gets the guess for the ellipse geometry from the detection catalog 
         '''
         obj = self.cat[self.objectIndex]
-        self.xcenter = obj.xcentroid.value
-        self.ycenter = obj.ycentroid.value
-        self.position = (obj.xcentroid.value, obj.ycentroid.value)
+        #self.xcenter = obj.xcentroid.value
+        #self.ycenter = obj.ycentroid.value
+        self.xcenter = obj.xcentroid
+        self.ycenter = obj.ycentroid
+        self.position = (obj.xcentroid, obj.ycentroid)
 
         self.sma = obj.semimajor_axis_sigma.value * r
         self.start_size = self.sma
@@ -571,7 +573,7 @@ class ellipse():
         r=3.
         apertures = []
         for obj in cat:
-            position = np.transpose((obj.xcentroid.value, obj.ycentroid.value))
+            position = np.transpose((obj.xcentroid, obj.ycentroid))
             a = obj.semimajor_axis_sigma.value * r
             b = obj.semiminor_axis_sigma.value * r
             theta = obj.orientation.to(u.rad).value
