@@ -495,7 +495,7 @@ class ellipse():
         self.b = obj.semiminor_sigma.value * r
         self.eps = 1 - self.b/self.sma
         self.gini = obj.gini
-        self.source_sum = self.cat[self.objectIndex].source_sum
+        self.source_sum = self.cat[self.objectIndex].segment_flux
         self.sky_centroid = obj.sky_centroid
         # orientation is angle in radians, CCW relative to +x axis
         t = obj.orientation.value
