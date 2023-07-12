@@ -496,7 +496,7 @@ class create_output_table():
         self.table['radius'].unit = u.arcsec
         self.table['radius'].description = 'radius from VF catalog'        
         self.ngalaxies = len(self.table)
-        print('number of galaxies = ',self.ngalaxies)
+        #print('number of galaxies = ',self.ngalaxies)
         self.haflag = np.zeros(self.ngalaxies,'bool')
         self.galid = self.table['VFID']
         self.NEDname = self.table['NEDname']                
@@ -1333,7 +1333,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.hacoadd_fname = self.imagedir+'pointing-3_ha4.coadd.fits'
             self.rcoadd_fname = self.imagedir+'pointing-3_R.coadd.fits'
         else:
-            print('got a pointing')
+            #print('got a pointing')
             if self.obsyear == '2020':
                 self.hacoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_ha4.coadd.fits'
                 self.rcoadd_fname = self.imagedir+'pointing-'+str(pointing)+'_r.coadd.fits'
@@ -1388,7 +1388,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
 
     def read_rcoadd(self):
-        print('reading rband image ',self.rcoadd_fname)
+        #print('reading rband image ',self.rcoadd_fname)
         self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
         try:
             self.pixelscale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
@@ -1416,7 +1416,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.rweight_flag = False
         self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
     def read_hacoadd(self):
-        print(self.hacoadd_fname)
+        #print(self.hacoadd_fname)
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
         self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS.fits'
         #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
@@ -1756,8 +1756,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             print('make sure you selected a filter!')
             return False
         
-        print('keepflag = ',keepflag)
-        print('number of galaxies in FOV = ',sum(keepflag),len(keepflag))
+        #print('keepflag = ',keepflag)
+        print('number of galaxies in FOV = ',sum(keepflag))
         # check weight image to make sure the galaxy actually has data
         # reject galaxies who have zero in the weight image
         px,py = self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
@@ -1778,7 +1778,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             keepflag[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
             #print(offimage)
         # cut down NSA catalog to keep information only for galaxies within FOV
-        print('number of galaxies in FOV = ',sum(keepflag))
+        #print('number of galaxies in FOV = ',sum(keepflag))
         if sum(keepflag) == 0:
             print('WARNING: no NSA galaxies in FOV')
             print('\t make sure you have selected the right filter!')
@@ -2002,14 +2002,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             '''
             up arrow will go to previous galaxy in the list
             '''
-            print(self.igal)
+            #print(self.igal)
             if self.igal == (len(self.ra)-1):
                 self.igal = 0
             else:
                 self.igal += 1
                 self.ui.wgalid.setCurrentIndex(self.igal)
                 self.select_galaxy(self.igal)
-            print(self.igal)
+            #print(self.igal)
         elif key == 'up':
             '''
             down arrow will go to previous galaxy in the list
@@ -2240,9 +2240,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
         
         try:
-            print('in display cutouts')
-            print('\t cutout size pix = {:.1f}'.format(self.cutout_size))
-            print('\t cutout size arcsec = {:.1f}'.format(self.cutout_size_arcsec.value))
+            #print('in display cutouts')
+            #print('\t cutout size pix = {:.1f}'.format(self.cutout_size))
+            #print('\t cutout size arcsec = {:.1f}'.format(self.cutout_size_arcsec.value))
             print(self.cutout_size_arcsec)
             self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size_arcsec, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
             #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
@@ -2317,7 +2317,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # add coadded image
 
         
-        print('saving r-band cutout')
+        #print('saving r-band cutout')
         fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
 
         # saving Ha CS Cutout as fits image
@@ -2332,7 +2332,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
         newfile.header['EXPTIME']=1.0 
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
-        print('saving halpha cutout')
+        #print('saving halpha cutout')
 
         # saving Ha with continuum Cutout as fits image
         newfile1 = fits.PrimaryHDU()
@@ -2346,7 +2346,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
         newfile.header['EXPTIME']=1.0 
         fits.writeto(self.cutout_name_hawc, newfile1.data, header = newfile1.header, overwrite=True)
-        print('saving halpha w/continuum cutout')
+        #print('saving halpha w/continuum cutout')
         # write bounding box to output table
         # save this for later
         ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
@@ -2916,14 +2916,14 @@ class galaxy_catalog():
         px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
         #print('in galaxies_in_fov: px={},py={}'.format(px,py))
         onimageflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
-        print('number of galaxies on image, before z cut = ',sum(onimageflag))
+        #print('number of galaxies on image, before z cut = ',sum(onimageflag))
         try:
             if agcflag:
                 zFlag1 = (self.cat.vopt/3.e5 > zmin) & (self.cat.vopt/3.e5 < zmax)
                 zFlag2 = (self.cat.v21/3.e5 > zmin) & (self.cat.v21/3.e5 < zmax)
                 zFlag = zFlag1 | zFlag2
             elif self.virgoflag:
-                print('virgo, right?')
+                #print('virgo, right?')
                 zFlag = (self.cat['vr']/3.e5 > zmin) & (self.cat['vr']/3.e5 < zmax)
             elif self.nsaflag:
                 zFlag = (self.cat.Z > zmin) & (self.cat.Z < zmax)
@@ -2933,7 +2933,7 @@ class galaxy_catalog():
             print('make sure you selected the halpha filter')
             return None
 
-        print('number of galaxies on image, after z cut = ',sum(zFlag & onimageflag))
+        #print('number of galaxies on image, after z cut = ',sum(zFlag & onimageflag))
         return (zFlag & onimageflag)
 
     def cull_catalog(self, keepflag,prefix):
@@ -2948,9 +2948,9 @@ class galaxy_catalog():
             outfile = prefix+'_agc.fits'
             fits.writeto(outfile,self.cat, overwrite=True)
         elif self.virgoflag:
-            print('virgo, right???')
+            #print('virgo, right???')
             outfile = prefix+'_virgo_cat.fits'
-            print('culled catalog = ',outfile)
+            #print('culled catalog = ',outfile)
             self.cat.write(outfile,format='fits',overwrite=True)
             # cull ephot
             

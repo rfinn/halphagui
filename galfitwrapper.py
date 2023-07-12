@@ -95,14 +95,14 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         # convert from degrees/pix to arcsec/pix
 
         ## making more general - not all images have CD1_1 keyword
-        #self.pscale = abs(float(self.image_header['CD1_1'])*3600)        
-        try:
-            self.pscale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
-        except KeyError:
-            try:
-                self.pscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
-            except KeyError:
-                self.pscale = np.abs(float(self.r_header['PC1_1']))*3600. # Siena pipel        
+        #self.pscale = abs(float(self.image_header['CD1_1'])*3600)
+
+        # found a better way to get the pixel scale
+
+        image_wcs = WCS(self.image_header)        
+        pscalex,pscaley = image_wcs.proj_plane_pixel_scales()
+
+        self.pscale = pscalex*3600 # convert deg/pix to arcsec/pix
 
         
         self.sigma_image = sigma_image

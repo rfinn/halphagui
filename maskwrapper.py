@@ -179,7 +179,9 @@ class buildmask():
         # find stars on cutout
         starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')
         x,y = self.image_wcs.world_to_pixel(starcoord)
-        pscalex,pscaley = self.image_wcs.proj_plane_pixel_scales()
+
+        # create wcs object from image header
+        pscalex,pscaley = self.image_wcs.proj_plane_pixel_scales() # appears to be degrees/pixel
         #print("pscalex = ",pscalex)        
         #pscale = pscalex.deg * 3600 # pixel scale in arcsec
         flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)        
@@ -189,12 +191,10 @@ class buildmask():
             xstar = x[flag]
             ystar = y[flag]
             rad = brightstar['radius'][flag] # in degrees
+            # convert radius to pixels            
             radpixels = rad/pscalex.value
             #print(xstar,ystar,rad)
 
-
-            # convert radius to pixels
-            
             mask_value = np.max(self.maskdat) + 200 # use the same value for all gaia stars
             print('mask value = ',mask_value)
             for i in range(len(mag)):
@@ -439,7 +439,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         t = self.image_name.split('.fit')
         self.mask_image=t[0]+'-mask.fits'
         self.mask_inv_image=t[0]+'-inv-mask.fits'
-        print('saving mask image as: ',self.mask_image)
+        #print('saving mask image as: ',self.mask_image)
         
         # read in image and define center coords
         self.image, self.imheader = fits.getdata(self.image_name,header = True)
