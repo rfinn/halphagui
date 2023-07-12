@@ -419,7 +419,7 @@ class ellipse():
                     source_sum[dyc,dxc] = np.sum(self.image2[self.object_pixels2])
             asym2 = sum_diff/source_sum
             
-            #print(asym2)
+            print('asym2 = ',asym2)
             # measure halpha asymmetry at pixel where R-band asymmetry is minimum
             self.asym2 = asym2[r,c][0]
             print(self.asym2)
@@ -599,7 +599,7 @@ class ellipse():
         apertures = (index+1)*.5*self.fwhm*(1+(index+1)*.1)
         # cut off apertures at edge of image
         self.apertures_a = apertures[apertures < rmax]
-        print('number of apertures = ',len(self.apertures_a))
+        #print('number of apertures = ',len(self.apertures_a))
         #self.apertures_a = np.linspace(3,rmax,40)
         self.apertures_b = (1.-self.eps)*self.apertures_a
         self.area = np.pi*self.apertures_a*self.apertures_b # area of each ellipse
@@ -695,7 +695,7 @@ class ellipse():
         except:
             print("WARNING: no PHOTZP keyword in image header. \nAssuming ZP=22.5")
             self.magzp = 22.5
-        print('mag zp = ',self.magzp)
+        #print('mag zp = ',self.magzp)
         filter = self.header
         # multiply by bandwidth of filter to convert from Jy to erg/s/cm^2
         bandwidth1 = 3.e8*dwavelength['R']*1.e-10/(central_wavelength['R']*1.e-10)**2
