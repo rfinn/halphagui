@@ -414,7 +414,7 @@ class profile():
                 self.petrorad = 0
                 # set the rest of the parameters to zero and return
                 self.petroflux = 0
-                self.petroflux_erg = 0
+                self.petroflux_erg = np.array([0,0])
                 self.petroradn = [0,0]
                 self.petrocon=0
                 self.petromag= 0
