@@ -312,7 +312,7 @@ class profile():
             b = funcb(np.where(sb < iphot))
             if abs(a-b) > 2:
                 print('isophotal radius uncertain for isophote = ',iphot)
-                print(rad[a],rad[b])
+                #print(rad[a],rad[b])
             self.iso_radii[i,0] = np.average([rad[a],rad[b]])
             self.iso_radii[i,1] = np.abs((rad[a]-rad[b])/2)
             m1 = mag[a]
