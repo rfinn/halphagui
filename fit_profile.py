@@ -250,8 +250,9 @@ class profile():
         flag =  (self.tab.sb > 0.)
         plt.errorbar(self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag],yerr=self.tab.sb_erg_sqarcsec_err[flag],fmt='b.', label=self.rootname,markersize=6)
         #plt.plot(self.tab.sma_arcsec, self.tab.sb_erg_sqarcsec, 'b.', label=self.rootname,markersize=6)
-        if self.popt is not None:
-            if self.fit_flag:
+
+        if self.fit_flag:
+            if self.popt is not None:
                 plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
         if self.linear_fit_flag:
             self.plot_linear_fit()
