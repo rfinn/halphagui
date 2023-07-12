@@ -883,7 +883,8 @@ class create_output_table():
         f='LOG_SFR_HA'
         c1 = Column(np.zeros(self.ngalaxies,'f'),name=f, unit=u.M_sun/u.yr,description='log10 of HA SFR in Msun/yr')
         c2 = Column(np.zeros(self.ngalaxies,'f'),name=f+'_ERR',unit=u.M_sun/u.yr)
-        c3 = Column(np.zeros(self.ngalaxies,'bool'),name=f+'_FLAG')        
+        c3 = Column(np.zeros(self.ngalaxies,'bool'),name=f+'_FLAG')
+        print('testing: colname = ',f+'_FLAG')
         self.table.add_columns([c1,c2,c3])
 
         ######################################################################
