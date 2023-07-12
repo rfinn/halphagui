@@ -221,11 +221,16 @@ class profile():
         if self.linear_fit_flag:
             plt.axvline(x=-1./self.cc[0],ls=':',label='log fit R50=%5.1f'%(-1./self.cc[0]))
         if self.fit_flag:
-            plt.axvline(x=1./self.popt[1],ls='-.',label='exp fit R50=%5.1f'%(1./self.popt[1]))
+            if self.popt is not None:
+                plt.axvline(x=1./self.popt[1],ls='-.',label='exp fit R50=%5.1f'%(1./self.popt[1]))
         plt.axvline(x=self.flux_radii[1][0], ls='--',label='phot R50=%5.1f'%(self.flux_radii[1][0]))
     def fit_sersic_n1(self):
         flag = (self.tab.sb_snr > 2) & (self.tab.sb > 0.)
-        self.popt, self.pcov = scipy.optimize.curve_fit(sersic_neq1,self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag])
+        try:
+            self.popt, self.pcov = scipy.optimize.curve_fit(sersic_neq1,self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag])
+        except:
+            self.popt = None
+            self.pcov = None
         
     def linear_fit(self):
         flag = (self.tab.sb_snr > 2) & (self.tab.sb > 0.)
@@ -245,8 +250,9 @@ class profile():
         flag =  (self.tab.sb > 0.)
         plt.errorbar(self.tab.sma_arcsec[flag],self.tab.sb_erg_sqarcsec[flag],yerr=self.tab.sb_erg_sqarcsec_err[flag],fmt='b.', label=self.rootname,markersize=6)
         #plt.plot(self.tab.sma_arcsec, self.tab.sb_erg_sqarcsec, 'b.', label=self.rootname,markersize=6)
-        if self.fit_flag:
-            plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
+        if self.popt is not None:
+            if self.fit_flag:
+                plt.plot(self.tab.sma_arcsec,sersic_neq1(self.tab.sma_arcsec, *self.popt),'r-',label='exp fit')
         if self.linear_fit_flag:
             self.plot_linear_fit()
         self.plot_lines()
