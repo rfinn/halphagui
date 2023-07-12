@@ -422,7 +422,7 @@ class ellipse():
                     source_sum[dyc,dxc] = np.sum(self.image2[self.object_pixels2])
             asym2 = sum_diff/source_sum
             
-            print('asym2 = ',asym2)
+            print('asym2 = ',asym2,r,c)
             # measure halpha asymmetry at pixel where R-band asymmetry is minimum
             self.asym2 = asym2[r,c][0]
             print(self.asym2)

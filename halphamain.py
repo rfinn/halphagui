@@ -2841,7 +2841,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         print(len(self.hafit.total_flux),len(self.gzdist))
         L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.gzdist[self.igal]).cgs.value**2)
         #print(L)
-        self.sfr = np.log10(L) - logCx
+        detect_flag = L > 0
+        self.sfr = np.zeros(len(L),'d')
+        self.sfr[detect_flag] = np.log10(L[detect_flag]) - logCx
         if prefix is None:
             colname='LOG_SFR_HA'
         else:
