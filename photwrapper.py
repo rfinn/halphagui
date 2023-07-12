@@ -550,6 +550,7 @@ class ellipse():
             for aperture in apertures:
                 aperture.plot(color='white',lw=1.5)
         plt.show()
+        #plt.close()
     def show_seg_aperture(self):
         ''' matplotlib plotting to show apertures   '''
         tbl1 = self.cat.to_table()
@@ -576,6 +577,7 @@ class ellipse():
             aperture.plot(axes=ax1, color='white', lw=1.5)
             aperture.plot(axes=ax2, color='white', lw=1.5)
         plt.show()
+        #plt.close()
     def measure_phot(self):
         '''
         # alternative is to use ellipse from detect
@@ -976,7 +978,7 @@ class ellipse():
             plt.gca().set_yscale('log')
         #plt.show()
         plt.savefig(self.image_name.split('.fits')[0]+'-enclosed-flux.png')
-
+        plt.close("all")
         
 if __name__ == '__main__':
     image = 'MKW8-18216-R.fits'
