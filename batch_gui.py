@@ -18,7 +18,7 @@ import shutil
 import glob
 from astropy.io import fits
 import matplotlib
-
+from matplotlib import pyplot as plt
 import argparse
 
 parser = argparse.ArgumentParser(description ='run the halpha gui in automatic mode.  Run this from the directory where you want the output data stored.  For example: /home/rfinn/research/Virgo/gui-output-NGC5846/')
@@ -150,6 +150,7 @@ for rimage in flist1: # loop through list
         print('##########################################')
 
     #just running on one directory for testing purposes
+    plt.close("all")
     i += 1
     if (i > 0) and args.testing:
         break
