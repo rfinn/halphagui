@@ -1369,8 +1369,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         ephot_fname = os.path.join(self.tabledir,'vf_v2_legacy_ephot.fits')
         ephot = Table.read(ephot_fname)
         self.radius_arcsec = ephot['SMA_SB24']
+
+        # for galaxies with SMA_SB24=0, set radius to value in main table 
         noradius_flag = self.radius_arcsec == 0
-        # set radius to value in main table for these sources
         self.radius_arcsec[noradius_flag] = self.vf.cat['radius'][noradius_flag]
 
         
@@ -1667,8 +1668,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         ##
         # rewrite to get the size from JM's ephot, +/- 3*SMA_SB24
+        #
+        # 3 is too small for most galaxies - forgot to convert radius to diameter
         ##
-        scale = 3
+        scale = 2*2.5
+
+        # this is the total length in one dimension
+        # the scale factor includes an extra factor of 2 to convert radius to diameter
         self.cutout_sizes = self.radius_arcsec*scale/self.pixelscale
         
         #start_time = time.perf_counter()        
