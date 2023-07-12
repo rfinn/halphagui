@@ -428,8 +428,15 @@ class ellipse():
                 self.asym2 = asym2[r,c][0]
                 #print(self.asym2)
             except IndexError:
-                r,c = np.where(asym == np.min(asym2))
-                self.asym2 = asym2[r,c][0]                
+                try:
+                    r,c = np.where(asym == np.min(asym2))
+                
+                    self.asym2 = asym2[r,c][0]
+                except IndexError:
+                    self.asym2 = np.nan
+                    self.asym2_err = np.nan
+                    self.asym2_center = np.nan
+                    return
             self.asym2_err = np.std(asym2)
             r,c = np.where(asym == np.min(asym2))
             self.asym2_center = np.array([r+yc,c+xc])
