@@ -183,7 +183,7 @@ class buildmask():
         try:
             brightstar = Table.read(self.gaiapath)
         except FileNotFoundError:
-            warnings.warn.(f"Can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
+            warnings.warn(f"Can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
             self.add_gaia_stars = False
             return
             
