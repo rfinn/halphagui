@@ -32,6 +32,8 @@ NOTES:
 import os
 import sys
 import numpy as np
+import warnings
+
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.convolution import Tophat2DKernel, convolve
@@ -54,11 +56,12 @@ from halphaCommon import cutout_image, circle_pixels
 
 try:
     from photutils import detect_threshold, detect_sources
-    from photutils import source_properties
+    #from photutils import source_properties
+    from photutils.segmentation import SourceCatalog    
     from photutils.segmentation import deblend_sources
     
 except ModuleNotFoundError:
-    print("Warning - photutils not found")
+    warnings.warn("Warning - photutils not found")
 except ImportError:
     print("got an import error with photutils - check your version number")
 
@@ -172,8 +175,6 @@ class buildmask():
         mask out bright gaia stars using the legacy dr9 catalog and magnitude-radius relation:  
         https://github.com/legacysurvey/legacypipe/blob/6d1a92f8462f4db9360fb1a68ef7d6c252781027/py/legacypipe/reference.py#L314-L319
 
-
-
         """
         # set up blank
         self.gaia_mask = np.zeros_like(self.maskdat)
@@ -182,7 +183,7 @@ class buildmask():
         try:
             brightstar = Table.read(self.gaiapath)
         except FileNotFoundError:
-            print(f"WARNING: can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
+            warnings.warn.(f"Can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
             self.add_gaia_stars = False
             return
             
@@ -194,7 +195,10 @@ class buildmask():
         pscalex,pscaley = self.image_wcs.proj_plane_pixel_scales() # appears to be degrees/pixel
         #print("pscalex = ",pscalex)        
         #pscale = pscalex.deg * 3600 # pixel scale in arcsec
-        flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)        
+        flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)
+        # add criteria for proper motion cut
+        pmflag = (brightstar['pmra'] < 5) & (brightstar['pmdec']<5)
+        flag = flag & pmflag
         if np.sum(flag) > 0:
             # add stars to mask according to the magnitude-radius relation
             mag = brightstar['mag'][flag]
@@ -236,7 +240,8 @@ class buildmask():
         self.segmentation = deblend_sources(self.image, segment_map,
                                npixels=10, nlevels=32, contrast=0.001)        
         self.maskdat = self.segmentation.data
-        self.cat = source_properties(self.image, self.segmentation)
+        #self.cat = source_properties(self.image, self.segmentation)
+        self.cat = SourceCatalog(self.image, self.segmentation)        
         # get average sky noise per pixel
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
@@ -246,7 +251,7 @@ class buildmask():
             print('setting center object to objid ',self.galaxy_id)
             self.center_object = self.galaxy_id
         else:
-            distance = np.sqrt((self.cat.xcentroid.value - self.xc)**2 + (self.cat.ycentroid.value - self.yc)**2)
+            distance = np.sqrt((self.cat.xcentroid - self.xc)**2 + (self.cat.ycentroid - self.yc)**2)
             # save object ID as the row in table with source that is closest to center
             objIndex = np.arange(len(distance))[(distance == min(distance))][0]
             # the value in shown in the segmentation image is called 'label'
