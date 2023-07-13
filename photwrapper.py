@@ -187,7 +187,8 @@ class ellipse():
             self.get_asymmetry()
         except:
             print("WARNING: problem measuring asymmetry")
-        self.run_statmorph()
+        print("running statmorph")
+        #self.run_statmorph()
         self.write_phot_tables()
         self.write_phot_fits_tables()
         self.get_sky_noise()
@@ -326,12 +327,17 @@ class ellipse():
         segmap = self.segmentation.data == self.cat.label[self.objectIndex]
         segmap_float = ndi.uniform_filter(np.float64(segmap), size=10)
         segmap = segmap_float > 0.5
+        if self.mask_image is not None:
+            mask = self.mask_image > 0
+        else:
+            mask = None
         #plt.figure()
         #plt.imshow(segmap, origin='lower', cmap='gray')
         if self.psf is None:
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain)
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
         else:
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf)
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf,mask=mask)
+        self.source_morphs = source_morphs
         self.morph = source_morphs[0]
         fig = make_figure(self.morph)
         figname = self.image_name.split('.fits')[0]
@@ -340,6 +346,7 @@ class ellipse():
             source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain)
         else:
             source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain, psf=self.psf_ha)
+        self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2[0]
         fig2 = make_figure(self.morph2)
         fig2.savefig(figname+'statmorph-ha.pdf')
