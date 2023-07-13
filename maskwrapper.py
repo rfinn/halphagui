@@ -209,7 +209,7 @@ class buildmask():
             radpixels = rad/pscalex.value
             #print(xstar,ystar,rad)
 
-            mask_value = np.max(self.maskdat) + 200 # use the same value for all gaia stars
+            mask_value = np.max(self.maskdat) + 20 # use the same value for all gaia stars
             print('mask value = ',mask_value)
             for i in range(len(mag)):
                 # mask stars
