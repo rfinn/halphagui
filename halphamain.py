@@ -1674,8 +1674,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # rewrite to get the size from JM's ephot, +/- 3*SMA_SB24
         #
         # 3 is too small for most galaxies - forgot to convert radius to diameter
+        # ran with 2*2.5, and this was tight for a lot of galaxies.  increasing size by 50%
         ##
-        scale = 2*2.5
+        scale = 2*2.5*1.5
 
         # this is the total length in one dimension
         # the scale factor includes an extra factor of 2 to convert radius to diameter

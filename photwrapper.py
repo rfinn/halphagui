@@ -187,6 +187,7 @@ class ellipse():
             self.get_asymmetry()
         except:
             print("WARNING: problem measuring asymmetry")
+        self.run_statmorph()
         self.write_phot_tables()
         self.write_phot_fits_tables()
         self.get_sky_noise()
@@ -1039,6 +1040,16 @@ if __name__ == '__main__':
     #mask = 'MKW8-18037-R-mask.fits'
     #image = 'r-18045-R.fits'
     #mask = 'r-18045-R-mask.fits'
+
+    prefix = 'VFID0501-UGC09556-BOK-20210315-VFID0501'
+    image = prefix+'-R.fits'
+    rphot_table = prefix+'-R-phot.fits'
+    image2 = prefix+'-CS.fits'
+    haphot_table = prefix+'-CS-phot.fits'
+    mask = prefix+'-R-mask.fits'
+    myfilter = '4'
+    myratio = .063573
+
     try:
         e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter=myfilter, filter_ratio=myratio)
     except FileNotFoundError:
