@@ -1172,6 +1172,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
 
         # skipping for now
         # just making cutouts and getting galaxies in FOV
+
+        # need to get a list of RA, DEC, SMA, BA, PA to feed into masking routine
         
         for i in range(len(self.gximage)):
         #for i in [2]: # for testing
@@ -1187,8 +1189,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.get_galaxy_cutout()
         
         # create mask
-        
-        self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',auto=self.auto)
+
+        objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]]
+        self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',auto=self.auto,\
+                                  objparams=objparams,unmaskellipse=True)
+                                  
         
         # run galfit
         self.run_galfit(ncomp=1,ha=False)
@@ -1378,6 +1383,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         noradius_flag = self.radius_arcsec == 0
         self.radius_arcsec[noradius_flag] = self.vf.cat['radius'][noradius_flag]
 
+        # also save BA and PA from John's catalog
+        # use the self.radius_arcsec for the sma
+        self.BA = np.ones(len(self.radius_arcsec))
+        self.PA = np.zeros(len(self.radius_arcsec))
+        
+        self.BA[~noradius_flag] = ephot['BA_MOMENT'][~noradius_flag]
+        self.PA[~noradius_flag] = ephot['PA_MOMENT'][~noradius_flag]
+        
+
         
         self.agcflag = False
         self.nsaflag = False
@@ -1462,7 +1476,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
             self.rweight_flag = False
 
         self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
-        self.check_previous_r_psf()
+        self.check_previous_r_psf()ephot['SMMA_MOMENT'][~noradius_flag]
     def load_hacoadd(self):
         self.coadd.load_file(self.hacoadd_fname)
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
@@ -1766,6 +1780,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # check weight image to make sure the galaxy actually has data
         # reject galaxies who have zero in the weight image
         px,py = self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
+        self.xpixel = px
+        self.ypixel = py
         if self.rweight_flag and self.haweight_flag:
             rweight = fits.getdata(self.rweight)
             haweight = fits.getdata(self.haweight)
@@ -2726,7 +2742,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
                   'AREA',\
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
-        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), self.e.gini,self.e.gini2,\
+        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
+                  self.e.gini,self.e.gini2,\
                   self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
@@ -2745,6 +2762,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
         self.table['ELLIP_RA'][self.igal]=ra
         self.table['ELLIP_DEC'][self.igal]=dec
+
+        # TODO - write out phot table
+
+        qtable = self.e.cat.to_table()
+        phot_table_name = self.cutout_name_r.replace('.fits','-photuil_tab.fits')
+        qtable.write()
         if not self.auto:
             self.update_gui_table()
 

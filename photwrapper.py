@@ -115,6 +115,9 @@ class ellipse():
             self.image2_flag = True
         else:
             self.image2_flag = False
+            self.image2 = None
+            self.image2_name = None
+            self.header2 = None
         self.image2_filter = image2_filter
         self.filter_ratio = filter_ratio
         # will use the gain to calculate the noise in the image
@@ -133,6 +136,7 @@ class ellipse():
         if mask is not None:
             self.mask_image, self.mask_header = fits.getdata(mask,header=True)
             self.mask_flag = True
+            # convert to boolean array with bad pixels = True
             self.boolmask = np.array(self.mask_image,'bool')
             self.masked_image = np.ma.array(self.image, mask = self.boolmask)
             if self.image2_flag:
@@ -258,12 +262,19 @@ class ellipse():
             self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
             #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
-            self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)            
+            self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
         else:
             self.threshold = detect_threshold(self.image, nsigma=snrcut)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
             #self.cat = source_properties(self.image, self.segmentation)
             self.cat = SourceCatalog(self.image, self.segmentation)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+            
         # get average sky noise per pixel
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
@@ -283,7 +294,8 @@ class ellipse():
         # add sky noise to image 1 header
         sky_noise_erg = np.mean(threshold)*self.uconversion1/self.pixel_scale**2
         print('r sky noise = ',sky_noise_erg)
-        self.header.set('SKYERR',float('{:.2f}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+        self.header.set('SKYNOISE',float('{:.2f}'.format(np.mean(thresold),'sky noise in ADU')        
+        self.header.set('SKYERR',float('{:.2e}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
         # save files
         fits.writeto(self.image_name,self.image,header=self.header,overwrite=True)
         self.im1_skynoise = sky_noise_erg
@@ -294,8 +306,9 @@ class ellipse():
             else:
                 threshold = detect_threshold(self.image2, nsigma=snrcut)
             # add sky noise to image 2 header
-            sky_noise_erg = np.mean(threshold)*self.uconversion2/self.pixel_scale**2        
-            self.header2.set('SKYERR',float('{:.2f}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+            sky_noise_erg = np.mean(threshold)*self.uconversion2/self.pixel_scale**2
+            self.header.set('SKYNOISE',float('{:.2f}'.format(np.mean(thresold),'sky noise in ADU')                    
+            self.header2.set('SKYERR',float('{:.2e}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
 
             fits.writeto(self.image2_name,self.image2,header=self.header2,overwrite=True)
             self.im2_skynoise = sky_noise_erg

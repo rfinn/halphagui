@@ -81,6 +81,46 @@ except ModuleNotFoundError:
 import timeit
 
 defaultcat='default.sex.HDI.mask'
+#####################################
+###  FUNCTIONS
+#####################################
+
+def remove_central_objects(mask, sma=20, BA=1, PA=0, xc=None,yc=None):
+    """ 
+    find any pixels within central ellipse and set their values to zero 
+
+    PARAMS:
+    mask = 2D array containing masked pixels, like from SE segmentation image
+    sma = semi-major axis in pixels
+    BA = ratio of semi-minor to semi-major axes
+    PA = position angle, measured in degree counter clockwise from +x axis
+
+    OPTIONAL ARGS:
+    xc = center of ellipse in pixels; assumed to be center of image if xc is not specified
+    yc = center of ellipse in pixels; assumed to be center of image if yc is not specified
+    
+    RETURNS:
+    newmask = copy of input mask, with pixels within ellipse set equal to zero
+
+    """
+    xmax,ymax = mask.shape
+    # set center of ellipse as the center of the image
+    if (xc is None) and (yc is None):
+        xc,yc = xmax//2,ymax//2
+    
+    a = sma
+    b = BA*sma
+    phirad = np.radians(PA)
+
+    X,Y = np.meshgrid(np.arange(xmax),np.arange(ymax))
+    
+    p1 = ((X-xc)*np.cos(phirad)+(Y-yc)*np.sin(phirad))**2/a**2
+    p2 = ((X-xc)*np.sin(phirad)-(Y-yc)*np.cos(phirad))**2/b**2
+    flag2 = p1+p2 < 1
+    newmask = np.copy(mask)
+    newmask[flag2] = 0
+    return newmask
+
 
 class buildmask():
     def link_files(self):
@@ -134,6 +174,10 @@ class buildmask():
         #for i in range(len(self.xsex)):
         # check to see if the object is not centered in the cutout
     def remove_center_object(self):
+        """ this removes the object in the center of the mask, which presumably is the galaxy """
+
+        # need to replace this with a function that will remove any objects within the specificed central ellipse
+
         if self.off_center_flag:
             print('setting center object to objid ',self.galaxy_id)
             self.center_object = self.galaxy_id
@@ -141,7 +185,11 @@ class buildmask():
             self.center_object = self.read_se_cat()
         if self.center_object is not np.nan:
             self.maskdat[self.maskdat == self.center_object] = 0
+        if self.objsma is not None:
+            # remove central objects within elliptical aperture
+            self.maskdat = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
         self.update_mask()
+        
     def update_mask(self):
         self.add_user_masks()
         self.add_gaia_masks()
@@ -209,7 +257,7 @@ class buildmask():
             radpixels = rad/pscalex.value
             #print(xstar,ystar,rad)
 
-            mask_value = np.max(self.maskdat) + 20 # use the same value for all gaia stars
+            mask_value = np.max(self.maskdat) + 200 # use the same value for all gaia stars
             print('mask value = ',mask_value)
             for i in range(len(mag)):
                 # mask stars
@@ -223,7 +271,6 @@ class buildmask():
             self.maskdat = self.maskdat + self.gaia_mask
         else:
             print("No bright stars on image - woo hoo!")
-
 
     def run_photutil(self, snrcut=1.5,npixels=10):
         ''' 
@@ -405,7 +452,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',auto=False):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False):
         self.auto = auto
         if MainWindow is None:
             self.auto = True
@@ -420,6 +467,33 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
 
             self.logger = logger
 
+        # define the position of the target galaxy, as well as the shape and size of elliptical region to unmask around galaxy.
+        if objparams is not None:
+            self.objra = objparams[0]
+            self.objdec = objparams[1]
+            self.objsma = objparams[2]
+            self.objBA = objparams[3]
+            self.objPA = objparams[4]            
+
+        else:
+            self.objra  = None  
+            self.objdec = None  
+            self.objsma = None  
+            self.objBA  = None  
+            self.objPA  = None
+
+        if unmaskellipse and (self.objsma is not None): # unmask central elliptical region around object
+            # get wcs from mask image
+            wcs = WCS(fits.getheader(image))
+            
+            # get x and y coord of galaxy from (RA,DEC) using mask wcs
+            self.xpixel,self.ypixel = wcs.wcs_world2pix(self.objra,self.objdec,0)
+            
+            # convert sma to pixels using pixel scale from mask wcs
+            self.pixel_scale = wcs.pixel_scale_matrix[1][1]
+            self.objsma_pixels = self.objsma/(self.pixel_scale*3600)
+            
+            
         ###  The lines below are for testing purposes
         ###  and should be removed before release.
         #if image is None:
@@ -489,6 +563,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             t_0 = timeit.default_timer()        
             self.runse()
             self.remove_center_object()
+            #self.remove_central_objects(xc=self.xpixels,yc=self.ypixels)
             t_1 = timeit.default_timer()
             print("HELLO!!!")
             print(f"\ntime to run se: {round((t_1-t_0),3)} sec\n")
@@ -781,29 +856,42 @@ if __name__ == "__main__":
     #from halphamain import cutout_image
     #from halphamain import cutout_image
     import argparse    
-    parser = argparse.ArgumentParser(description ='Run gui for making an mask')
+    parser = argparse.ArgumentParser(description ='Run gui for making an mask.  You can specify the RA and DEC of galaxy, which is useful if galaxy is not at the center of the cutout image.  You can also provide an elliptical region around the galaxy to unmask.  This is useful for galaxies that are shredded by source extractor.')
     parser.add_argument('--image',dest = 'image', default=None,help='r-band image')
     parser.add_argument('--haimage',dest = 'haimage', default=None,help='this is typically the continuum-subtracted Halpha image.  If no image is provided, the middle panel is left blank.')
     parser.add_argument('--sepath',dest = 'sepath', default=None,help='path to source extractor config files (e.g. ~/github/HalphaImaging/astromatic/ - this is default if no path is given.)')
     parser.add_argument('--gaiapath',dest = 'gaiapath', default=None,help='full pathname of gaia mask file from legacy dr9.')    
     parser.add_argument('--config',dest = 'config', default=None,help='source extractor config file.  default is default.sex.HDI.mask')
+    parser.add_argument('--objra',dest = 'objra', default=None,help='RA of target galaxy. default is none, then object is assumed to be at center of image.')
+    parser.add_argument('--objdec',dest = 'objdec', default=None,help='DEC of target galaxy')
+    parser.add_argument('--objsma',dest = 'objsma', default=None,help='SMA of elliptical region to unmask around galaxy.')
+    parser.add_argument('--objBA',dest = 'objBA', default=None,help='BA of elliptical region to unmask around galaxy.')
+    parser.add_argument('--objPA',dest = 'objPA', default=None,help='PA of elliptical region to unmask around galaxy, measure CCW from +x axis')        
     parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')        
         
     args = parser.parse_args()
+    if (args.objra is not None) and (args.objBA is not None):
+        objparams = [float(args.objra),float(args.objdec),float(args.objsma),float(args.objBA),float(args.objPA)]
+    else:
+        objparams = None
     if gingaflag:
         logger = log.get_logger("masklog", log_stderr=True, level=40)
     app = QtWidgets.QApplication(sys.argv)
     #MainWindow = QtWidgets.QMainWindow()
-        
+
+    if args.objsma is not None:
+        unmaskellipse = True
+    else:
+        unmaskellipse = False
     if args.image is not None:
         if not args.auto:
             
             #print('got here 1')
             MainWindow = QtWidgets.QWidget()
-            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto)
+            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse = unmaskellipse)
         else:
             #print('got here 2')
-            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto)
+            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse=unmaskellipse)
     else:
         #print('got here 3')
         ui = maskwindow(MainWindow, logger)
