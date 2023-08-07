@@ -6,9 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1296</width>
-    <height>711</height>
+    <width>932</width>
+    <height>600</height>
    </rect>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>10</pointsize>
+   </font>
   </property>
   <property name="windowTitle">
    <string>Halpha Console</string>
@@ -159,20 +164,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QSlider" name="ratioSlider">
-               <property name="mouseTracking">
-                <bool>true</bool>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-              </widget>
+              <widget class="QLineEdit" name="filterRatioLineEdit"/>
              </item>
              <item>
               <widget class="QPushButton" name="resetRatioButton">
@@ -201,14 +193,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QSlider" name="cutoutSlider">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-              </widget>
+              <widget class="QLineEdit" name="cutoutSizeLineEdit"/>
              </item>
              <item>
               <widget class="QPushButton" name="resetSizeButton">
@@ -379,7 +364,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1296</width>
+     <width>932</width>
      <height>20</height>
     </rect>
    </property>
