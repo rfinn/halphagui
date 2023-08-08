@@ -294,8 +294,8 @@ class ellipse():
         # add sky noise to image 1 header
         sky_noise_erg = np.mean(threshold)*self.uconversion1/self.pixel_scale**2
         print('r sky noise = ',sky_noise_erg)
-        self.header.set('SKYNOISE',float('{:.2f}'.format(np.mean(thresold),'sky noise in ADU')        
-        self.header.set('SKYERR',float('{:.2e}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+        self.header.set('SKYNOISE','{:.2f}'.format(np.mean(threshold)),'sky noise in ADU')        
+        self.header.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
         # save files
         fits.writeto(self.image_name,self.image,header=self.header,overwrite=True)
         self.im1_skynoise = sky_noise_erg
@@ -307,8 +307,9 @@ class ellipse():
                 threshold = detect_threshold(self.image2, nsigma=snrcut)
             # add sky noise to image 2 header
             sky_noise_erg = np.mean(threshold)*self.uconversion2/self.pixel_scale**2
-            self.header.set('SKYNOISE',float('{:.2f}'.format(np.mean(thresold),'sky noise in ADU')                    
-            self.header2.set('SKYERR',float('{:.2e}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+            self.header2.set('SKYNOISE','{:.2f}'.format(np.mean(threshold)),'sky noise in ADU')        
+            self.header2.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
+            
 
             fits.writeto(self.image2_name,self.image2,header=self.header2,overwrite=True)
             self.im2_skynoise = sky_noise_erg

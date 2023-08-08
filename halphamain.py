@@ -12,6 +12,11 @@ cd /data-pool/Halpha/halphagui-output-20230626
 
 %run ~/github/halphagui/testing/halphamain.py --virgo --rimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-r-shifted.fits --haimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-Halpha.fits --filter inthalpha --psfdir /home/rfinn/data/reduced/psf-images/ --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --auto
 
+
+Testing after MVC semi-implementation.  I created a testing directory on the linux laptop, and this is command I used to run the gui:
+
+(venv) (base) rfinn@virgof:~/research/Virgo-dev/halphagui-test$ python ~/github/halphagui/halphamain.py --virgo --tabledir ~/research/Virgo/tables-north/v2/ --rimage VF-145.781+31.887-HDI-20180313-p019-R.fits --haimage VF-145.781+31.887-HDI-20180313-p019-ha4.fits --csimage VF-145.781+31.887-HDI-20180313-p019-ha4-CS-ZP.fits --psfdir ~/research/Virgo-dev/halphagui-test/ --filter ha4 --prefix VF-145.781+31.887-HDI-20180313-p019
+
 """
 
 
@@ -110,19 +115,27 @@ cutout_scale = 14
 # now in terms of R25 for
 cutout_scale = 2.5
 
+
+######################################################
+## FUNCTIONS
+######################################################
+
 def get_params_from_name(image_name):
     t = os.path.basename(image_name).split('-')
     #print(t)
     if len(t) == 5:
-
         telescope = t[2]
         dateobs = t[3]
         pointing = t[4]
     elif len(t) == 6: # meant to catch negative declinations
         telescope = t[3]
         dateobs = t[4]
-        pointing = t[5]        
+        pointing = t[5]
+    else:
+        print("ruh roh - trouble getting info from ",image_name, len(t))
+        print(t)
     return telescope,dateobs,pointing
+
 class psfimage():
     def __init__(self):
         fwhm = 5.6
@@ -991,6 +1004,7 @@ class create_output_table():
                 self.update_gui_table_cell(self.igal, 'COMMENT',t)
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
         if self.prefix is not None:
+            # this is not working when running gui - need to feed in the r-band image name
             telescope,dateobs,p = get_params_from_name(self.prefix)
             for i in range(len(self.table)):
                 self.table['POINTING'][i] = self.prefix
@@ -1110,7 +1124,9 @@ class hamodel():
             self.rweight_flag = False
 
         self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
-        self.check_previous_r_psf()ephot['SMMA_MOMENT'][~noradius_flag]
+        self.check_previous_r_psf()
+        #not sure what the following line is suppose to do
+        # ephot['SMMA_MOMENT'][~noradius_flag]
     def load_hacoadd(self): # model
         self.coadd.load_file(self.hacoadd_fname)
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
@@ -1201,12 +1217,15 @@ class hamodel():
                 self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
             elif s < self.global_min_cutout_size:
                 self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
-                self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale                
+                self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale
+                
         #print('after comparing with max/min size limits:')
         #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
         # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
 
+
+        # TODO - this needs to be moved into the view class
         if not self.auto:
             # plot location of galaxies in the coadd image
             self.mark_galaxies()
@@ -1423,15 +1442,17 @@ class hamodel():
                 self.halpha_cs = self.ha - self.filter_ratio*self.r
                 fits.writeto(self.hacoadd_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)           
             except AttributeError:
+
                 print('WARNING: no filter ratio')
 
+        # TODO - needs to be moved to view and then called from controller
         if not self.auto:
             # display continuum subtracted Halpha image in the large frame
             self.coadd.fitsimage.set_autocut_params('zscale')
             self.coadd.fitsimage.set_data(self.halpha_cs)
         
     def get_galaxy_cutout(self): # MVC - mix of model and view?
-        # TODO  - split into separate model and view functions
+
         # scale cutout size according to NSA Re
         #size = cutout_scale*self.gradius[self.igal]
         # updating to use the size from segmentation image from photutils
@@ -1447,13 +1468,6 @@ class hamodel():
         self.cutout_size = size.value/self.pixelscale
         self.mincutout_size = 0.2*self.cutout_size
         self.maxcutout_size = 3.*self.cutout_size
-        # only do this when running gui (as opposed to automatically)
-        if not self.auto:
-            self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
-            self.reset_cutout_size()
-            self.reset_cutout_ratio()
-            pass
-        self.display_cutouts()
 
         
 
@@ -1465,8 +1479,6 @@ class hamodel():
 
         # date is stored in epoch for HDI data
 
-
-        
         try:
             # store time 
             t = header['EPOCH']
@@ -1568,32 +1580,35 @@ class hamodel():
         self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
         self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
 
-        #if self.prefix is None:
-        #    self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
-        #    self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
-        #    self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'   
-        #else:
-        #    self.cutout_name_r = self.cutoutdir+cprefix+'-'+self.prefix+'-R.fits'
-        #    self.cutout_name_ha = self.cutoutdir+cprefix+'-'+self.prefix+'-CS.fits'
-        #    self.cutout_name_hawc = self.cutoutdir+cprefix+'-'+self.prefix+'-Ha.fits'            
 
+        position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
+        
+        try:
+            ###########################################################
+            # TODONE - this part should be moved to get_galaxy_cutout
+            #print(self.cutout_size_arcsec)
+            
+            #get cutout, and require entire image to be on parent image
+            self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size_arcsec, wcs=self.coadd_wcs, mode='trim') 
+            ############################################################
+
+        except nddata.utils.PartialOverlapError:# PartialOverlapError:
+            print('galaxy is only partially covered by mosaic - skipping ',self.galid[self.igal])
+            return
+        except nddata.utils.NoOverlapError:# PartialOverlapError:
+            print('galaxy is not covered by mosaic - skipping ',self.galid[self.igal])
+            return
 
         t = self.cutout_name_r.split('.fit')
         self.mask_image_name=t[0]+'-mask.fits'
-        if not self.auto:
-            if os.path.exists(self.mask_image_name):
-                self.display_mask(self.mask_image_name)
-            else:
-                # clear mask frame
-                self.maskcutout.fitsimage.clear()
-
-            self.rcutout.canvas.delete_all_objects()
-            self.hacutout.canvas.delete_all_objects()            
-            self.clear_comment_field()
 
         self.write_cutouts()
+
+        #self.display_cutouts() - moved this to calling function in controller
+
+
+
     def write_cutouts(self): # MVC - model
-        # TODO - this calls a view function - make a controller function that calls this and then the view function
         #print(ymin,ymax,xmin,xmax)
         print('in write_cutouts')
         try:
@@ -1667,16 +1682,16 @@ class hamodel():
         newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
         newfile.header['EXPTIME']=1.0 
         fits.writeto(self.cutout_name_hawc, newfile1.data, header = newfile1.header, overwrite=True)
-        #print('saving halpha w/continuum cutout')
-        # write bounding box to output table
-        # save this for later
+
+
+
+        
         ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
         bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))
         self.table['BBOX'][self.igal] = bbox
 
-        # this should not be called in the model b/c model does not interact with view
-        if not self.auto:
-            self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
+        # this should be the end of the write function
+        
     def build_psf(self): # MVC - model
         # check to see if R-band PSF images exist
         coadd_header = fits.getheader(self.rcoadd_fname)
@@ -2166,7 +2181,14 @@ class hamodel():
             self.update_gui_table()
 
 class haview():
-    """ class to handle all gui setup and visualizations  """
+    """ 
+    class to handle all gui setup and visualizations 
+
+    I think this needs to inherit the model class, because buttons are connected to model functions
+
+    Or the functions that are connecting the buttons should be called from the controller class
+
+    """
 
     def setup_gui(self): # view
         #print(MainWindow)
@@ -2254,10 +2276,10 @@ class haview():
 
 
 
-    def clear_cutouts(self): # view
+    def clear_cutouts(self): # view - should this be in the controller class?
         self.rcutout.canvas.delete_all_objects()
         self.hacutout.canvas.delete_all_objects()
-    def connect_setup_menu(self): # view
+    def connect_setup_menu(self): # view or controller - these are calling model functions/quantities
         self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
         self.ui.actionHa_coadd_2.triggered.connect(self.get_hacoadd_file)
         self.ui.actionNSA_catalog_path.triggered.connect(self.getnsafile)
@@ -2273,7 +2295,8 @@ class haview():
         self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
         self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('inthalpha'))
         self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('intha6657'))
-        self.ui.actionsienaha.triggered.connect(lambda: self.set_hafilter('sienaha'))        
+        self.ui.actionsienaha.triggered.connect(lambda: self.set_hafilter('sienaha'))
+        
     def connect_halpha_type_menu(self): # view
         ha_types = ['Ha Emission','No Ha']
         for name in ha_types:
@@ -2284,7 +2307,7 @@ class haview():
         for name in comment_types:
             self.ui.commentComboBox.addItem(str(name))
         self.ui.commentComboBox.activated.connect(self.set_comment)
-    def mark_galaxies(self): # MVC - view
+    def mark_galaxies(self): # MVC - view or controller, b/c this relies on model quantities
         #
         # using code in TVMark.py as a guide for adding shapes to canvas
         #
@@ -2340,27 +2363,33 @@ class haview():
         self.ui.commentLineEdit.clear()
         
     def display_cutouts(self): # MVC - view
-        position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
+
+        # TODONE  - split into separate model and view functions
+        #################################################
+        # this part needs to move to the view class
+        #################################################
+        # only do this when running gui (as opposed to automatically)
+        self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
+        self.reset_cutout_size()
+        self.reset_cutout_ratio()
         
-        try:
-            #print('in display cutouts')
-            #print('\t cutout size pix = {:.1f}'.format(self.cutout_size))
-            #print('\t cutout size arcsec = {:.1f}'.format(self.cutout_size_arcsec.value))
-            print(self.cutout_size_arcsec)
-            self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size_arcsec, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
-            #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
-            ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
-            #print(ymin,ymax,xmin,xmax)
-            if not self.auto:
-                self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
-                self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
-                #cutoutR.plot_on_original(color='white')
-        except nddata.utils.PartialOverlapError:# PartialOverlapError:
-            print('galaxy is only partially covered by mosaic - skipping ',self.galid[self.igal])
-            return
-        except nddata.utils.NoOverlapError:# PartialOverlapError:
-            print('galaxy is not covered by mosaic - skipping ',self.galid[self.igal])
-            return
+        ############################################################
+        # TODONE: this is the only part that should be in view
+        #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
+        ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))        
+        #print(ymin,ymax,xmin,xmax)
+        
+        ############################################################                
+
+        self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
+        self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
+        #cutoutR.plot_on_original(color='white')
+        
+        # ###################################################################################
+        # TODO - this should not be called in the model b/c model does not interact with view
+        # ###################################################################################
+        self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
         
     def draw_ellipse_results(self, color='cyan'): # MVC - view
         # mark r24
@@ -2385,6 +2414,21 @@ class haview():
             im.fitsimage.redraw()
         # mark R17 in halpha image
         
+    def display_mask(self, mask_image_name): # MVC - controller or view??? putting in view for now
+        t = self.cutout_name_r.split('.fit')
+        self.mask_image_name=t[0]+'-mask.fits'
+        
+        if not self.auto:
+            if os.path.exists(self.mask_image_name):
+                self.maskcutout.load_file(self.mask_image_name)
+                self.mask_image_exists = True
+                
+            else:
+                # clear mask frame
+                self.maskcutout.fitsimage.clear()
+
+        
+        #self.mask_image = mask_image_name
 
 
         
@@ -2563,6 +2607,19 @@ class hacontroller():
         # when galaxy is selected from list, trigger
         # cutout imaages
         self.get_galaxy_cutout()
+
+        # will need to also call new view functions
+        self.display_cutouts()
+        #self.display_mask()
+
+        # the following two lines are the same as self.clear_cutouts
+        # seems odd that this is called here - why are we clearing the cutouts after we displayed the cutouts???
+        # need to test this when actually running gui, as opposed to running in auto mode
+        self.clear_cutouts()
+        #self.rcutout.canvas.delete_all_objects()
+        #self.hacutout.canvas.delete_all_objects()            
+        self.clear_comment_field()
+        #################################################
         
     def reset_cutout_size(self): # MVC - controller
         self.cutout_size = self.reset_size
@@ -2575,7 +2632,7 @@ class hacontroller():
         
     def update_images(self): # MVC - controller b/c calls model and view
         self.subtract_images(overwrite=True)
-        self.display_cutouts()
+        #self.display_cutouts()
     def make_mask(self): # MVC - is this controller, or view?
         # TODO - break off view functions into a method within the haview class
         #current_dir = os.getcwd()
@@ -2597,12 +2654,6 @@ class hacontroller():
             print('Hey - make sure you selected a galaxy!')
         #os.chdir(current_dir)
         
-    def display_mask(self, mask_image_name):
-        t = self.cutout_name_r.split('.fit')
-        self.mask_image_name=t[0]+'-mask.fits'
-        #self.mask_image = mask_image_name
-        self.maskcutout.load_file(self.mask_image_name)
-        self.mask_image_exists = True
     def set_comment(self,comment): # MVC - controller or model??
         """ what is this doing? """
         col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG','NUC_HA']
@@ -2778,8 +2829,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # create mask
 
         objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]]
-        self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',auto=self.auto,\
-                                  objparams=objparams,unmaskellipse=True)
+        self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
+                              sepath='~/github/halphagui/astromatic/',auto=self.auto,\
+                              objparams=objparams,unmaskellipse=True)
                                   
         
         # run galfit
@@ -3088,7 +3140,8 @@ if __name__ == "__main__":
     ## UPDATED TO USE ARGPARSE
     #################################
     if not args.auto:
-        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,csimage=args.csimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
+        ui = hafunctions(MainWindow, logger, sepath = sepath, args=args)        
+        #ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,csimage=args.csimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
         if os.getenv("HOME").find('/home/') > -1: # special case for when running on linux laptop
             x = MainWindow.width()*.7
             y = MainWindow.height()*.7
