@@ -37,6 +37,10 @@ from astropy.table import Table, Column
 from astropy.visualization import SqrtStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
 
+from astropy.stats import sigma_clip
+from astropy.visualization import simple_norm
+
+
 import scipy.ndimage as ndi
 import statmorph
 from statmorph.utils.image_diagnostics import make_figure
@@ -61,6 +65,24 @@ import imutils
 ## from https://www.noao.edu/kpno/mosaic/filters/
 central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28,'inthalpha':6568.,'intha6657':6657,'intr':6240} # angstrom
 dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17,'inthalpha':95.,'intha6657':80,'intr':1347} # angstrom
+
+
+def display_image(image,percent=99.9,lowrange=False,mask=None,sigclip=True):
+    lowrange=False
+    if sigclip:
+        clipped_data = sigma_clip(image,sigma_lower=5,sigma_upper=5)#,grow=10)
+    else:
+        clipped_data = image
+    if lowrange:
+        norm = simple_norm(clipped_data, stretch='linear',percent=percent)
+    else:
+        norm = simple_norm(clipped_data, stretch='asinh',percent=percent)
+
+    plt.imshow(image, norm=norm,cmap='gray_r',origin='lower')
+    #v1,v2=scoreatpercentile(image,[.5,99.5])            
+    #plt.imshow(image, cmap='gray_r',vmin=v1,vmax=v2,origin='lower')    
+
+
 
 # read in image and mask
 
@@ -320,6 +342,8 @@ class ellipse():
         find the central object in the image and get its objid in segmentation image.
         object is stored as self.objectIndex
         '''
+
+        # TODO - need to be able to handle objects that are not at the center - should have option to pass in RA/DEC and then do like in maskwrapper
         xdim,ydim = self.image.shape
         distance = np.sqrt((self.cat.xcentroid - xdim/2.)**2 + (self.cat.ycentroid - ydim/2.)**2)        
         #distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
@@ -544,8 +568,10 @@ class ellipse():
         #
         norm = ImageNormalize(stretch=SqrtStretch())
         plt.figure()
-        plt.imshow(self.masked_image, cmap='Greys_r', norm=norm , origin='lower')
-        self.aperture.plot(color='white', lw=1.)
+        #plt.imshow(self.masked_image, cmap='Greys', norm=norm , origin='lower')
+        display_image(self.masked_image)#, cmap='Greys', norm=norm , origin='lower')        
+        plt.colorbar()
+        self.aperture.plot(color='k', lw=1.)
         plt.show()
 
     def fit_ellipse(self):
@@ -1063,13 +1089,14 @@ if __name__ == '__main__':
     #mask = 'r-18045-R-mask.fits'
 
     prefix = 'VFID0501-UGC09556-BOK-20210315-VFID0501'
+    prefix = 'VFID2772-NGC2964-HDI-20180313-p019'    
     image = prefix+'-R.fits'
     rphot_table = prefix+'-R-phot.fits'
     image2 = prefix+'-CS.fits'
     haphot_table = prefix+'-CS-phot.fits'
     mask = prefix+'-R-mask.fits'
     myfilter = '4'
-    myratio = .063573
+    myratio = .0497427
 
     try:
         e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter=myfilter, filter_ratio=myratio)

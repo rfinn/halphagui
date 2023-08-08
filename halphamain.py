@@ -15,7 +15,9 @@ cd /data-pool/Halpha/halphagui-output-20230626
 
 Testing after MVC semi-implementation.  I created a testing directory on the linux laptop, and this is command I used to run the gui:
 
-(venv) (base) rfinn@virgof:~/research/Virgo-dev/halphagui-test$ python ~/github/halphagui/halphamain.py --virgo --tabledir ~/research/Virgo/tables-north/v2/ --rimage VF-145.781+31.887-HDI-20180313-p019-R.fits --haimage VF-145.781+31.887-HDI-20180313-p019-ha4.fits --csimage VF-145.781+31.887-HDI-20180313-p019-ha4-CS-ZP.fits --psfdir ~/research/Virgo-dev/halphagui-test/ --filter ha4 --prefix VF-145.781+31.887-HDI-20180313-p019
+(venv) (base) rfinn@virgof:~/research/Virgo-dev/halphagui-test$ 
+
+python ~/github/halphagui/halphamain.py --virgo --tabledir ~/research/Virgo/tables-north/v2/ --rimage VF-145.781+31.887-HDI-20180313-p019-R.fits --haimage VF-145.781+31.887-HDI-20180313-p019-ha4.fits --csimage VF-145.781+31.887-HDI-20180313-p019-ha4-CS-ZP.fits --psfdir ~/research/Virgo-dev/halphagui-test/ --filter ha4 --prefix VF-145.781+31.887-HDI-20180313-p019
 
 """
 
@@ -1775,9 +1777,6 @@ class hamodel():
             self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
             self.hapsf.run_all()
             self.psf_haimage_name = self.hapsf.psf_image_name
-    def set_prefix(self,prefix): # MVC - probably model?
-        self.prefix = prefix
-        #print('prefix for output files = ',self.prefix)
 
     def add_psf_to_table(self): # MVC - model
         fields = ['R_FWHM','H_FWHM']
@@ -2060,9 +2059,56 @@ class hamodel():
 
         # TODO - write out phot table
 
-        qtable = self.e.cat.to_table()
+
+
+        colnames = ['area',
+                    'background_mean',
+                    'bbox_xmax',
+                    'bbox_xmin',
+                    'bbox_ymax',
+                    'bbox_ymin',
+                    'cxx',
+                    'cxy',
+                    'cyy',
+                    'eccentricity',
+                    'ellipticity',
+                    'elongation',
+                    'equivalent_radius',
+                    'fwhm',
+                    'gini',
+                    'inertia_tensor',
+                    'kron_flux',
+                    'kron_fluxerr',
+                    'kron_radius',
+                    'local_background',
+                    'moments', # multi-dimensional
+                    'moments_central',
+                    'orientation',
+                    'perimeter',
+                    'segment_flux',
+                    'segment_fluxerr',
+                    'semimajor_sigma',
+                    'semiminor_sigma',
+                    'xcentroid',
+                    'ycentroid']
+
+
+        qtable = self.e.cat[e.objectIndex].to_table(colnames)
+        
         phot_table_name = self.cutout_name_r.replace('.fits','-photuil_tab.fits')
-        qtable.write()
+
+        # calculate fractional radii, but these are circular, and in pixels
+        r30 = self.e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec
+        r50 = self.e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec
+        r90 = self.e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec
+
+        c1 = Column(r30,name='PHOT_R30',unit='arcsec',description='photutils sourcecat circ fluxfrac_radius')
+        c2 = Column(r50,name='PHOT_R50',unit='arcsec',description='photutils sourcecat circ fluxfrac_radius')
+        c3 = Column(r90,name='PHOT_R90',unit='arcsec',description='photutils sourcecat circ fluxfrac_radius')
+        qtable.add_columns([c1,c2,c3])
+        qtable.write(phot_table_name,format='fits',overwrite=True)
+        
+       
         if not self.auto:
             self.update_gui_table()
 
@@ -2307,6 +2353,13 @@ class haview():
         for name in comment_types:
             self.ui.commentComboBox.addItem(str(name))
         self.ui.commentComboBox.activated.connect(self.set_comment)
+    def set_prefix(self,prefix): # MVC - probably model? - no this is from the gui
+        self.prefix = prefix
+        #print('prefix for output files = ',self.prefix)
+    def set_prefix_on_gui(self,prefix): # MVC - probably model? - no this is from the gui
+        """  use this if the prefix is provided by the user - this will fill in the box with the provided prefix """
+        self.ui.prefixLineEdit.setText(prefix)        
+        
     def mark_galaxies(self): # MVC - view or controller, b/c this relies on model quantities
         #
         # using code in TVMark.py as a guide for adding shapes to canvas
@@ -2685,6 +2738,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         if not(self.auto):
             self.setup_gui()
         self.prefix = args.prefix
+        if self.prefix is not None:
+            self.set_prefix_on_gui(self.prefix)
         self.testing = args.testing
         self.draco = args.draco
         self.nebula = args.nebula        
