@@ -1268,7 +1268,7 @@ class hamodel():
             print('Warning: no catalog defined.')
             print('Make sure you set the path to the NSA/Virgo parent catalog')
         try:
-            print('min and max redshift = ',self.zmin,self.zmax)
+            print(f'min and max redshift = {self.zmin:.3f}, {self.zmax:.3f}')
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
             
         except AttributeError:
@@ -1314,6 +1314,8 @@ class hamodel():
         if self.virgo:
             self.nsa.cull_catalog(keepflag,self.prefix)
             self.radius_arcsec = self.radius_arcsec[keepflag]
+            self.BA = self.BA[keepflag]
+            self.PA = self.PA[keepflag]            
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
         #self.gradius=self.nsa.cat.SERSIC_TH50
@@ -1460,11 +1462,11 @@ class hamodel():
         # updating to use the size from segmentation image from photutils
         size_arcsec = self.cutout_sizes_arcsec[self.igal]
         # set the min size to 100x100 pixels (43"x43")
-        print('size, global min, global max = ',size_arcsec,self.global_min_cutout_size,self.global_max_cutout_size)
+        #print('size, global min, global max = ',size_arcsec,self.global_min_cutout_size,self.global_max_cutout_size)
         size = max(self.global_min_cutout_size,size_arcsec)
         if size > self.global_max_cutout_size:
             size = self.global_max_cutout_size
-        print('new cutout size = ',size, self.igal, self.gradius[self.igal])
+        #print('new cutout size = ',size, self.igal, self.gradius[self.igal])
         self.reset_size = size.value
         self.cutout_size_arcsec = size
         self.cutout_size = size.value/self.pixelscale
@@ -1612,7 +1614,7 @@ class hamodel():
 
     def write_cutouts(self): # MVC - model
         #print(ymin,ymax,xmin,xmax)
-        print('in write_cutouts')
+        #print('in write_cutouts')
         try:
             self.table['FILTER_RATIO'][self.igal] = self.filter_ratio
         except AttributeError:
@@ -2654,13 +2656,16 @@ class hacontroller():
             print('Trouble plotting cutouts')
             print('make sure galaxy is selected')
     def select_galaxy(self,id): # MVC - view or controller?
-
+        print()
+        print()
         print('selecting a galaxy')
         self.igal = self.ui.wgalid.currentIndex()
         if self.virgo:
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
-            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal]*1.2,self.BA[self.igal],self.PA[self.igal]]
-            print(self.objparams)
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal]*1.2,self.BA[self.igal],self.PA[self.igal]+90]
+            #print("new galaxy params = ",self.objparams)
+            #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
+            print()
         else:
             self.rcutout_label.setText('r-band '+str(self.nsa2['NSAID'][self.igal]))
             self.objparams = None
@@ -2725,6 +2730,9 @@ class hacontroller():
             return
         #try:
         self.mwindow = QtWidgets.QWidget()
+        print()
+        #print("initiating mask window")
+        #print("\t object params = ",objparams)
         self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',\
                                   objparams=objparams)
         self.mui.mask_saved.connect(self.display_mask)
@@ -2910,7 +2918,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         
         # create mask
 
-        self.objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]]
+        self.objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]+90]
+
         self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
                               sepath='~/github/halphagui/astromatic/',auto=self.auto,\
                               objparams=self.objparams,unmaskellipse=True)
@@ -3048,16 +3057,19 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # RF 2023-03-24: updating to use the v2 catalogs
         self.vf_fname = os.path.join(self.tabledir,'vf_v2_main.fits')
         self.nsa_fname = os.path.join(self.tabledir,'vf_v2_nsa_v0.fits')
+        ephot_fname = os.path.join(self.tabledir,'vf_v2_legacy_ephot.fits')        
         self.vf = galaxy_catalog(self.vf_fname,virgo=True)
 
         self.nsa = galaxy_catalog(self.nsa_fname,virgo=True)
 
         ##
         # get sizes for galaxies - will use this to unmask central region
+        # need to cut this catalog based on keepflag
         ##
-        ephot_fname = os.path.join(self.tabledir,'vf_v2_legacy_ephot.fits')
+
         ephot = Table.read(ephot_fname)
-        self.radius_arcsec = ephot['SMA_SB24']
+        #self.radius_arcsec = ephot['SMA_SB24']
+        self.radius_arcsec = ephot['SMA_SB23.5']
 
         # for galaxies with SMA_SB24=0, set radius to value in main table 
         noradius_flag = self.radius_arcsec == 0
@@ -3091,7 +3103,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
 
         
 class galaxy_catalog():
-    def __init__(self,catalog,nsa=False,agc=False,virgo=False):
+    def __init__(self,catalog,nsa=False,agc=False,virgo=False,sizecat=None):
         self.cat = fits.getdata(catalog)
         self.cat = Table(self.cat)
         self.catalog_name = catalog
@@ -3100,6 +3112,10 @@ class galaxy_catalog():
         self.virgoflag = virgo
         if self.agcflag:
             self.check_ra_colname()
+        if sizecat is not None:
+            self.sizecat = sizecat
+        else:
+            self.sizecat = None
     def check_ra_colname(self):
         # make sure the catalog has RA and DEC
         # columns that are named RA and DEC
@@ -3112,7 +3128,7 @@ class galaxy_catalog():
             
     def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,weight_image=None, agcflag=False,virgoflag=False):
 
-        print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
+        #print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None

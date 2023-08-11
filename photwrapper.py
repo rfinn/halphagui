@@ -103,7 +103,7 @@ def get_M20(catalog,objectIndex):
     xc,yc = catalog.cutout_centroid[objectIndex]
 
     # can't make sense of moments that photutils includes in the catalog, so recalculating here
-    ymax,xmax = e.cat.data_ma[objectIndex].shape
+    ymax,xmax = catalog.data_ma[objectIndex].shape
     X,Y = np.meshgrid(np.arange(xmax),np.arange(ymax))
 
     # calculate distance of each point from center of galaxy
@@ -248,7 +248,7 @@ class ellipse():
         self.find_central_object()
         self.get_ellipse_guess()
         self.measure_phot()
-        self.get_M20()
+        self.get_all_M20()
         self.calc_sb()
         self.convert_units()
         self.get_image2_gini()

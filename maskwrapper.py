@@ -168,7 +168,7 @@ class buildmask():
         self.catname = self.image_name.replace('.fits','.cat')
         self.segmentation = self.image_name.replace('.fits','-segmentation.fits')
         sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation}"
-        print(sestring)
+        #print(sestring)
         os.system(sestring)
         self.maskdat = fits.getdata(self.segmentation)
         # grow masked areas
@@ -408,6 +408,31 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         ui.readoutGridLayout.addWidget(self.readout, 1, col, 1, 1)
         #self.ui.readoutLabel.setText('this is another test')
         self.fitsimage.set_callback('key-press',self.key_press_cb)
+
+
+        # adding lines to allow drawing on canvas?
+        self.dc = get_canvas_types()        
+        canvas = self.dc.DrawingCanvas()
+        canvas.enable_draw(True)
+        canvas.enable_edit(True)
+        canvas.set_drawtype('rectangle', color='lightblue')
+        canvas.set_surface(fi)
+        #canvas.rectangle(.5,.5,10,0)
+        self.canvas = canvas
+        # add canvas to view
+        #fi.add(canvas)
+        private_canvas = fi.get_canvas()
+        private_canvas.add(canvas)
+        canvas.register_for_cursor_drawing(fi)
+        #canvas.add_callback('draw-event', self.draw_cb)
+        canvas.set_draw_mode('draw')
+        canvas.ui_set_active(True)
+        self.canvas = canvas
+
+        self.drawtypes = canvas.get_drawtypes()
+        self.drawtypes.sort()
+
+        
     def load_image(self, imagearray):
         #self.fitsimage.set_image(imagearray)
         self.fitsimage.set_data(imagearray)
@@ -472,12 +497,13 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.logger = logger
 
         # define the position of the target galaxy, as well as the shape and size of elliptical region to unmask around galaxy.
+        #print("inside maskwrapper.init, objparams = ",objparams)
         if objparams is not None:
             self.objra = objparams[0]
             self.objdec = objparams[1]
             self.objsma = objparams[2]
             self.objBA = objparams[3]
-            self.objPA = objparams[4]            
+            self.objPA = objparams[4]
 
         else:
             self.objra  = None  
@@ -631,6 +657,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.display_mask()
     def display_mask(self):
         self.maskcutout.load_file(self.mask_image)
+        self.draw_central_ellipse()
     def show_mask(self):
         if self.nods9 & (not self.auto):
             plt.close('all')
@@ -648,18 +675,19 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             #plt.draw()
             #plt.show(block=False)
             self.draw_central_ellipse()
-    def draw_central_results(self, color='cyan'): # MVC - view
+    def draw_central_ellipse(self, color='cyan'): # MVC - view
         # mark r24
         markcolor=color#, 'yellow', 'cyan']
         markwidth=1
         #print('inside draw_ellipse_results')
-        image_frames = [self.maskcutout]
+        image_frames = [self.rcutout,self.hacutout,self.maskcutout]
         if self.ellipseparams is None:
             print("")
             print("no parameters found for central ellipse")
             print()
             return
-        xy,yc,r,BA,PA = self.ellipseparams
+        xc,yc,r,BA,PA = self.ellipseparams
+        #print("just checking - adding ellipse drawing ",self.ellipseparams)
         objlist = []
         for i,im in enumerate(image_frames):
             obj =im.dc.Ellipse(xc,yc,r,r*BA, rot_deg = np.degrees(PA), color=markcolor,linewidth=markwidth)
@@ -667,6 +695,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             objlist.append(obj)
             self.markhltag = im.canvas.add(im.dc.CompoundObject(*objlist))
             im.fitsimage.redraw()
+            #print("did you see anything???")
         # mark R17 in halpha image
 
     def key_press_func(self,text):
