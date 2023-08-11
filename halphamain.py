@@ -2093,19 +2093,27 @@ class hamodel():
                     'ycentroid']
 
 
-        qtable = self.e.cat[e.objectIndex].to_table(colnames)
-        
-        phot_table_name = self.cutout_name_r.replace('.fits','-photuil_tab.fits')
 
         # calculate fractional radii, but these are circular, and in pixels
-        r30 = self.e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec
-        r50 = self.e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec
-        r90 = self.e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec
+        r30 = self.e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
+        r50 = self.e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
+        r90 = self.e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
 
-        c1 = Column(r30,name='PHOT_R30',unit='arcsec',description='photutils sourcecat circ fluxfrac_radius')
-        c2 = Column(r50,name='PHOT_R50',unit='arcsec',description='photutils sourcecat circ fluxfrac_radius')
-        c3 = Column(r90,name='PHOT_R90',unit='arcsec',description='photutils sourcecat circ fluxfrac_radius')
-        qtable.add_columns([c1,c2,c3])
+        self.e.cat.add_extra_property('PHOT_R30',r30)
+        self.e.cat.add_extra_property('PHOT_R50',r50)
+        self.e.cat.add_extra_property('PHOT_R90',r90)
+
+        # calculate M20 here, or in photwrapper?
+
+        #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
+        #c2 = Column(data=np.array(r50[self.e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
+        #c3 = Column(data=r90[self.e.objectIndex],name='PHOTR90',unit='arcsec',description='photutils fluxfrac_radius')
+        #qtable.add_columns([c1,c2,c3])
+
+        qtable = self.e.cat[self.e.objectIndex].to_table(colnames)
+        
+        phot_table_name = self.cutout_name_r.replace('.fits','-photuil_tab.fits')
+        
         qtable.write(phot_table_name,format='fits',overwrite=True)
         
        
@@ -2651,8 +2659,11 @@ class hacontroller():
         self.igal = self.ui.wgalid.currentIndex()
         if self.virgo:
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal]*1.2,self.BA[self.igal],self.PA[self.igal]]
+            print(self.objparams)
         else:
-            self.rcutout_label.setText('r-band '+str(self.nsa2['NSAID'][self.igal]))            
+            self.rcutout_label.setText('r-band '+str(self.nsa2['NSAID'][self.igal]))
+            self.objparams = None
         self.rcutout_label.show()
                                    
                                    
@@ -2673,7 +2684,9 @@ class hacontroller():
         #self.hacutout.canvas.delete_all_objects()            
         self.clear_comment_field()
         #################################################
-        
+
+
+
     def reset_cutout_size(self): # MVC - controller
         self.cutout_size = self.reset_size
         self.update_images()
@@ -2686,25 +2699,39 @@ class hacontroller():
     def update_images(self): # MVC - controller b/c calls model and view
         self.subtract_images(overwrite=True)
         #self.display_cutouts()
-    def make_mask(self): # MVC - is this controller, or view?
+    def make_mask(self,objparams=None): # MVC - is this controller, or view?
         # TODO - break off view functions into a method within the haview class
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
         #os.chdir(image_dir)
+        try:
+            print()
+            print("using ellipe parameters to unmask central region - woo hoo!")
+            print()
+            objparams = self.objparams
+            print("\t ",self.objparams)
+        except AttributeError:
+            print()
+            print("problem getting objparams for masking routing")
+            print()
+            pass
+    
+    
         try:
             self.write_cutouts()
         except AttributeError:
             print('are you rushing to make a mask w/out selecting galaxies?')
             print('try selecting filter, then selecting galaxies')
             return
-        try:
-            self.mwindow = QtWidgets.QWidget()
-            self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/')
-            self.mui.mask_saved.connect(self.display_mask)
-            self.mui.setupUi(self.mwindow)
-            self.mwindow.show()
-        except AttributeError:
-            print('Hey - make sure you selected a galaxy!')
+        #try:
+        self.mwindow = QtWidgets.QWidget()
+        self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',\
+                                  objparams=objparams)
+        self.mui.mask_saved.connect(self.display_mask)
+        self.mui.setupUi(self.mwindow)
+        self.mwindow.show()
+        #except AttributeError:
+        #    print('Hey - make sure you selected a galaxy!')
         #os.chdir(current_dir)
         
     def set_comment(self,comment): # MVC - controller or model??
@@ -2883,10 +2910,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         
         # create mask
 
-        objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]]
+        self.objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]]
         self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
                               sepath='~/github/halphagui/astromatic/',auto=self.auto,\
-                              objparams=objparams,unmaskellipse=True)
+                              objparams=self.objparams,unmaskellipse=True)
                                   
         
         # run galfit
@@ -3026,7 +3053,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.nsa = galaxy_catalog(self.nsa_fname,virgo=True)
 
         ##
-        # get sizes for galaxies
+        # get sizes for galaxies - will use this to unmask central region
         ##
         ephot_fname = os.path.join(self.tabledir,'vf_v2_legacy_ephot.fits')
         ephot = Table.read(ephot_fname)
@@ -3044,7 +3071,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.BA[~noradius_flag] = ephot['BA_MOMENT'][~noradius_flag]
         self.PA[~noradius_flag] = ephot['PA_MOMENT'][~noradius_flag]
         
-
+        self.RA = self.vf.cat['RA']
+        self.DEC = self.vf.cat['DEC']        
         
         self.agcflag = False
         self.nsaflag = False

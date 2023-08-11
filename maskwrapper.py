@@ -103,6 +103,7 @@ def remove_central_objects(mask, sma=20, BA=1, PA=0, xc=None,yc=None):
     newmask = copy of input mask, with pixels within ellipse set equal to zero
 
     """
+    # changing the xmax and ymax - if the ellipse looks wrong, then swap back
     xmax,ymax = mask.shape
     # set center of ellipse as the center of the image
     if (xc is None) and (yc is None):
@@ -119,7 +120,8 @@ def remove_central_objects(mask, sma=20, BA=1, PA=0, xc=None,yc=None):
     flag2 = p1+p2 < 1
     newmask = np.copy(mask)
     newmask[flag2] = 0
-    return newmask
+    ellipse_params = [xc,yc,sma,BA,phirad]
+    return newmask,ellipse_params
 
 
 class buildmask():
@@ -187,7 +189,9 @@ class buildmask():
             self.maskdat[self.maskdat == self.center_object] = 0
         if self.objsma is not None:
             # remove central objects within elliptical aperture
-            self.maskdat = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
+            self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
+        else:
+            self.ellipseparams = None
         self.update_mask()
         
     def update_mask(self):
@@ -482,7 +486,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.objBA  = None  
             self.objPA  = None
 
-        if unmaskellipse and (self.objsma is not None): # unmask central elliptical region around object
+        if (self.objsma is not None): # unmask central elliptical region around object
             # get wcs from mask image
             wcs = WCS(fits.getheader(image))
             
@@ -643,6 +647,27 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             plt.gca().set_yticks(())
             #plt.draw()
             #plt.show(block=False)
+            self.draw_central_ellipse()
+    def draw_central_results(self, color='cyan'): # MVC - view
+        # mark r24
+        markcolor=color#, 'yellow', 'cyan']
+        markwidth=1
+        #print('inside draw_ellipse_results')
+        image_frames = [self.maskcutout]
+        if self.ellipseparams is None:
+            print("")
+            print("no parameters found for central ellipse")
+            print()
+            return
+        xy,yc,r,BA,PA = self.ellipseparams
+        objlist = []
+        for i,im in enumerate(image_frames):
+            obj =im.dc.Ellipse(xc,yc,r,r*BA, rot_deg = np.degrees(PA), color=markcolor,linewidth=markwidth)
+
+            objlist.append(obj)
+            self.markhltag = im.canvas.add(im.dc.CompoundObject(*objlist))
+            im.fitsimage.redraw()
+        # mark R17 in halpha image
 
     def key_press_func(self,text):
         key, x, y = text.split(',')
@@ -883,6 +908,7 @@ if __name__ == "__main__":
         unmaskellipse = True
     else:
         unmaskellipse = False
+    print("testing - unmaskellipse = ",unmaskellipse)
     if args.image is not None:
         if not args.auto:
             

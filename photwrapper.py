@@ -83,6 +83,48 @@ def display_image(image,percent=99.9,lowrange=False,mask=None,sigclip=True):
     #plt.imshow(image, cmap='gray_r',vmin=v1,vmax=v2,origin='lower')    
 
 
+def get_M20(catalog,objectIndex):
+    """ 
+    calculate M20 according to Lotz+2004 for central object only
+    https://iopscience.iop.org/article/10.1086/421849/fulltext/  
+
+    cat.data_ma = A 2D MaskedArray cutout from the data using the minimal bounding box of the source.
+    cat.segment = A 2D ndarray cutout of the segmentation image using the minimal bounding box of the source.
+    cat.cutout_centroid = The (x, y) coordinate, relative to the cutout data, of the centroid within the isophotal source segment.
+
+    """
+    # total second-order moment Mtot is the flux in each pixel fi multiplied by distance^2 of pixel to center,
+    # summed over all pixels assigned to the segmentation map
+
+    objNumber = catalog.label[objectIndex]
+    dat = catalog.data_ma[objectIndex]
+    goodflag = catalog.segment[objectIndex] == objNumber
+
+    xc,yc = catalog.cutout_centroid[objectIndex]
+
+    # can't make sense of moments that photutils includes in the catalog, so recalculating here
+    ymax,xmax = e.cat.data_ma[objectIndex].shape
+    X,Y = np.meshgrid(np.arange(xmax),np.arange(ymax))
+
+    # calculate distance of each point from center of galaxy
+    distsq = (X-xc)**2 + (Y-yc)**2
+
+    # second Moment total
+    Mtot = np.sum(dat[goodflag]*distsq[goodflag])
+    Fluxtot = np.sum(dat[goodflag])
+    # get pixel value of 80th percentile, so that top 20% have values higher than this
+    threshold_brightest20 = scoreatpercentile(dat[goodflag].flatten(),80)
+
+    brightest20 = dat > threshold_brightest20
+
+    # second moment of brightest 20
+    Sum_Mi = np.sum(dat[goodflag & brightest20]*distsq[goodflag & brightest20])
+
+    # now calculate M20 as
+    # M20 = log10(Sum_Mi/Mtot)
+
+    M20 = np.log10(Sum_Mi/Mtot)
+    return M20
 
 # read in image and mask
 
@@ -206,6 +248,7 @@ class ellipse():
         self.find_central_object()
         self.get_ellipse_guess()
         self.measure_phot()
+        self.get_M20()
         self.calc_sb()
         self.convert_units()
         self.get_image2_gini()
@@ -301,6 +344,22 @@ class ellipse():
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
         #self.tbl = self.cat.to_table()
+    def get_all_M20(self):
+        # as a kludge, I am going to set all objects' M20 equal to this value
+        # in the end, I will only keep the value for the central object...
+        M20 = get_M20(self.cat,self.objectIndex)
+        allM20 = M20*np.ones(len(self.cat))
+        self.cat.add_extra_property('M20',allM20)
+        self.M20_1 = M20
+
+        # repeat for image2 if it's included
+        if self.image2 is not None:
+            M20 = get_M20(self.cat2,self.objectIndex)
+            allM20 = M20*np.ones(len(self.cat))
+            self.cat2.add_extra_property('M20',allM20)
+            self.M20_2 = M20
+
+            
     def get_sky_noise(self):
         '''
         * get the noise in image1 and image2 
