@@ -37,6 +37,10 @@ from astropy.table import Table, Column
 from astropy.visualization import SqrtStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
 
+from astropy.stats import sigma_clip
+from astropy.visualization import simple_norm
+
+
 import scipy.ndimage as ndi
 import statmorph
 from statmorph.utils.image_diagnostics import make_figure
@@ -61,6 +65,66 @@ import imutils
 ## from https://www.noao.edu/kpno/mosaic/filters/
 central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28,'inthalpha':6568.,'intha6657':6657,'intr':6240} # angstrom
 dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17,'inthalpha':95.,'intha6657':80,'intr':1347} # angstrom
+
+
+def display_image(image,percent=99.9,lowrange=False,mask=None,sigclip=True):
+    lowrange=False
+    if sigclip:
+        clipped_data = sigma_clip(image,sigma_lower=5,sigma_upper=5)#,grow=10)
+    else:
+        clipped_data = image
+    if lowrange:
+        norm = simple_norm(clipped_data, stretch='linear',percent=percent)
+    else:
+        norm = simple_norm(clipped_data, stretch='asinh',percent=percent)
+
+    plt.imshow(image, norm=norm,cmap='gray_r',origin='lower')
+    #v1,v2=scoreatpercentile(image,[.5,99.5])            
+    #plt.imshow(image, cmap='gray_r',vmin=v1,vmax=v2,origin='lower')    
+
+
+def get_M20(catalog,objectIndex):
+    """ 
+    calculate M20 according to Lotz+2004 for central object only
+    https://iopscience.iop.org/article/10.1086/421849/fulltext/  
+
+    cat.data_ma = A 2D MaskedArray cutout from the data using the minimal bounding box of the source.
+    cat.segment = A 2D ndarray cutout of the segmentation image using the minimal bounding box of the source.
+    cat.cutout_centroid = The (x, y) coordinate, relative to the cutout data, of the centroid within the isophotal source segment.
+
+    """
+    # total second-order moment Mtot is the flux in each pixel fi multiplied by distance^2 of pixel to center,
+    # summed over all pixels assigned to the segmentation map
+
+    objNumber = catalog.label[objectIndex]
+    dat = catalog.data_ma[objectIndex]
+    goodflag = catalog.segment[objectIndex] == objNumber
+
+    xc,yc = catalog.cutout_centroid[objectIndex]
+
+    # can't make sense of moments that photutils includes in the catalog, so recalculating here
+    ymax,xmax = catalog.data_ma[objectIndex].shape
+    X,Y = np.meshgrid(np.arange(xmax),np.arange(ymax))
+
+    # calculate distance of each point from center of galaxy
+    distsq = (X-xc)**2 + (Y-yc)**2
+
+    # second Moment total
+    Mtot = np.sum(dat[goodflag]*distsq[goodflag])
+    Fluxtot = np.sum(dat[goodflag])
+    # get pixel value of 80th percentile, so that top 20% have values higher than this
+    threshold_brightest20 = scoreatpercentile(dat[goodflag].flatten(),80)
+
+    brightest20 = dat > threshold_brightest20
+
+    # second moment of brightest 20
+    Sum_Mi = np.sum(dat[goodflag & brightest20]*distsq[goodflag & brightest20])
+
+    # now calculate M20 as
+    # M20 = log10(Sum_Mi/Mtot)
+
+    M20 = np.log10(Sum_Mi/Mtot)
+    return M20
 
 # read in image and mask
 
@@ -184,6 +248,7 @@ class ellipse():
         self.find_central_object()
         self.get_ellipse_guess()
         self.measure_phot()
+        self.get_all_M20()
         self.calc_sb()
         self.convert_units()
         self.get_image2_gini()
@@ -279,6 +344,22 @@ class ellipse():
         # threshold is the sky noise at the snrcut level, so need to divide by this
         self.sky_noise = np.mean(self.threshold)/snrcut
         #self.tbl = self.cat.to_table()
+    def get_all_M20(self):
+        # as a kludge, I am going to set all objects' M20 equal to this value
+        # in the end, I will only keep the value for the central object...
+        M20 = get_M20(self.cat,self.objectIndex)
+        allM20 = M20*np.ones(len(self.cat))
+        self.cat.add_extra_property('M20',allM20)
+        self.M20_1 = M20
+
+        # repeat for image2 if it's included
+        if self.image2 is not None:
+            M20 = get_M20(self.cat2,self.objectIndex)
+            allM20 = M20*np.ones(len(self.cat))
+            self.cat2.add_extra_property('M20',allM20)
+            self.M20_2 = M20
+
+            
     def get_sky_noise(self):
         '''
         * get the noise in image1 and image2 
@@ -294,8 +375,8 @@ class ellipse():
         # add sky noise to image 1 header
         sky_noise_erg = np.mean(threshold)*self.uconversion1/self.pixel_scale**2
         print('r sky noise = ',sky_noise_erg)
-        self.header.set('SKYNOISE',float('{:.2f}'.format(np.mean(thresold),'sky noise in ADU')        
-        self.header.set('SKYERR',float('{:.2e}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+        self.header.set('SKYNOISE','{:.2f}'.format(np.mean(threshold)),'sky noise in ADU')        
+        self.header.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
         # save files
         fits.writeto(self.image_name,self.image,header=self.header,overwrite=True)
         self.im1_skynoise = sky_noise_erg
@@ -307,8 +388,9 @@ class ellipse():
                 threshold = detect_threshold(self.image2, nsigma=snrcut)
             # add sky noise to image 2 header
             sky_noise_erg = np.mean(threshold)*self.uconversion2/self.pixel_scale**2
-            self.header.set('SKYNOISE',float('{:.2f}'.format(np.mean(thresold),'sky noise in ADU')                    
-            self.header2.set('SKYERR',float('{:.2e}'.format(sky_noise_erg)),'sky noise in erg/s/cm^2/arcsec^2')
+            self.header2.set('SKYNOISE','{:.2f}'.format(np.mean(threshold)),'sky noise in ADU')        
+            self.header2.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
+            
 
             fits.writeto(self.image2_name,self.image2,header=self.header2,overwrite=True)
             self.im2_skynoise = sky_noise_erg
@@ -319,6 +401,8 @@ class ellipse():
         find the central object in the image and get its objid in segmentation image.
         object is stored as self.objectIndex
         '''
+
+        # TODO - need to be able to handle objects that are not at the center - should have option to pass in RA/DEC and then do like in maskwrapper
         xdim,ydim = self.image.shape
         distance = np.sqrt((self.cat.xcentroid - xdim/2.)**2 + (self.cat.ycentroid - ydim/2.)**2)        
         #distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
@@ -543,8 +627,10 @@ class ellipse():
         #
         norm = ImageNormalize(stretch=SqrtStretch())
         plt.figure()
-        plt.imshow(self.masked_image, cmap='Greys_r', norm=norm , origin='lower')
-        self.aperture.plot(color='white', lw=1.)
+        #plt.imshow(self.masked_image, cmap='Greys', norm=norm , origin='lower')
+        display_image(self.masked_image)#, cmap='Greys', norm=norm , origin='lower')        
+        plt.colorbar()
+        self.aperture.plot(color='k', lw=1.)
         plt.show()
 
     def fit_ellipse(self):
@@ -1062,13 +1148,14 @@ if __name__ == '__main__':
     #mask = 'r-18045-R-mask.fits'
 
     prefix = 'VFID0501-UGC09556-BOK-20210315-VFID0501'
+    prefix = 'VFID2772-NGC2964-HDI-20180313-p019'    
     image = prefix+'-R.fits'
     rphot_table = prefix+'-R-phot.fits'
     image2 = prefix+'-CS.fits'
     haphot_table = prefix+'-CS-phot.fits'
     mask = prefix+'-R-mask.fits'
     myfilter = '4'
-    myratio = .063573
+    myratio = .0497427
 
     try:
         e = ellipse(image,mask=mask, image2=image2, use_mpl=True,image2_filter=myfilter, filter_ratio=myratio)

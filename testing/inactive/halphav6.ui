@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1110</width>
-    <height>651</height>
+    <width>667</width>
+    <height>570</height>
    </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>STIXGeneral</family>
+    <pointsize>7</pointsize>
+   </font>
   </property>
   <property name="windowTitle">
    <string>Halpha Console</string>
@@ -19,9 +25,15 @@
      <widget class="QFrame" name="mainframe">
       <property name="minimumSize">
        <size>
-        <width>503</width>
+        <width>0</width>
         <height>0</height>
        </size>
+      </property>
+      <property name="font">
+       <font>
+        <family>STIX</family>
+        <pointsize>8</pointsize>
+       </font>
       </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
@@ -32,11 +44,11 @@
       <layout class="QGridLayout" name="leftLayout">
        <item row="1" column="0">
         <widget class="QWidget" name="button_bar" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="0">
            <widget class="QWidget" name="widget_3" native="true">
-            <layout class="QVBoxLayout" name="leftButtonLayout">
-             <item>
+            <layout class="QFormLayout" name="formLayout_2">
+             <item row="0" column="0">
               <widget class="QFrame" name="frame_7">
                <property name="frameShape">
                 <enum>QFrame::StyledPanel</enum>
@@ -44,28 +56,28 @@
                <property name="frameShadow">
                 <enum>QFrame::Raised</enum>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_9">
-                <item>
+               <layout class="QFormLayout" name="formLayout_3">
+                <item row="0" column="0">
                  <widget class="QLabel" name="label">
                   <property name="text">
                    <string>Output Prefix</string>
                   </property>
                  </widget>
                 </item>
-                <item>
+                <item row="1" column="0">
                  <widget class="QLineEdit" name="prefixLineEdit"/>
                 </item>
                </layout>
               </widget>
              </item>
-             <item>
+             <item row="1" column="0">
               <widget class="QPushButton" name="wfratio">
                <property name="text">
                 <string>Get Filt Ratio</string>
                </property>
               </widget>
              </item>
-             <item>
+             <item row="2" column="0">
               <widget class="QPushButton" name="psfButton">
                <property name="text">
                 <string>Build PSF</string>
@@ -75,7 +87,7 @@
             </layout>
            </widget>
           </item>
-          <item>
+          <item row="0" column="1">
            <widget class="QWidget" name="widget_4" native="true">
             <layout class="QVBoxLayout" name="verticalLayout_7">
              <item>
@@ -118,7 +130,7 @@
          <property name="minimumSize">
           <size>
            <width>0</width>
-           <height>172</height>
+           <height>0</height>
           </size>
          </property>
          <layout class="QGridLayout" name="cutoutsLayout"/>
@@ -141,6 +153,9 @@
        </item>
        <item row="0" column="1">
         <widget class="QWidget" name="rightButtons" native="true">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <layout class="QGridLayout" name="gridLayout_4">
           <item row="0" column="1">
            <widget class="QFrame" name="frame">
@@ -251,7 +266,7 @@
                <property name="autoFillBackground">
                 <bool>false</bool>
                </property>
-               <property name="currentText" stdset="0">
+               <property name="currentText">
                 <string extracomment="Halpha Type"/>
                </property>
               </widget>
@@ -359,8 +374,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1110</width>
-     <height>22</height>
+     <width>667</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSetup">

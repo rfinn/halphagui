@@ -1,6 +1,5 @@
-'''
-
-
+#!/usr/bin/env python 
+"""
 USAGE:
 
 Virgo 2019 INT data, running on laptop
@@ -13,7 +12,14 @@ cd /data-pool/Halpha/halphagui-output-20230626
 
 %run ~/github/halphagui/testing/halphamain.py --virgo --rimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-r-shifted.fits --haimage /home/rfinn/data/reduced/virgo-coadds-feb2019-int/VF-118.1817+20.9822-INT-20190205-p001-Halpha.fits --filter inthalpha --psfdir /home/rfinn/data/reduced/psf-images/ --tabledir /home/rfinn/research/Virgo/tables-north/v1/ --auto
 
-'''
+
+Testing after MVC semi-implementation.  I created a testing directory on the linux laptop, and this is command I used to run the gui:
+
+(venv) (base) rfinn@virgof:~/research/Virgo-dev/halphagui-test$ 
+
+python ~/github/halphagui/halphamain.py --virgo --tabledir ~/research/Virgo/tables-north/v2/ --rimage VF-145.781+31.887-HDI-20180313-p019-R.fits --haimage VF-145.781+31.887-HDI-20180313-p019-ha4.fits --csimage VF-145.781+31.887-HDI-20180313-p019-ha4-CS-ZP.fits --psfdir ~/research/Virgo-dev/halphagui-test/ --filter ha4 --prefix VF-145.781+31.887-HDI-20180313-p019
+
+"""
 
 
 import sys, os
@@ -111,19 +117,27 @@ cutout_scale = 14
 # now in terms of R25 for
 cutout_scale = 2.5
 
+
+######################################################
+## FUNCTIONS
+######################################################
+
 def get_params_from_name(image_name):
     t = os.path.basename(image_name).split('-')
     #print(t)
     if len(t) == 5:
-
         telescope = t[2]
         dateobs = t[3]
         pointing = t[4]
     elif len(t) == 6: # meant to catch negative declinations
         telescope = t[3]
         dateobs = t[4]
-        pointing = t[5]        
+        pointing = t[5]
+    else:
+        print("ruh roh - trouble getting info from ",image_name, len(t))
+        print(t)
     return telescope,dateobs,pointing
+
 class psfimage():
     def __init__(self):
         fwhm = 5.6
@@ -371,7 +385,10 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         ax.add_patch(r)
 
         
-class create_output_table():
+class create_output_table(output_table_view):
+    """
+    output table that stores all of the measured values for each galaxy in FOV
+    """
     def initialize_results_table(self, prefix=None,virgo=False,nogui=False):
         self.nogui = nogui
         if virgo:
@@ -723,6 +740,8 @@ class create_output_table():
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
         e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
         e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
+        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
+        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA',description='area from ellipse')
         e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2,description='total flux from ellipse')
         e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag,description='mag from ellipse')
@@ -919,6 +938,36 @@ class create_output_table():
             c = Column(np.zeros(self.ngalaxies,'bool'),name=n,description=descriptions[i])
             self.table.add_column(c)
             
+    def append_column(self, variable, var_name, var_dtype=None, var_unit=None):
+        if (var_dtype != None) & (var_unit != None):
+            z = Column(variable, name=var_name, dtype = var_dype, unit  = var_unit)
+        elif (var_dtype != None) & (var_unit == None):
+            z = Column(variable, name=var_name, dtype = var_dype)
+        elif (var_dtype == None) & (var_unit != None):
+            z = Column(variable, name=var_name, unit  = var_unit)
+        else:
+            z = Column(variable, name=var_name)
+        self.table.add_column(z)
+    def write_fits_table(self):
+        if (self.igal is not None) & (not self.auto):
+            #print(self.ui.commentLineEdit.text())
+            t = str(self.ui.commentLineEdit.text())
+            if len(t) > 1:
+                self.table['COMMENT'][self.igal] = t
+                self.update_gui_table_cell(self.igal, 'COMMENT',t)
+        #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
+        if self.prefix is not None:
+            # this is not working when running gui - need to feed in the r-band image name
+            telescope,dateobs,p = get_params_from_name(self.prefix)
+            for i in range(len(self.table)):
+                self.table['POINTING'][i] = self.prefix
+                self.table['TEL'][i] = telescope
+                self.table['DATE-OBS'] = dateobs
+        self.table.write(self.output_table, format='fits', overwrite=True)
+
+class output_table_view():
+    """ methods that interact with the gui  """
+    
     def update_gui_table(self):
 
         self.ui.tableWidget.setColumnCount(len(self.table.columns))
@@ -951,16 +1000,7 @@ class create_output_table():
         #item = self.tableWidget.horizontalHeaderItem(0)
         #item.setText(_translate("MainWindow", "ID"))
         self.write_fits_table()
-    def append_column(self, variable, var_name, var_dtype=None, var_unit=None):
-        if (var_dtype != None) & (var_unit != None):
-            z = Column(variable, name=var_name, dtype = var_dype, unit  = var_unit)
-        elif (var_dtype != None) & (var_unit == None):
-            z = Column(variable, name=var_name, dtype = var_dype)
-        elif (var_dtype == None) & (var_unit != None):
-            z = Column(variable, name=var_name, unit  = var_unit)
-        else:
-            z = Column(variable, name=var_name)
-        self.table.add_column(z)
+
     def update_gui_table_cell(self,row,col,item):
         # row will be igal, so that's easy
         # how to make it easy to get the right column number?
@@ -980,22 +1020,7 @@ class create_output_table():
         else:
             print('could not match column name ',col)
         self.write_fits_table()
-    def write_fits_table(self):
-        if (self.igal is not None) & (not self.auto):
-            #print(self.ui.commentLineEdit.text())
-            t = str(self.ui.commentLineEdit.text())
-            if len(t) > 1:
-                self.table['COMMENT'][self.igal] = t
-                self.update_gui_table_cell(self.igal, 'COMMENT',t)
-        #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
-        if self.prefix is not None:
-            telescope,dateobs,p = get_params_from_name(self.prefix)
-            for i in range(len(self.table)):
-                self.table['POINTING'][i] = self.prefix
-                self.table['TEL'][i] = telescope
-                self.table['DATE-OBS'] = dateobs
-        self.table.write(self.output_table, format='fits', overwrite=True)
-
+    
 class uco_table():
     '''
     table for collecting positions of objects that are not in NSA or AGC catalogs
@@ -1034,8 +1059,1712 @@ class uco_table():
 
         self.uco_table.write(self.uco_output_table, format='fits',overwrite=True)
 
-class hafunctions(Ui_MainWindow, create_output_table, uco_table):
-    ''' Main class for the halpha image analysis  '''
+class hamodel():
+    """ class to handle Halpha model, in Model-View-Controller design"""
+
+    def read_rcoadd(self): # model
+        #print('reading rband image ',self.rcoadd_fname)
+        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        try:
+            self.pixelscale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
+        except KeyError:
+            try:
+                self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
+            except KeyError:
+                self.pixelscale = np.abs(float(self.r_header['PC1_1']))*3600. # Siena pipeline from astronometry.net
+        #self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600          
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+
+        # check for weight image
+        # assuminging naming conventions from swarp
+        # image = NRGb161_R.coadd.fits
+        # weight = NRGb161_R.coadd.weight.fits
+        
+        weight_image = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        if weight_image.find('-shifted') > -1:
+            weight_image = self.rcoadd_fname.replace('shifted','weight-shifted')
+
+        if os.path.exists(weight_image):
+            self.rweight = weight_image
+            self.rweight_flag = True
+        else:
+            self.rweight_flag = False
+        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
+    def read_hacoadd(self): # model
+        #print(self.hacoadd_fname)
+        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
+        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS.fits'
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+
+        # check for weight image
+        # assuminging naming conventions from swarp
+        # image = NRGb161_R.coadd.fits
+        # weight = NRGb161_R.coadd.weight.fits
+        
+        weight_image = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        if os.path.exists(weight_image):
+            self.haweight = weight_image
+            self.haweight_flag = True
+        else:
+            self.haweight_flag = False
+        
+    def load_rcoadd(self): # model
+        self.coadd.load_file(self.rcoadd_fname)
+        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
+        try:
+            self.pixelscale = abs(float(self.r_header['PIXSCAL1'])) # in deg per pixel
+        except KeyError:
+            try:
+                self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
+            except KeyError:
+                self.pixelscale = abs(float(self.r_header['PC1_1']))*3600. # in deg per pixel
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+
+        # check for weight image
+        # assuminging naming conventions from swarp
+        # image = NRGb161_R.coadd.fits
+        # weight = NRGb161_R.coadd.weight.fits
+        
+        weight_image = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
+        if os.path.exists(weight_image):
+            self.rweight = weight_image
+            self.rweight_flag = True
+        else:
+            self.rweight_flag = False
+
+        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
+        self.check_previous_r_psf()
+        #not sure what the following line is suppose to do
+        # ephot['SMMA_MOMENT'][~noradius_flag]
+    def load_hacoadd(self): # model
+        self.coadd.load_file(self.hacoadd_fname)
+        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
+
+        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
+        weight_image = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
+        if os.path.exists(weight_image):
+            self.haweight = weight_image
+            self.haweight_flag = True
+        else:
+            self.haweight_flag = False
+        self.check_previous_ha_psf()
+    def get_zcut(self): # model
+        self.zmax=(((lmax[self.hafilter])/6563.)-1)
+        self.zmin=(((lmin[self.hafilter])/6563.)-1)
+    def check_previous_ha_psf(self): # MVC - model
+        """
+        check for data from previous runs, including
+        - psf file
+        - data table with results for all/subset of galaxies
+        - filter ratio
+        """
+
+        # check for halpha psf
+        basename = os.path.basename(self.hacoadd_fname)
+        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        if os.path.exists(psf_image_name):
+            self.psf_haimage_name = psf_image_name
+        else:
+            self.psf_haimage_name = None
+    def check_previous_r_psf(self): # MVC - model
+        """
+        check for data from previous runs, including
+        - psf file
+        - data table with results for all/subset of galaxies
+        - filter ratio
+        """
+        # check for rband psf
+        basename = os.path.basename(self.rcoadd_fname)
+        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        if os.path.exists(psf_image_name):
+            self.psf_image_name = psf_image_name
+        else:
+            self.psf_image_name = None
+
+    def find_galaxies(self): # MVC - model
+        print('getting galaxies in FOV')
+        flag = self.get_gal_list()
+        if flag == False:
+            return
+
+
+        ##
+        # rewrite to get the size from JM's ephot, +/- 3*SMA_SB24
+        #
+        # 3 is too small for most galaxies - forgot to convert radius to diameter
+        # ran with 2*2.5, and this was tight for a lot of galaxies.  increasing size by 50%
+        ##
+        scale = 2*2.5*1.5
+
+        # this is the total length in one dimension
+        # the scale factor includes an extra factor of 2 to convert radius to diameter
+        self.cutout_sizes = self.radius_arcsec*scale/self.pixelscale
+        
+        #start_time = time.perf_counter()        
+        #print('getting object sizes from segmentation image')
+        #if 'HDI' is in self.rcoadd_fname:
+        #    scale = 3.5
+        #else:
+        #    scale = 1.75
+        #self.cutout_sizes = getobjectsize(self.rcoadd_fname,np.array(self.gximage,'i'),np.array(self.gyimage,'i'),scale=scale)
+        #print('...done with segmentation image in {:2f} sec'.format(time.perf_counter()-start_time))
+        #print('...sorry for the wait')
+        #print('\t cutout sizes = ',self.cutout_sizes)
+              
+        # convert to arcsec
+        self.cutout_sizes_arcsec = self.cutout_sizes*self.pixelscale*u.arcsec
+        #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)
+        # check to see if any are outside the allowed range
+
+
+        ##
+        # SKIPPING MIN/MAX RESET - would rather correct values in source catalogs
+        ##
+        for i,s in enumerate(self.cutout_sizes_arcsec):
+            if s > self.global_max_cutout_size:
+                self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
+                self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
+            elif s < self.global_min_cutout_size:
+                self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
+                self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale
+                
+        #print('after comparing with max/min size limits:')
+        #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
+        # set up the output table that will store results from various fits
+        self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
+
+
+        # TODO - this needs to be moved into the view class
+        if not self.auto:
+            # plot location of galaxies in the coadd image
+            self.mark_galaxies()
+
+            # populate a button that contains list
+            # of galaxies in the field of view,
+            # user can select from list to set the active galaxy
+            for name in self.galid:
+                self.ui.wgalid.addItem(str(name))
+            print(len(self.galid),' galaxies in FOV')
+            self.ui.wgalid.activated.connect(self.select_galaxy)
+
+        # get transmission correction for each galaxy
+        # add prefix to figure that is created by filter_trace.get_trans_correction        
+        figfile = f"{self.prefix}-galaxies_in_filter.png"        
+        self.filter_correction= self.filter_trace.get_trans_correction(self.table['REDSHIFT'],outfile=figfile)
+        #print(self.filter_correction)
+        self.table['FILT_COR'] = self.filter_correction
+
+
+        
+    def get_gal_list(self): # MVC - model
+        
+        #
+        # get list of NSA galaxies on image viewer
+        #
+        # for reference:
+        # self.r, header_r = fits.getdata(self.rcoadd_fname,header=True)
+        # self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
+        #
+        n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
+
+        #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
+        #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+        try:
+            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+        except AttributeError:
+            print('Warning: no catalog defined.')
+            print('Make sure you set the path to the NSA/Virgo parent catalog')
+        try:
+            print(f'min and max redshift = {self.zmin:.3f}, {self.zmax:.3f}')
+            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+            
+        except AttributeError:
+            print('problem finding galaxies.')
+            print('make sure you selected a filter!')
+            return False
+        
+        #print('keepflag = ',keepflag)
+        print('number of galaxies in FOV = ',sum(keepflag))
+        # check weight image to make sure the galaxy actually has data
+        # reject galaxies who have zero in the weight image
+        px,py = self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
+        self.xpixel = px
+        self.ypixel = py
+        if self.rweight_flag and self.haweight_flag:
+            rweight = fits.getdata(self.rweight)
+            haweight = fits.getdata(self.haweight)
+            # multiply weights
+            # result will equal zero if exposure is zero in either image
+            weight = rweight * haweight
+            # check location of pixels to make sure weight is not zero
+            # this will have the length = # of galaxies that have keepflag True
+            offimage = (weight[np.array(py[keepflag],'i'),np.array(px[keepflag],'i')] == 0)
+            # store another array that has the indices in original keepflag array
+            # where keepflag = True
+            # need to take [0] element because np.where is weird
+            keepindex = np.where(keepflag)[0]
+            # change value of keepflag for galaxies that are off the image
+            keepflag[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
+            #print(offimage)
+        # cut down NSA catalog to keep information only for galaxies within FOV
+        #print('number of galaxies in FOV = ',sum(keepflag))
+        if sum(keepflag) == 0:
+            print('WARNING: no NSA galaxies in FOV')
+            print('\t make sure you have selected the right filter!')
+            return
+        if self.prefix is None:
+            print('you need to set the prefix')
+            print('try again!')
+            return
+        self.defcat.cull_catalog(keepflag,self.prefix)
+    
+        if self.virgo:
+            self.nsa.cull_catalog(keepflag,self.prefix)
+            self.radius_arcsec = self.radius_arcsec[keepflag]
+            self.BA = self.BA[keepflag]
+            self.PA = self.PA[keepflag]            
+        #self.gra=self.nsa.cat.RA
+        #self.gdec=self.nsa.cat.DEC
+        #self.gradius=self.nsa.cat.SERSIC_TH50
+        #self.galid=self.nsa.cat.NSAID
+        #self.gredshift = self.nsa.cat.Z
+        #self.gzdist= self.nsa.cat.ZDIST
+        self.gximage,self.gyimage =self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
+        # set up a boolean array to track whether Halpha emission is present
+
+        if self.agcflag:
+            try:
+                px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+            except AttributeError:
+                px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)
+
+            keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,zmin=self.zmin,zmax=self.zmax)
+            #print('number of AGC galaxies in FOV = ',sum(keepagc))
+            if self.rweight_flag and self.haweight_flag:
+                offimage = (weight[np.array(py[keepagc],'i'),np.array(px[keepagc],'i')] == 0)
+                # store another array that has the indices in original keepflag array
+                # where keepflag = True
+                # need to take [0] element because np.where is weird
+                keepindex = np.where(keepagc)[0]
+                # change value of keepagc for galaxies that are off the image
+                keepagc[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
+
+            print('number of AGC galaxies in FOV = ',sum(keepagc))
+            self.agc.cull_catalog(keepagc, self.prefix)
+            if sum(keepagc) == 0:
+                self.agcflag = False
+            else:
+                try:
+                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+                except AttributeError:
+                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)        
+            #print(self.agcximage)
+            #print(self.agcyimage)
+
+        return True
+    def initialize_output_arrays(self): # MVC - model
+        ngal = len(self.galid)
+
+        # galfit output
+        self.gal_xc = np.zeros((ngal,2),'f')
+        self.gal_xc = np.zeros((ngal,2),'f')
+        self.gal_mag = np.zeros((ngal,2),'f')
+        self.gal_n = np.zeros((ngal,2),'f')
+        self.gal_re = np.zeros((ngal,2),'f')
+        self.gal_PA = np.zeros((ngal,2),'f')
+        self.gal_BA = np.zeros((ngal,2),'f')
+        self.gal_sky = np.zeros((ngal,2),'f')
+        
+    def link_files(self): # MVC- model
+        # these are the sextractor files that we need
+        # set up symbolic links from sextractor directory to the current working directory
+        sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
+        for file in sextractor_files:
+            if not os.path.exists(file):
+                os.system('ln -s '+self.sepath+'/'+file+' .')
+    def clean_links(self): # MVC - model
+        # clean up symbolic links to sextractor files
+        # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
+        sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
+        for file in sextractor_files:
+            os.system('unlink '+file)
+
+        # remove catalog
+    def get_filter_ratio(self): # MVC - model
+        #
+        # get ratio of Halpha to Rband filters
+        # 
+        # cannabalizing HalphaImaging/uat_find_filter_ratio.py
+        #
+
+        ##
+        # Look for ZP info in headers
+        ##
+        try:
+            header = fits.getheader(self.rcoadd_fname)
+            #rZP = header['PHOTZP']
+            #header = fits.getheader(self.hacoadd_fname)
+            #hZP = header['PHOTZP']
+            #dm = hZP-rZP
+            #ave = 10**(dm/2.5) # f2/f1
+
+            ave = header['FRATIOZP']
+            runse = False
+        except KeyError:
+            self.link_files()
+            current_dir = os.getcwd()
+            image_dir = os.path.dirname(self.rcoadd_fname)
+            #os.chdir(image_dir)
+
+            runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
+            ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
+            print(ave,std)
+            runse = True
+            #plt.show()
+            #os.chdir(current_dir)
+        self.filter_ratio = ave
+        self.reset_ratio = ave
+        self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
+        self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
+
+        self.subtract_images()
+        if not self.auto:
+            self.ui.filterRatioLineEdit.setText(str(self.filter_ratio))
+        #if not self.auto:
+        #    self.setup_ratio_slider()
+        if runse:
+            self.clean_links()
+
+            # the following lines remove the SE files, but we shouldn't do this
+            # it takes a while to run SE.  Should keep the catalogs
+            images = [self.rcoadd_fname, self.hacoadd_fname]
+            for im in images:
+                catfile = os.path.basename(im).split('.fits')[0]+'.cat'
+                os.remove(catfile)
+    def subtract_images(self,overwrite=False): # MVC - model
+        # use the ZP subtracted images
+        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS-ZP.fits'
+        
+        if os.path.exists(self.hacoadd_cs_fname) and not overwrite:
+            # don't need to subtract images
+            self.halpha_cs = fits.getdata(self.hacoadd_cs_fname)
+        else:
+            try:
+                self.halpha_cs = self.ha - self.filter_ratio*self.r
+                fits.writeto(self.hacoadd_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)           
+            except AttributeError:
+
+                print('WARNING: no filter ratio')
+
+        # TODO - needs to be moved to view and then called from controller
+        if not self.auto:
+            # display continuum subtracted Halpha image in the large frame
+            self.coadd.fitsimage.set_autocut_params('zscale')
+            self.coadd.fitsimage.set_data(self.halpha_cs)
+        
+    def get_galaxy_cutout(self): # MVC - mix of model and view?
+
+        # scale cutout size according to NSA Re
+        #size = cutout_scale*self.gradius[self.igal]
+        # updating to use the size from segmentation image from photutils
+        size_arcsec = self.cutout_sizes_arcsec[self.igal]
+        # set the min size to 100x100 pixels (43"x43")
+        #print('size, global min, global max = ',size_arcsec,self.global_min_cutout_size,self.global_max_cutout_size)
+        size = max(self.global_min_cutout_size,size_arcsec)
+        if size > self.global_max_cutout_size:
+            size = self.global_max_cutout_size
+        #print('new cutout size = ',size, self.igal, self.gradius[self.igal])
+        self.reset_size = size.value
+        self.cutout_size_arcsec = size
+        self.cutout_size = size.value/self.pixelscale
+        self.mincutout_size = 0.2*self.cutout_size
+        self.maxcutout_size = 3.*self.cutout_size
+
+        
+
+        # updating on march 5, 2021 to make cutout directory name unique
+        # to prevent accidentally writing over data
+        # add date and pointing
+
+        header = self.ha_header
+
+        # date is stored in epoch for HDI data
+
+        try:
+            # store time 
+            t = header['EPOCH']
+            # convert to year, month,day
+            t = Time(t,format='decimalyear')
+        except KeyError:
+            # try format expected for INT data
+            try:
+                t = Time(header['DATE-OBS'],format='isot')
+            except KeyError:
+                # putting in a place holder b/c older (2017)
+                # HDI coadds don't have epoch in the header.
+                t = Time('2017-05-20T00:00:00.0',format='isot')
+        dateobs = t.iso.split()[0].replace('-','')
+
+        # get instrument
+        try:
+            instrument = self.ha_header['INSTRUME']
+            if instrument.find('hdi') > -1:
+                instrument='HDI'
+            elif instrument.find('Mosaic') > -1:
+                instrument='MOSAIC'
+        except KeyError:
+            instrument='INT'
+
+        # read in object
+        o = header['OBJECT']
+        if instrument == '90prime':
+            # this should be the VFID of the primary target
+            pointing = o.split('_')[0]
+            instrument = 'BOK'
+        else:
+            try:
+
+                if (o.find('197') > -1) | (o.find('227') > -1): #INT, may data
+                    pnumber = o.split('-')[1]
+                else:
+                    # try to identify format
+                    #print(o,len(o))
+                    print(o)
+                    if len(o.split()) > 1:
+                        split_string=' '
+                        pnumber = int(o.split(split_string)[1])
+                        #print('object names contain ',split_string)        
+                    elif len(o.split('-')) > 1:
+                        split_string='-'
+                        pnumber = int(o.split(split_string)[1])
+                        #print('object names contain ',split_string)
+                    elif len(o.split('_')) > 1:
+                        split_string='_'
+                        #print('object names contain ',split_string)                     
+                        pnumber = int(o.split(split_string)[1])
+                        print('testing')
+                if (o.find('lm') > -1)| (o.find('LM') > -1):
+                    # low-mass pointing
+                    prefix = "lmp"
+                else:
+                    prefix = "p"
+            
+                pointing = "{}{:03d}".format(prefix,pnumber)
+
+            except ValueError:
+                pointing=self.rcoadd_fname.replace('R.fits','')
+            except UnboundLocalError:
+                pointing = o
+
+
+            if self.rcoadd_fname.find('nNGC5846') > -1:
+                pointing = os.path.basename(self.rcoadd_fname.replace('R.fits',''))
+        # first pass of mask
+        # radial profiles
+        # save latest of mask
+        if self.virgo:
+            nedname = self.NEDname[self.igal].replace(" ","")
+            nedname = nedname.replace("[","")
+            nedname = nedname.replace("]","")
+            nedname = nedname.replace("/","")
+
+            instrument,dateobs,pointing = get_params_from_name(self.prefix)
+            
+            
+            cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,instrument,dateobs,pointing)
+            
+        else:
+            cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
+            
+    
+
+        
+        ## create the output directory to store the cutouts and figures
+        self.cutoutdir = 'cutouts/'+cprefix+'/'
+        if not os.path.exists('cutouts'):
+            os.mkdir('cutouts')
+        if not os.path.exists(self.cutoutdir):
+            os.mkdir(self.cutoutdir)
+
+            
+        self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
+        self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
+        self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
+
+
+        position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
+        
+        try:
+            ###########################################################
+            # TODONE - this part should be moved to get_galaxy_cutout
+            #print(self.cutout_size_arcsec)
+            
+            #get cutout, and require entire image to be on parent image
+            self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size_arcsec, wcs=self.coadd_wcs, mode='trim') 
+            ############################################################
+
+        except nddata.utils.PartialOverlapError:# PartialOverlapError:
+            print('galaxy is only partially covered by mosaic - skipping ',self.galid[self.igal])
+            return
+        except nddata.utils.NoOverlapError:# PartialOverlapError:
+            print('galaxy is not covered by mosaic - skipping ',self.galid[self.igal])
+            return
+
+        t = self.cutout_name_r.split('.fit')
+        self.mask_image_name=t[0]+'-mask.fits'
+
+        self.write_cutouts()
+
+        #self.display_cutouts() - moved this to calling function in controller
+
+
+
+    def write_cutouts(self): # MVC - model
+        #print(ymin,ymax,xmin,xmax)
+        #print('in write_cutouts')
+        try:
+            self.table['FILTER_RATIO'][self.igal] = self.filter_ratio
+        except AttributeError:
+            print('Warning - could not set filter ratio in table')
+            print('I think something is wrong')
+
+        w = WCS(self.rcoadd_fname)
+        try:
+            ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        except AttributeError:
+            print('make sure you have selected a galaxy and saved the cutout')
+            return
+        #print('got here, so that is good')
+        newfile = fits.PrimaryHDU()
+        #print('how about here?')
+        newfile.data = self.r[ymin:ymax,xmin:xmax]
+        #print('or here?')        
+        newfile.header = self.r_header
+        newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        #print('or maybe here?')                
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        #print('or maybe here??')                
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        #print('or maybe here???')                        
+        newfile.header.set('ID',str(self.galid[self.igal]))
+        #print('or maybe here????')                        
+        newfile.header.set('SERSTH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        #print('trying to add exptime now')
+        # set the exposure time to 1 sec
+        # for some reason, in the coadded images produced by swarp, the gain has been corrected
+        # to account for image units in ADU/s, but the exptime was not adjusted.
+        # this will impact galfit magnitudes if we don't correct it here.
+        # alternatively, we could fix it right after running swarp
+        newfile.header['EXPTIME']=1.0
+
+        
+
+        # add PSF image
+
+        # add coadded image
+
+        
+        #print('saving r-band cutout')
+        fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
+
+        # saving Ha CS Cutout as fits image
+        newfile1 = fits.PrimaryHDU()
+        newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
+        newfile1.header = self.ha_header
+        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile.header.set('ID',str(self.galid[self.igal]))
+
+        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile.header['EXPTIME']=1.0 
+        fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
+        #print('saving halpha cutout')
+
+        # saving Ha with continuum Cutout as fits image
+        newfile1 = fits.PrimaryHDU()
+        newfile1.data = self.ha[ymin:ymax,xmin:xmax]
+        newfile1.header = self.ha_header
+        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile.header.set('ID',str(self.galid[self.igal]))
+
+        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile.header['EXPTIME']=1.0 
+        fits.writeto(self.cutout_name_hawc, newfile1.data, header = newfile1.header, overwrite=True)
+
+
+
+        
+        ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))
+        self.table['BBOX'][self.igal] = bbox
+
+        # this should be the end of the write function
+        
+    def build_psf(self): # MVC - model
+        # check to see if R-band PSF images exist
+        coadd_header = fits.getheader(self.rcoadd_fname)
+
+
+        basename = os.path.basename(self.rcoadd_fname)
+        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
+        if psf_image_name.find('-shifted') > -1:
+            psf_image_name = psf_image_name.replace('-shifted','')
+        basename = os.path.basename(self.hacoadd_fname)
+        psf_image_name_ha = basename.split('.fits')[0]+'-psf.fits'
+        psf_image_name = os.path.join(self.psfdirectory,psf_image_name)
+        psf_image_name_ha = os.path.join(self.psfdirectory,psf_image_name_ha).replace('-CS','')
+        print('\nPSF NAME = ',psf_image_name,'\n')
+        if os.path.exists(psf_image_name):
+            # get fwhm from the image header
+            # and oversampling
+            print("LOADING EXISTING PSF IMAGE")
+            header = fits.getheader(psf_image_name)
+            self.psf = psfimage()           
+            self.psf.fwhm = header['FWHM'] # in pixels
+            self.psf.fwhm_arcsec = self.psf.fwhm*self.pixelscale
+            self.oversampling = float(header['OVERSAMP'])
+            # if psf is in another directory, create a link to the current directory
+            # this will avoid having a long filename b/c galfit does not handle long filenames
+
+            ##
+            # GALFIT does not handle the long image name - it craps out
+            #
+            # that must be why I copied the psf image to r-psf.fits
+            # need to figure out another way so that I can run them in parallel
+            ##
+            #self.psf_image_name = psf_image_name
+
+            ##
+            # changing to use the psf without copying to current directory
+            ##
+            outname = os.path.basename(psf_image_name)
+            command = f'ln -s {psf_image_name} {outname}'
+            #print('running: ',command)
+            os.system(command)
+            #self.psf_image_name = 'r-psf.fits'
+            self.psf_image_name = outname
+
+
+            
+        else:
+            print('oversampling = ',self.oversampling)
+            print('PSF RESULTS FOR R-BAND COADDED IMAGE')
+            self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+            self.psf.run_all()
+            self.psf_image_name = self.psf.psf_image_name
+            
+        print('\nPSF NAME = ',psf_image_name_ha,'\n')
+        if os.path.exists(psf_image_name_ha):
+            # get fwhm from the image header
+            # and oversampling
+            print("LOADING EXISTING HALPHA PSF IMAGE")            
+            header = fits.getheader(psf_image_name_ha)
+            self.hapsf = psfimage()
+            self.hapsf.fwhm = header['FWHM'] # in pixels
+            self.hapsf.fwhm_arcsec = self.hapsf.fwhm*self.pixelscale
+
+            # if psf is in another directory, create a link to the current directory
+            # this will avoid having a long filename b/c galfit does not handle long filenames
+
+            #self.psf_haimage_name = psf_image_name
+            #command = 'cp {} ha-psf.fits'.format(psf_image_name)
+            #print('running: ',command)
+            #os.system(command)
+            #self.psf_haimage_name = 'ha-psf.fits'
+
+            outname = os.path.basename(psf_image_name_ha)
+            command = f'ln -s {psf_image_name_ha} {outname}'
+            #print('running: ',command)
+            os.system(command)
+            self.psf_haimage_name = outname
+            
+        else:
+            print('PSF RESULTS FOR HA COADDED IMAGE')
+            self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
+            self.hapsf.run_all()
+            self.psf_haimage_name = self.hapsf.psf_image_name
+
+    def add_psf_to_table(self): # MVC - model
+        fields = ['R_FWHM','H_FWHM']
+        values = [self.psf.fwhm_arcsec,self.hapsf.fwhm_arcsec]
+        for i,f in enumerate(fields):
+            for j in range(len(self.table)):
+                self.table[f][j]=values[i]
+        pass
+    def run_galfit(self, ncomp=1, asym=0, ha=0): # MVC - model?
+        if self.psf_image_name is None:
+            print('WARNING: psf could not be found')
+            print('Please run build_psf')
+            return
+        self.add_psf_to_table()
+        self.ncomp = ncomp
+        self.asym=asym
+        self.galha = ha
+        print('running galfit with ',ncomp,' components')
+        #self.gwindow = QtWidgets.QWidget()
+        '''
+        if self.testing:
+            self.ncomp = ncomp
+            self.galfit = galfitwindow(self.gwindow, self.logger, image = 'MKW8-18037-R.fits', mask_image = 'MKW8-18037-R-mask.fits', psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
+        else:
+            self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp)
+        self.galfit.model_saved.connect(self.galfit_save)        
+        self.galfit.setupUi(self.gwindow)
+
+        self.gwindow.show()
+        '''
+        try:
+            if ha:
+                self.galimage = self.cutout_name_ha
+                # setup psfimage
+                psf = self.psf_haimage_name
+                psf_oversampling = self.oversampling
+            else:
+                self.galimage = self.cutout_name_r
+                # setup psfimage
+                psf = self.psf_image_name
+                psf_oversampling = self.oversampling
+        except AttributeError:
+            print('make sure you selected a galaxy')
+            return
+        try:
+            if not self.auto:
+                self.gwindow = QtWidgets.QWidget()
+            #self.gwindow.aboutToQuit.connect(self.galfit_closed)
+
+            
+            if (ncomp == 1) & (asym == 0):
+                #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
+                print('GALFIT psf image = ',psf)
+                if self.auto:
+                    self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
+                else:
+                    self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)                
+            elif (ncomp == 1) & (asym == 1):
+                #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80,asym=1)
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=5,nsersic=2, convolution_size=80,asym=1)                
+            elif ncomp == 2:
+                # use results from 1 component fit as input
+                try:
+                    mag = self.table['GAL_MAG'][self.igal]
+                    re = self.table['GAL_RE'][self.igal]
+                    BA = self.table['GAL_BA'][self.igal]
+                    PA = self.table['GAL_BA'][self.igal]
+                
+                except KeyError:
+                    print('WARNING!!!!')
+                    print('trouble reading galfit results from data table')
+                    print('make sure you run 1 component fit first')
+                    return
+                ########################
+                # assume bulge contains 20% of light for initial guess
+                ########################
+                mag_disk = mag+.25
+                mag_bulge = mag + 1.75
+        
+                ########################
+                # require n=1 for disk, n=4 for bulge (allow bulge to vary)
+                # also start PA=0 and BA=1 for bulge
+                ########################
+                nsersic_disk=1
+                nsersic_bulge=4
+        
+                ########################
+                # set re=1.5*re_initial for disk
+                # set re = 0.5*re_initial for bulge
+                ########################
+                re1=1.2*re
+                re2=.5*re
+                    
+                self.galfit = galfitwindow(self.gwindow, self.logger, image = galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True, convolution_size=80)
+
+            if not self.auto:
+                self.galfit.model_saved.connect(self.galfit_save)        
+                self.galfit.setupUi(self.gwindow)
+                self.gwindow.show()
+            else:
+                self.galfit_save(None)
+        except ValueError:
+            print('WARNING - ERROR RUNNING GALFIT!!!')
+            print('Make sure you have measured the PSF and made a mask!')
+            print("error:", sys.exc_info()[0])
+        #except:
+        #    print("Unexpected error:", sys.exc_info()[0])
+        #    raise
+    def galfit_save(self,msg): # MVC - model?
+        print('galfit model saved!!!',msg)
+        if self.testing:
+            self.ncomp = int(msg)
+            print('ncomp = ',self.ncomp)
+        if self.galha:
+            prefix = 'GAL_H'
+        else:
+            prefix = 'GAL_'
+        if (self.ncomp == 1) & (self.asym == 0):
+            if self.galha:
+                self.galfit_hresults = self.galfit.galfit_results
+            else:
+                self.galfit_results = self.galfit.galfit_results
+            fields = ['XC','YC','MAG','RE','N','BA','PA']
+            values = np.array(self.galfit.galfit_results[:-2])[:,0].tolist()
+            for i,f in enumerate(fields):
+                colname = prefix+f
+                if i == 3: # multiply radius by pixel scale
+                    self.table[colname][self.igal]=values[i]*self.pixelscale
+                else:
+                    self.table[colname][self.igal]=values[i]
+            fields = ['XC','YC','MAG','RE','N','BA','PA']
+            values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
+            for i,f in enumerate(fields):
+                colname = prefix+f+'_ERR'
+                if i == 3: # convert radius from pixels to arcsec
+                    self.table[colname][self.igal]=values[i]*self.pixelscale
+                else:
+                    self.table[colname][self.igal]=values[i]
+            fields = ['SKY','CHISQ']
+            values = [self.galfit.galfit_results[-2],self.galfit.galfit_results[-1]]
+            for i,f in enumerate(fields):
+                colname = prefix+f
+                self.table[colname][self.igal]=values[i]
+            wcs = WCS(self.galimage)
+            ra,dec = wcs.wcs_pix2world(self.galfit.galfit_results[0][0],self.galfit.galfit_results[1][0],0)
+            self.table[prefix+'RA'][self.igal]=ra
+            self.table[prefix+'DEC'][self.igal]=dec
+            #self.update_gui_table()
+
+            # save results to output table
+            #self.table['GAL_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
+            #self.table['GAL_SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
+            #self.table['GAL_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
+            #self.table['GAL_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
+            #print(self.table[self.igal])
+        elif (self.ncomp == 1) & (self.asym == 1):
+            if self.galha:
+                self.galfit_haasym_results = self.galfit.galfit_results
+            else:
+                self.galfit_asym_results = self.galfit.galfit_results
+            print('writing results for galfit w/asymmetry')
+            self.table[prefix+'SERSASYM'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
+            self.table[prefix+'SERSASYM_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
+            self.table[prefix+'SERSASYM_ERROR'][self.igal] = (self.galfit.galfit_results[-2])
+            self.table[prefix+'SERSASYM_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
+            wcs = WCS(self.galimage)
+            ra,dec = wcs.wcs_pix2world(self.galfit.galfit_results[0][0],self.galfit.galfit_results[1][0],0)
+            self.table[prefix+'SERSASYM_RA'][self.igal]=ra
+            self.table[prefix+'SERSASYM_DEC'][self.igal]=dec
+            self.update_gui_table()
+        elif self.ncomp == 2:
+            self.galfit_results2 = self.galfit.galfit_results
+            #print(self.galfit_results2)
+            self.table['GAL_2SERSIC'][self.igal] = np.array(self.galfit_results2[:-2])[:,0]
+            self.table['GAL_2SERSIC_ERR'][self.igal] = np.array(self.galfit_results2[:-2])[:,1]
+            self.table['GAL_2SERSIC_ERROR'][self.igal] = (self.galfit_results2[-2])
+            self.table['GAL_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
+            #print(self.table[self.igal])
+        if not self.auto:
+            self.update_gui_table()
+        
+
+    def galfit_ellip_phot(self): # MVC - model
+        '''
+        use galfit ellipse parameters as input for photutils elliptical photometry
+
+        '''
+        ### CLEAR R-BAND CUTOUT CANVAS
+        #self.rcutout.canvas.delete_all_objects()
+
+        ### MAKE SURE GALFIT 1 COMP MODEL WAS RUN
+
+        try:
+            xc,yc,mag,re,n,BA,pa = np.array(self.galfit_results[:-3])[:,0].tolist()
+            #print('GALFIT PA = ',xc,yc,mag,re,n,BA,pa )
+        except AttributeError:
+            print('Warning - galfit 1 comp fit results not found!')
+            print('Make sure you run galfit, then try again.')
+            return
+        
+        ### FIT ELLIPSE
+        #
+        if self.auto:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = None,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
+        else:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)            
+        #fields = ['XC','YC','MAG','RE','N','BA','PA']
+
+        # TRANSFORM THETA
+        # GALFIT DEFINES THETA RELATIVE TO Y AXIS
+        # PHOT UTILS DEFINES THETA RELATIVE TO X AXIS
+        THETA = pa + 90 # in degrees
+        print('THETA = ',THETA)
+        self.e.run_with_galfit_ellipse(xc,yc,BA=BA,THETA=THETA)
+        self.e.plot_profiles()
+        #os.chdir(current_dir)
+
+        '''
+        fields = ['ASYM','ASYM_ERR','ASYM2','ASYM2_ERR']
+        values = [self.e.asym, self.e.asym_err, self.e.asym2,self.e.asym2_err]
+        for i,f in enumerate(fields):
+            colname = 'GAL_'+f
+            self.table[colname][self.igal]=values[i]
+        self.update_gui_table()
+        '''
+
+        # fit profiles
+        self.fit_profiles(prefix='GAL')
+        # save results
+        self.write_profile_fits(prefix='GAL_')
+
+        # TODO - this is calling a view function - should not do that.  need to separate model and view, or call both from controller
+        if not self.auto:
+            self.draw_ellipse_results(color='cyan')
+
+    def photutils_ellip_phot(self):
+        #current_dir = os.getcwd()
+        #image_dir = os.path.dirname(self.rcoadd_fname)
+        #os.chdir(image_dir)
+
+        ### CLEAR R-BAND CUTOUT CANVAS
+        #self.rcutout.canvas.delete_all_objects()
+
+        ### FIT ELLIPSE
+        #
+        if self.auto:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = None,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
+        else:
+            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)            
+        self.e.run_for_gui()
+        self.e.plot_profiles()
+        #os.chdir(current_dir)
+
+        ### SAVE DATA TO TABLE
+        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
+                  'M20','HM20',
+                  'AREA',\
+                  'SUM','SUM_MAG','ASYM','ASYM_ERR',\
+                  'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
+        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
+                  self.e.gini,self.e.gini2,\
+                  self.e.M20_1,self.e.M20_2,\                  
+                  self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
+                  self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
+                  self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
+        for i,f in enumerate(fields):
+            colname = 'ELLIP_'+f
+            #print(colname)
+            self.table[colname][self.igal]=float('%.2e'%(values[i]))
+
+        # update sky noise
+        fields = ['R_SKYNOISE','H_SKYNOISE']
+        values = [self.e.im1_skynoise,self.e.im2_skynoise]
+        for i,f in enumerate(fields):
+            print(values[i])
+            self.table[colname] = values[i]
+        wcs = WCS(self.cutout_name_r)
+        ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
+        self.table['ELLIP_RA'][self.igal]=ra
+        self.table['ELLIP_DEC'][self.igal]=dec
+
+        # TODONE - write out phot table
+        colnames = ['area',
+                    'background_mean',
+                    'bbox_xmax',
+                    'bbox_xmin',
+                    'bbox_ymax',
+                    'bbox_ymin',
+                    'cxx',
+                    'cxy',
+                    'cyy',
+                    'eccentricity',
+                    'ellipticity',
+                    'elongation',
+                    'equivalent_radius',
+                    'fwhm',
+                    'gini',
+                    'inertia_tensor',
+                    'kron_flux',
+                    'kron_fluxerr',
+                    'kron_radius',
+                    'local_background',
+                    'moments', # multi-dimensional
+                    'moments_central',
+                    'orientation',
+                    'perimeter',
+                    'segment_flux',
+                    'segment_fluxerr',
+                    'semimajor_sigma',
+                    'semiminor_sigma',
+                    'xcentroid',
+                    'ycentroid']
+
+
+
+        # calculate fractional radii, but these are circular, and in pixels
+        r30 = self.e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
+        r50 = self.e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
+        r90 = self.e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
+
+        self.e.cat.add_extra_property('PHOT_R30',r30)
+        self.e.cat.add_extra_property('PHOT_R50',r50)
+        self.e.cat.add_extra_property('PHOT_R90',r90)
+
+        #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
+        #c2 = Column(data=np.array(r50[self.e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
+        #c3 = Column(data=r90[self.e.objectIndex],name='PHOTR90',unit='arcsec',description='photutils fluxfrac_radius')
+        #qtable.add_columns([c1,c2,c3])
+
+        qtable = self.e.cat[self.e.objectIndex].to_table(colnames)
+        
+        phot_table_name = self.cutout_name_r.replace('.fits','-photuil_tab.fits')
+        
+        qtable.write(phot_table_name,format='fits',overwrite=True)
+        
+       
+        if not self.auto:
+            self.update_gui_table()
+
+        # convert theta to degrees, and subtract 90 to get angle relative to y axis
+        #self.e.theta = np.degrees(self.e.theta) - 90
+        # fit profiles
+        self.fit_profiles()
+        # save results
+        self.write_profile_fits()
+        if not self.auto:
+            self.draw_ellipse_results(color='magenta')
+    def fit_profiles(self,prefix=None):
+        #current_dir = os.getcwd()
+        #image_dir = os.path.dirname(self.rcoadd_fname)
+        #os.chdir(image_dir)
+        if prefix is None:
+            rphot_table = self.cutout_name_r.split('.fits')[0]+'-phot.fits'
+            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-phot.fits'
+        else:
+            rphot_table = self.cutout_name_r.split('.fits')[0]+'-'+prefix+'-phot.fits'
+            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-'+prefix+'-phot.fits'
+
+        self.rfit = rprofile(self.cutout_name_r, rphot_table, label='R')
+        self.rfit.becky_measurements()
+        self.hafit = haprofile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
+        #if self.hafit.fit_flag:
+        self.hafit.becky_measurements()
+        self.hafit.get_r24_stuff(self.rfit.iso_radii[self.rfit.isophotes == 24.][0][0])
+
+        # TODO - is this mixing model and view????  ARGGGHHHHHH
+        both = dualprofile(self.rfit,self.hafit)
+        both.make_3panel_plot()
+    def write_profile_fits(self,prefix=None): # MVC - model
+        fields = ['R24','R25','R26','R24V','R25V',\
+                  'R_F25','R_F50','R_F75',\
+                  'M24','M25','M26',\
+                  'F_30R24','F_R24','C30',\
+                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
+        d = self.rfit
+        values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],d.iso_radii[3],d.iso_radii[4],\
+                  d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
+                  d.iso_mag[0],d.iso_mag[1],d.iso_mag[2],\
+                  d.flux_30r24,d.flux_r24,d.c30,\
+                  d.petrorad,d.petroflux_erg,d.petror50,d.petror90,d.petrocon,d.petromag
+                  ]
+        for i,f in enumerate(fields):
+            if prefix is None:
+                colname = f
+            else:
+                colname = prefix+f
+            #print(colname, values[i])
+            self.table[colname][self.igal]=float('%.2e'%(values[i][0]))
+            self.table[colname+'_ERR'][self.igal]=float('%.2e'%(values[i][1]))
+            
+        fields = ['R16','R17','R_F25','R_F50','R_F75','M16','M17','F_30R24','F_R24','C30','R_F95R24','F_TOT',\
+                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
+        d = self.hafit
+        values = [d.iso_radii[0],d.iso_radii[1],\
+                  d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
+                  d.iso_mag[0],d.iso_mag[1],\
+                  d.flux_30r24,d.flux_r24,d.c30,d.flux_95r24, d.total_flux,\
+                  d.petrorad,d.petroflux_erg,d.petror50,d.petror90,d.petrocon,d.petromag
+                  ]
+        for i,f in enumerate(fields):
+            if prefix is None:
+                colname = 'H'+f
+            else:
+                colname = prefix+'H'+f
+
+            #print(colname,values[i])
+            self.table[colname][self.igal]=float('{:.2e}'.format(values[i][0]))
+            self.table[colname+'_ERR'][self.igal]=float('{:.2e}'.format(values[i][1]))
+
+        # SFR conversion from Kennicutt and Evans (2012)
+        # log (dM/dt/Msun/yr) = log(Lx) - logCx
+        logCx = 41.27
+        print(len(self.hafit.total_flux),len(self.gzdist))
+        L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.gzdist[self.igal]).cgs.value**2)
+        #print(L)
+        detect_flag = L > 0
+        self.sfr = np.zeros(len(L),'d')
+        self.sfr[detect_flag] = np.log10(L[detect_flag]) - logCx
+        if prefix is None:
+            colname='LOG_SFR_HA'
+        else:
+            colname=prefix+'LOG_SFR_HA'
+        #print('sfr = ',self.sfr)
+        #print(self.sfr[0], self.sfr[1])
+        self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
+        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
+        self.table[colname+'_FLAG'][self.igal]=detect_flag[0]
+        # inner ssfr
+        a = self.hafit.flux_30r24
+        b = self.rfit.flux_30r24
+        self.inner_ssfr = a[0]/b[0]
+        self.inner_ssfr_err = ratio_error(a[0],b[0],a[1],b[1])
+        if prefix is None:
+            colname='SSFR_IN'
+        else:
+            colname = prefix+'SSFR_IN'
+        self.table[colname][self.igal]=float('%.2e'%(self.inner_ssfr))
+        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.inner_ssfr_err))
+        # outer ssfr
+        c = self.hafit.flux_r24
+        d = self.rfit.flux_r24
+        self.outer_ssfr = (c[0] - a[0])/(d[0] - b[0])
+        self.outer_ssfr_err = ratio_error(c[0] - a[0],d[0] - b[0],np.sqrt(a[1]**2 + c[1]**2),np.sqrt(b[1]**2 + d[1]**2))
+        if prefix is None:
+            colname='SSFR_OUT'
+        else:
+            colname=prefix+'SSFR_OUT'
+        self.table[colname][self.igal]=float('%.2e'%(self.outer_ssfr))
+        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.outer_ssfr_err))
+        self.write_fits_table()        
+        if not self.auto:
+            self.update_gui_table()
+
+class haview():
+    """ 
+    class to handle all gui setup and visualizations 
+
+    I think this needs to inherit the model class, because buttons are connected to model functions
+
+    Or the functions that are connecting the buttons should be called from the controller class
+
+    """
+
+    def setup_gui(self): # view
+        #print(MainWindow)
+        self.ui = Ui_MainWindow()
+
+        self.ui.setupUi(MainWindow)
+        #self.ui.setGeometry(0,0,400,300)
+        #self.ui.setFont(QtGui.Qfont('Arial',10))
+        self.logger = logger
+        self.drawcolors = colors.get_colors()
+        self.dc = get_canvas_types()
+        self.add_coadd_frame(self.ui.leftLayout)
+        self.add_cutout_frames()
+        self.connect_setup_menu()
+        self.connect_ha_menu()
+        self.connect_halpha_type_menu()
+        self.connect_comment_menu()
+        #self.connect_buttons()
+        #self.add_image(self.ui.gridLayout_2)
+        #self.add_image(self.ui.gridLayout_2)
+        self.connect_buttons()
+    def connect_buttons(self): #view
+        self.ui.wmark.clicked.connect(self.find_galaxies)
+        #self.ui.editMaskButton.clicked.connect(self.edit_mask)
+        self.ui.makeMaskButton.clicked.connect(self.make_mask)
+        #self.ui.saveCutoutsButton.clicked.connect(self.write_cutouts)
+        self.ui.fitEllipseGalfitButton.clicked.connect(self.galfit_ellip_phot)
+        self.ui.fitEllipsePhotutilsButton.clicked.connect(self.photutils_ellip_phot)
+        self.ui.wfratio.clicked.connect(self.get_filter_ratio)
+        self.ui.resetRatioButton.clicked.connect(self.reset_cutout_ratio)
+        self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
+        self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
+        #self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse_phot)
+        self.ui.galfitButton.clicked.connect(lambda: self.run_galfit(ncomp=1))
+        self.ui.galfitAsymButton.clicked.connect(lambda: self.run_galfit(ncomp=1,asym=1))
+        self.ui.galfitHaButton.clicked.connect(lambda: self.run_galfit(ncomp=1,ha=1))
+        self.ui.galfitHaAsymButton.clicked.connect(lambda: self.run_galfit(ncomp=1,asym=1,ha=1))
+        self.ui.galfit2Button.clicked.connect(lambda: self.run_galfit(ncomp=2))
+        self.ui.psfButton.clicked.connect(self.build_psf)
+        self.ui.saveButton.clicked.connect(self.write_fits_table)
+        self.ui.clearCutoutsButton.clicked.connect(self.clear_cutouts)
+        self.ui.filterRatioLineEdit.returnPressed.connect(self.set_filter_ratio)
+        self.ui.cutoutSizeLineEdit.returnPressed.connect(self.set_cutout_size)
+    def add_coadd_frame(self,panel_name): # view
+        logger = log.get_logger("example1", log_stderr=True, level=40)
+        self.coadd = image_panel(panel_name, self.ui,logger)
+        self.coadd.key_pressed.connect(self.key_press_func)
+        #self.coadd.add_cutouts()
+
+    def add_cutout_framesv4(self):# with halphav4 # view
+        # r-band cutout
+        self.rcutout_label = QtWidgets.QLabel('r-band')
+        self.ui.cutoutsLayout.addWidget(self.rcutout_label, 0, 0, 1, 1)
+        a = QtWidgets.QLabel('CS Halpha')
+        self.ui.cutoutsLayout.addWidget(a, 0, 1, 1, 1)
+        a = QtWidgets.QLabel('Mask')
+        self.ui.cutoutsLayout.addWidget(a, 0, 2, 1, 1)
+
+        #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
+        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 8, 1,autocut_params='histogram')
+        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1,autocut_params='stddev')
+        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1,autocut_params='stddev')
+    def add_cutout_frames(self): # view
+        # r-band cutout
+        self.rcutout_label = QtWidgets.QLabel('r-band')
+        drow = 20
+        self.ui.cutoutsLayout.addWidget(self.rcutout_label, 0, 0, 1, 2)
+        temp_label = QtWidgets.QLabel('')
+        self.ui.cutoutsLayout.addWidget(temp_label, 0, 2, 1, 2)
+        self.nsa_label = QtWidgets.QLabel('NSA ID')
+        self.ui.cutoutsLayout.addWidget(self.nsa_label, 0, 4, 1, 2)
+        temp_label = QtWidgets.QLabel('')
+        self.ui.cutoutsLayout.addWidget(temp_label, 0, 6, 1, 2)
+        self.agc_label = QtWidgets.QLabel('AGC Number')
+        self.ui.cutoutsLayout.addWidget(self.agc_label, 0, 8, 1, 2)
+        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, drow, 10,autocut_params='stddev')
+        a = QtWidgets.QLabel('CS Halpha')
+        self.ui.cutoutsLayout.addWidget(a, drow+1, 0, 1, 2)
+        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, drow+2, 0, drow, 10,autocut_params='stddev')
+
+        a = QtWidgets.QLabel('Mask')
+        self.ui.cutoutsLayout.addWidget(a, 2*drow+2, 0, 1, 2)
+        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,2*drow+3, 0, drow, 10)
+        #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
+
+
+
+    def clear_cutouts(self): # view - should this be in the controller class?
+        self.rcutout.canvas.delete_all_objects()
+        self.hacutout.canvas.delete_all_objects()
+    def connect_setup_menu(self): # view or controller - these are calling model functions/quantities
+        self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
+        self.ui.actionHa_coadd_2.triggered.connect(self.get_hacoadd_file)
+        self.ui.actionNSA_catalog_path.triggered.connect(self.getnsafile)
+        self.ui.actionAGC_catalog_path.triggered.connect(self.getagcfile)
+        
+    def connect_ha_menu(self): # view
+        #print('working on this')
+        #extractAction.triggered.connect(self.close_application)
+
+        self.ui.actionhalpha4.triggered.connect(lambda: self.set_hafilter('4'))
+        self.ui.actionhalpha8.triggered.connect(lambda: self.set_hafilter('8'))
+        self.ui.actionhalpha12.triggered.connect(lambda: self.set_hafilter('12'))
+        self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
+        self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('inthalpha'))
+        self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('intha6657'))
+        self.ui.actionsienaha.triggered.connect(lambda: self.set_hafilter('sienaha'))
+        
+    def connect_halpha_type_menu(self): # view
+        ha_types = ['Ha Emission','No Ha']
+        for name in ha_types:
+            self.ui.haTypeComboBox.addItem(str(name))
+        self.ui.haTypeComboBox.activated.connect(self.set_halpha_type)
+    def connect_comment_menu(self): # view
+        comment_types = ['Cont Sub Prob','merger/tidal','scat light','asym R', 'asym Ha','fore. star', 'fore. gal','edge-on','part cov','nuc ha']
+        for name in comment_types:
+            self.ui.commentComboBox.addItem(str(name))
+        self.ui.commentComboBox.activated.connect(self.set_comment)
+    def set_prefix(self,prefix): # MVC - probably model? - no this is from the gui
+        self.prefix = prefix
+        #print('prefix for output files = ',self.prefix)
+    def set_prefix_on_gui(self,prefix): # MVC - probably model? - no this is from the gui
+        """  use this if the prefix is provided by the user - this will fill in the box with the provided prefix """
+        self.ui.prefixLineEdit.setText(prefix)        
+        
+    def mark_galaxies(self): # MVC - view or controller, b/c this relies on model quantities
+        #
+        # using code in TVMark.py as a guide for adding shapes to canvas
+        #
+        #
+
+        objlist = []
+        markcolor='cyan'
+        markwidth=1
+        size = cutout_scale*self.gradius
+        size = self.cutout_sizes
+        #size[size > self.global_max_cutout_size] = self.global_max_cutout_size
+        #size[size < self.global_min_cutout_size] = self.global_min_cutout_size
+        
+        for i,x in enumerate(self.gximage):
+            obj = self.coadd.dc.Box(
+                x=x, y=self.gyimage[i], \
+                xradius=size[i]/2,yradius=size[i]/2, \
+                #xradius=100,yradius=100, \
+                color=markcolor, linewidth=markwidth)
+            glabel = self.coadd.dc.Text(x-50,self.gyimage[i]+60,\
+                                        str(self.galid[i]), color=markcolor)
+            objlist.append(obj)
+            objlist.append(glabel)
+        if self.agcflag:
+            for i,x in enumerate(self.agcximage):
+                #print(x,self.agcyimage[i],self.agc.cat.AGCNUMBER[i])
+                obj = self.coadd.dc.Box(
+                    x=x, y=self.agcyimage[i], xradius=75,\
+                    yradius=75, color='purple', linewidth=markwidth)
+                glabel = self.coadd.dc.Text(x-40,self.agcyimage[i]+40,\
+                                        str(self.agc.cat.AGCnr[i]), color='purple')
+                objlist.append(obj)
+                objlist.append(glabel)
+            
+        self.markhltag = self.coadd.canvas.add(self.coadd.dc.CompoundObject(*objlist))
+        self.coadd.fitsimage.redraw()
+    def setup_ratio_slider(self): # MVC - view
+        self.ui.ratioSlider.setRange(0,100)
+        self.ui.ratioSlider.setValue(50)
+        self.ui.ratioSlider.setSingleStep(1)
+        #self.ui.ratioSlider.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        #self.ui.ratioSlider.setFocusPolicy(QtCore.StrongFocus)
+        self.ui.ratioSlider.valueChanged.connect(self.ratio_slider_changed)
+    def setup_cutout_slider(self): # MVC - view
+        self.ui.cutoutSlider.setRange(0,100)
+        self.ui.cutoutSlider.setValue(50)
+        self.ui.cutoutSlider.setSingleStep(1)
+        #self.ui.ratioSlider.setTickPosition(QtWidgets.QSlider.TicksBelow)
+        #self.ui.ratioSlider.setFocusPolicy(QtCore.StrongFocus)
+        self.ui.cutoutSlider.valueChanged.connect(self.cutout_slider_changed)
+            
+    def clear_comment_field(self): # MVC - view?
+        self.ui.commentLineEdit.clear()
+        
+    def display_cutouts(self): # MVC - view
+
+        # TODONE  - split into separate model and view functions
+        #################################################
+        # this part needs to move to the view class
+        #################################################
+        # only do this when running gui (as opposed to automatically)
+        self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
+        self.reset_cutout_size()
+        self.reset_cutout_ratio()
+        
+        ############################################################
+        # TODONE: this is the only part that should be in view
+        #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
+        ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
+        bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))        
+        #print(ymin,ymax,xmin,xmax)
+        
+        ############################################################                
+
+        self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
+        self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
+        #cutoutR.plot_on_original(color='white')
+        
+        # ###################################################################################
+        # TODO - this should not be called in the model b/c model does not interact with view
+        # ###################################################################################
+        self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
+        
+    def draw_ellipse_results(self, color='cyan'): # MVC - view
+        # mark r24
+        markcolor=color#, 'yellow', 'cyan']
+        markwidth=1
+        #print('inside draw_ellipse_results')
+        image_frames = [self.rcutout, self.hacutout]
+        radii = self.rfit.iso_radii[:,0][0:2]
+        objlist = []
+        for i,im in enumerate(image_frames):
+            for r in radii:
+                #print('r = ',r)
+                r = r/self.pixelscale
+                #print('r = ',r)
+                obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
+                objlist.append(obj)
+            if i == 1: # add R17 for Halpha image
+                r = self.hafit.iso_radii[:,0][1]/self.pixelscale
+                obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
+                objlist.append(obj)
+            self.markhltag = im.canvas.add(im.dc.CompoundObject(*objlist))
+            im.fitsimage.redraw()
+        # mark R17 in halpha image
+        
+    def display_mask(self, mask_image_name): # MVC - controller or view??? putting in view for now
+        t = self.cutout_name_r.split('.fit')
+        self.mask_image_name=t[0]+'-mask.fits'
+        
+        if not self.auto:
+            if os.path.exists(self.mask_image_name):
+                self.maskcutout.load_file(self.mask_image_name)
+                self.mask_image_exists = True
+                
+            else:
+                # clear mask frame
+                self.maskcutout.fitsimage.clear()
+
+        
+        #self.mask_image = mask_image_name
+
+
+        
+class hacontroller():
+    """ class to handle interactions with the user and send requests to model and view  """
+    def get_rcoadd_file(self): # view or controller? controller b/c interact w/user
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            self.rcoadd_fname = fname[0]
+            #print(self.rcoadd_fname)
+            self.load_rcoadd()
+            #self.le.setPixmap(QPixmap(fname))
+    def get_hacoadd_file(self): # view or controller? controller
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            
+            self.hacoadd_fname = fname[0]
+            #print(self.hacoadd_fname)
+            self.load_hacoadd()
+            #self.le.setPixmap(QPixmap(fname))
+    def getnsafile(self): # view or controller?
+        """ get NSA file location from the user """
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            self.nsa_fname = fname[0]
+            self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
+        print('Got NSA catalog with {} lines!'.format(len(self.nsa.cat)))
+        self.defcat = self.nsa
+        #self.le.setPixmap(QPixmap(fname))
+    def getagcfile(self): # controller
+        """ get AGC file location from the user """        
+        fname = QtWidgets.QFileDialog.getOpenFileName()
+        if len(fname[0]) < 1:
+            print('invalid filename')
+        else:
+            self.agc_fname = fname[0]
+            self.agc = galaxy_catalog(self.agc_fname,agc=True)
+            self.agcflag = True
+    def set_hafilter(self,filterid): # model or controller? I think this is a mix...
+        #print('setting ha filter to ',filterid)
+
+        # this is in controller
+        self.hafilter = filterid
+        print('halpha filter = ',self.hafilter)
+        
+        # this part should be in the model, so this should be a method in model
+        # and then call model.set_filter() which would execute the following lines
+
+        self.filter_trace = filter_trace(self.hafilter)
+        self.zmin = self.filter_trace.minz_trans10
+        self.zmax = self.filter_trace.maxz_trans10
+        #self.get_zcut()
+        
+    def set_halpha_type(self,hatype): # controller
+        self.halpha_type = hatype
+        #print(hatype)
+        try:
+            if int(hatype) == 0:
+                self.haflag[self.igal]=True
+                self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
+        except AttributeError:
+            print('make sure you selected a galaxy')
+    def set_filter_ratio(self,ratio): # controller?
+        try:
+            self.filter_ratio = float(ratio)
+            self.subtract_images()
+            self.ui.filterRatioLineEdit.setText(str(ratio))
+        except:
+            print('did not understand.  try again')
+    def set_cutout_size(self,size): # controller?
+        try:
+            self.cutout_size_arcsec = int(size)*u.arcsec
+            self.cutout_size_arcsec = int(size)            
+            self.display_cutouts()
+            self.ui.cutoutSizeLineEdit.setText(str(size))            
+        except:
+            print('Trouble plotting cutouts')
+            print('make sure galaxy is selected')
+            self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))            
+    def key_press_func(self,key): # MVC - is this controller or view? controller
+        """ define keys to that control behavior of image display """
+        print(key)
+        if key == 'r':
+            z = self.coadd.fitsimage.settings.get_setting('zoomlevel')
+            print('zoom = ',z)
+            p = self.coadd.fitsimage.settings.get_setting('pan')
+            print('pan = ',p)
+
+            self.coadd.fitsimage.set_data(self.r)
+            self.coadd.fitsimage.zoom_to(z.value)
+            self.coadd.fitsimage.panset_xy(p.value[0],p.value[1])
+            self.coadd.canvas.redraw()
+        elif key == 'h':
+            try:
+                self.coadd.fitsimage.set_data(self.halpha_cs)
+            except AttributeError:
+                print('no continuum subtracted image yet - get filter ratio')
+                self.coadd.fitsimage.set_data(self.ha)
+        elif key == 'u': # unidentified object!
+            x,y = self.coadd.fitsimage.get_last_data_xy()
+            x = float(x)
+            y = float(y)
+            self.uco_x.append(x)
+            self.uco_y.append(y)
+            ra,dec = self.coadd_wcs.wcs_pix2world(x,y,0)
+            self.uco_ra.append(ra)
+            self.uco_dec.append(dec)
+            if len(self.uco_id) == 0:
+                self.uco_id.append(1)
+            else:
+                self.uco_id.append(np.max(self.uco_id)+1)
+            self.write_uco_table()
+        elif key == 'down':
+            '''
+            up arrow will go to previous galaxy in the list
+            '''
+            #print(self.igal)
+            if self.igal == (len(self.ra)-1):
+                self.igal = 0
+            else:
+                self.igal += 1
+                self.ui.wgalid.setCurrentIndex(self.igal)
+                self.select_galaxy(self.igal)
+            #print(self.igal)
+        elif key == 'up':
+            '''
+            down arrow will go to previous galaxy in the list
+            '''
+            if self.igal == 0: 
+                self.igal = len(self.ra)-1
+            else:
+                self.igal -= 1
+                self.ui.wgalid.setCurrentIndex(self.igal)
+                self.select_galaxy(self.igal)
+    def ratio_slider_changed(self, value): # MVC - controller
+        #print(self.minfilter_ratio, self.maxfilter_ratio, self.filter_ratio)
+        delta = self.maxfilter_ratio - self.minfilter_ratio
+        self.filter_ratio = self.minfilter_ratio + (delta)/100.*self.ui.ratioSlider.value()
+        #print(value,' ratio slider changed to', round(self.filter_ratio,4))
+        try:
+            self.subtract_images(overwrite=True)
+            self.display_cutouts()
+        except:
+            print('Trouble plotting cutouts')
+            print('make sure galaxy is selected')
+    def cutout_slider_changed(self, value): # MVC - controller
+        #print(self.minfilter_ratio, self.maxfilter_ratio, self.filter_ratio)
+        delta = self.maxcutout_size - self.mincutout_size
+        #self.cutout_size = self.mincutout_size + (delta)/100.*value
+        self.cutout_size = self.cutout_sizes[self.igal]
+        self.cutout_size_arcsec = self.cutout_sizes_arcsec[self.igal]        
+        #print(value,' ratio slider changed to', round(self.filter_ratio,4))
+        try:
+            self.display_cutouts()
+        except:
+            print('Trouble plotting cutouts')
+            print('make sure galaxy is selected')
+    def select_galaxy(self,id): # MVC - view or controller?
+        print()
+        print()
+        print('selecting a galaxy')
+        self.igal = self.ui.wgalid.currentIndex()
+        if self.virgo:
+            self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal]*1.2,self.BA[self.igal],self.PA[self.igal]+90]
+            #print("new galaxy params = ",self.objparams)
+            #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
+            print()
+        else:
+            self.rcutout_label.setText('r-band '+str(self.nsa2['NSAID'][self.igal]))
+            self.objparams = None
+        self.rcutout_label.show()
+                                   
+                                   
+        print('active galaxy = ',self.igal)
+        # when galaxy is selected from list, trigger
+        # cutout imaages
+        self.get_galaxy_cutout()
+
+        # will need to also call new view functions
+        self.display_cutouts()
+        #self.display_mask()
+
+        # the following two lines are the same as self.clear_cutouts
+        # seems odd that this is called here - why are we clearing the cutouts after we displayed the cutouts???
+        # need to test this when actually running gui, as opposed to running in auto mode
+        self.clear_cutouts()
+        #self.rcutout.canvas.delete_all_objects()
+        #self.hacutout.canvas.delete_all_objects()            
+        self.clear_comment_field()
+        #################################################
+
+
+
+    def reset_cutout_size(self): # MVC - controller
+        self.cutout_size = self.reset_size
+        self.update_images()
+        #self.ui.cutoutSlider.setValue(50)
+    def reset_cutout_ratio(self): # MVC - controller
+        self.filter_ratio = self.reset_ratio
+        self.update_images()
+        #self.ui.ratioSlider.setValue(50)
+        
+    def update_images(self): # MVC - controller b/c calls model and view
+        self.subtract_images(overwrite=True)
+        #self.display_cutouts()
+    def make_mask(self,objparams=None): # MVC - is this controller, or view?
+        # TODO - break off view functions into a method within the haview class
+        #current_dir = os.getcwd()
+        #image_dir = os.path.dirname(self.rcoadd_fname)
+        #os.chdir(image_dir)
+        try:
+            print()
+            print("using ellipe parameters to unmask central region - woo hoo!")
+            print()
+            objparams = self.objparams
+            print("\t ",self.objparams)
+        except AttributeError:
+            print()
+            print("problem getting objparams for masking routing")
+            print()
+            pass
+    
+    
+        try:
+            self.write_cutouts()
+        except AttributeError:
+            print('are you rushing to make a mask w/out selecting galaxies?')
+            print('try selecting filter, then selecting galaxies')
+            return
+        #try:
+        self.mwindow = QtWidgets.QWidget()
+        print()
+        #print("initiating mask window")
+        #print("\t object params = ",objparams)
+        self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',\
+                                  objparams=objparams)
+        self.mui.mask_saved.connect(self.display_mask)
+        self.mui.setupUi(self.mwindow)
+        self.mwindow.show()
+        #except AttributeError:
+        #    print('Hey - make sure you selected a galaxy!')
+        #os.chdir(current_dir)
+        
+    def set_comment(self,comment): # MVC - controller or model??
+        """ what is this doing? """
+        col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG','NUC_HA']
+        self.table[col_names[int(comment)]][self.igal] = not(self.table[col_names[int(comment)]][self.igal])
+        if not self.auto:
+            self.update_gui_table_cell(self.igal,col_names[int(comment)],str(True))
+
+        
+        
+
+    def closeEvent(self, event):
+        # send signal that window is closed
+
+        # write the data table
+        print('writing fits table')
+        self.table.write_fits_table()
+        #event.accept()
+
+class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview, hacontroller):
+    """ Main class for the halpha image analysis  """
     def __init__(self,MainWindow, logger, sepath=None, args=None):
         #testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None,rimage=None,haimage=None,csimage=None,filter=None,tabledir=None):
         super(hafunctions, self).__init__()
@@ -1047,6 +2776,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         if not(self.auto):
             self.setup_gui()
         self.prefix = args.prefix
+        if self.prefix is not None:
+            self.set_prefix_on_gui(self.prefix)
         self.testing = args.testing
         self.draco = args.draco
         self.nebula = args.nebula        
@@ -1190,9 +2921,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         
         # create mask
 
-        objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]]
-        self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',auto=self.auto,\
-                                  objparams=objparams,unmaskellipse=True)
+        self.objparams = [self.RA[igal],self.DEC[igal],self.radius_arcsec[igal]*1.2,self.BA[igal],self.PA[igal]+90]
+
+        self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
+                              sepath='~/github/halphagui/astromatic/',auto=self.auto,\
+                              objparams=self.objparams,unmaskellipse=True)
                                   
         
         # run galfit
@@ -1214,48 +2947,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         #except:
         #    print('WARNING: problem running photutils ellip phot')
             
-    def setup_gui(self):
-        #print(MainWindow)
-        self.ui = Ui_MainWindow()
-
-        self.ui.setupUi(MainWindow)
-        #self.ui.setGeometry(0,0,400,300)
-        #self.ui.setFont(QtGui.Qfont('Arial',10))
-        self.logger = logger
-        self.drawcolors = colors.get_colors()
-        self.dc = get_canvas_types()
-        self.add_coadd_frame(self.ui.leftLayout)
-        self.add_cutout_frames()
-        self.connect_setup_menu()
-        self.connect_ha_menu()
-        self.connect_halpha_type_menu()
-        self.connect_comment_menu()
-        #self.connect_buttons()
-        #self.add_image(self.ui.gridLayout_2)
-        #self.add_image(self.ui.gridLayout_2)
-        self.connect_buttons()
-    def connect_buttons(self):
-        self.ui.wmark.clicked.connect(self.find_galaxies)
-        #self.ui.editMaskButton.clicked.connect(self.edit_mask)
-        self.ui.makeMaskButton.clicked.connect(self.make_mask)
-        #self.ui.saveCutoutsButton.clicked.connect(self.write_cutouts)
-        self.ui.fitEllipseGalfitButton.clicked.connect(self.galfit_ellip_phot)
-        self.ui.fitEllipsePhotutilsButton.clicked.connect(self.photutils_ellip_phot)
-        self.ui.wfratio.clicked.connect(self.get_filter_ratio)
-        self.ui.resetRatioButton.clicked.connect(self.reset_cutout_ratio)
-        self.ui.resetSizeButton.clicked.connect(self.reset_cutout_size)
-        self.ui.prefixLineEdit.textChanged.connect(self.set_prefix)
-        #self.ui.fitEllipseButton.clicked.connect(self.fit_ellipse_phot)
-        self.ui.galfitButton.clicked.connect(lambda: self.run_galfit(ncomp=1))
-        self.ui.galfitAsymButton.clicked.connect(lambda: self.run_galfit(ncomp=1,asym=1))
-        self.ui.galfitHaButton.clicked.connect(lambda: self.run_galfit(ncomp=1,ha=1))
-        self.ui.galfitHaAsymButton.clicked.connect(lambda: self.run_galfit(ncomp=1,asym=1,ha=1))
-        self.ui.galfit2Button.clicked.connect(lambda: self.run_galfit(ncomp=2))
-        self.ui.psfButton.clicked.connect(self.build_psf)
-        self.ui.saveButton.clicked.connect(self.write_fits_table)
-        self.ui.clearCutoutsButton.clicked.connect(self.clear_cutouts)
-        self.ui.filterRatioLineEdit.returnPressed.connect(self.set_filter_ratio)
-        self.ui.cutoutSizeLineEdit.returnPressed.connect(self.set_cutout_size)        
+      
     def setup_testing(self):
         #self.hacoadd_fname = os.getenv('HOME')+'/research/halphagui_test/MKW8_ha16.coadd.fits'
         #self.hacoadd_fname = os.getenv('HOME')+'/research/HalphaGroups/reduced_data/HDI/20150418/NRGs27_ha16.coadd.fits'
@@ -1368,16 +3060,19 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         # RF 2023-03-24: updating to use the v2 catalogs
         self.vf_fname = os.path.join(self.tabledir,'vf_v2_main.fits')
         self.nsa_fname = os.path.join(self.tabledir,'vf_v2_nsa_v0.fits')
+        ephot_fname = os.path.join(self.tabledir,'vf_v2_legacy_ephot.fits')        
         self.vf = galaxy_catalog(self.vf_fname,virgo=True)
 
         self.nsa = galaxy_catalog(self.nsa_fname,virgo=True)
 
         ##
-        # get sizes for galaxies
+        # get sizes for galaxies - will use this to unmask central region
+        # need to cut this catalog based on keepflag
         ##
-        ephot_fname = os.path.join(self.tabledir,'vf_v2_legacy_ephot.fits')
+
         ephot = Table.read(ephot_fname)
-        self.radius_arcsec = ephot['SMA_SB24']
+        #self.radius_arcsec = ephot['SMA_SB24']
+        self.radius_arcsec = ephot['SMA_SB23.5']
 
         # for galaxies with SMA_SB24=0, set radius to value in main table 
         noradius_flag = self.radius_arcsec == 0
@@ -1391,7 +3086,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.BA[~noradius_flag] = ephot['BA_MOMENT'][~noradius_flag]
         self.PA[~noradius_flag] = ephot['PA_MOMENT'][~noradius_flag]
         
-
+        self.RA = self.vf.cat['RA']
+        self.DEC = self.vf.cat['DEC']        
         
         self.agcflag = False
         self.nsaflag = False
@@ -1405,1520 +3101,12 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table):
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
 
-    def read_rcoadd(self):
-        #print('reading rband image ',self.rcoadd_fname)
-        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        try:
-            self.pixelscale = np.abs(float(self.r_header['PIXSCAL1'])) # convert deg/pix to arcsec/pixel                        
-        except KeyError:
-            try:
-                self.pixelscale = np.abs(float(self.r_header['CD1_1']))*3600. # convert deg/pix to arcsec/pixel
-            except KeyError:
-                self.pixelscale = np.abs(float(self.r_header['PC1_1']))*3600. # Siena pipeline from astronometry.net
-        #self.pixelscale = np.abs(float(coadd_header['CD1_1']))*3600          
-        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
-
-        # check for weight image
-        # assuminging naming conventions from swarp
-        # image = NRGb161_R.coadd.fits
-        # weight = NRGb161_R.coadd.weight.fits
-        
-        weight_image = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
-        if weight_image.find('-shifted') > -1:
-            weight_image = self.rcoadd_fname.replace('shifted','weight-shifted')
-
-        if os.path.exists(weight_image):
-            self.rweight = weight_image
-            self.rweight_flag = True
-        else:
-            self.rweight_flag = False
-        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
-    def read_hacoadd(self):
-        #print(self.hacoadd_fname)
-        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
-        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS.fits'
-        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
-
-        # check for weight image
-        # assuminging naming conventions from swarp
-        # image = NRGb161_R.coadd.fits
-        # weight = NRGb161_R.coadd.weight.fits
-        
-        weight_image = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
-        if os.path.exists(weight_image):
-            self.haweight = weight_image
-            self.haweight_flag = True
-        else:
-            self.haweight_flag = False
-        
-    def load_rcoadd(self):
-        self.coadd.load_file(self.rcoadd_fname)
-        self.r, self.r_header = fits.getdata(self.rcoadd_fname, header=True)
-        try:
-            self.pixelscale = abs(float(self.r_header['PIXSCAL1'])) # in deg per pixel
-        except KeyError:
-            try:
-                self.pixelscale = abs(float(self.r_header['CD1_1']))*3600. # in deg per pixel
-            except KeyError:
-                self.pixelscale = abs(float(self.r_header['PC1_1']))*3600. # in deg per pixel
-        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
-
-        # check for weight image
-        # assuminging naming conventions from swarp
-        # image = NRGb161_R.coadd.fits
-        # weight = NRGb161_R.coadd.weight.fits
-        
-        weight_image = self.rcoadd_fname.split('.fits')[0]+'.weight.fits'
-        if os.path.exists(weight_image):
-            self.rweight = weight_image
-            self.rweight_flag = True
-        else:
-            self.rweight_flag = False
-
-        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
-        self.check_previous_r_psf()ephot['SMMA_MOMENT'][~noradius_flag]
-    def load_hacoadd(self):
-        self.coadd.load_file(self.hacoadd_fname)
-        self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
-
-        #self.psf.psf_image_name = 'MKW8_R.coadd-psf.fits'
-        weight_image = self.hacoadd_fname.split('.fits')[0]+'.weight.fits'
-        if os.path.exists(weight_image):
-            self.haweight = weight_image
-            self.haweight_flag = True
-        else:
-            self.haweight_flag = False
-        self.check_previous_ha_psf()
-    def add_coadd_frame(self,panel_name):
-        logger = log.get_logger("example1", log_stderr=True, level=40)
-        self.coadd = image_panel(panel_name, self.ui,logger)
-        self.coadd.key_pressed.connect(self.key_press_func)
-        #self.coadd.add_cutouts()
-
-    def add_cutout_framesv4(self):# with halphav4
-        # r-band cutout
-        self.rcutout_label = QtWidgets.QLabel('r-band')
-        self.ui.cutoutsLayout.addWidget(self.rcutout_label, 0, 0, 1, 1)
-        a = QtWidgets.QLabel('CS Halpha')
-        self.ui.cutoutsLayout.addWidget(a, 0, 1, 1, 1)
-        a = QtWidgets.QLabel('Mask')
-        self.ui.cutoutsLayout.addWidget(a, 0, 2, 1, 1)
-
-        #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
-        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, 8, 1,autocut_params='histogram')
-        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 1, 8, 1,autocut_params='stddev')
-        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,1, 2, 8, 1,autocut_params='stddev')
-    def add_cutout_frames(self):
-        # r-band cutout
-        self.rcutout_label = QtWidgets.QLabel('r-band')
-        drow = 20
-        self.ui.cutoutsLayout.addWidget(self.rcutout_label, 0, 0, 1, 2)
-        temp_label = QtWidgets.QLabel('')
-        self.ui.cutoutsLayout.addWidget(temp_label, 0, 2, 1, 2)
-        self.nsa_label = QtWidgets.QLabel('NSA ID')
-        self.ui.cutoutsLayout.addWidget(self.nsa_label, 0, 4, 1, 2)
-        temp_label = QtWidgets.QLabel('')
-        self.ui.cutoutsLayout.addWidget(temp_label, 0, 6, 1, 2)
-        self.agc_label = QtWidgets.QLabel('AGC Number')
-        self.ui.cutoutsLayout.addWidget(self.agc_label, 0, 8, 1, 2)
-        self.rcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, 1, 0, drow, 10,autocut_params='stddev')
-        a = QtWidgets.QLabel('CS Halpha')
-        self.ui.cutoutsLayout.addWidget(a, drow+1, 0, 1, 2)
-        self.hacutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger, drow+2, 0, drow, 10,autocut_params='stddev')
-
-        a = QtWidgets.QLabel('Mask')
-        self.ui.cutoutsLayout.addWidget(a, 2*drow+2, 0, 1, 2)
-        self.maskcutout = cutout_image(self.ui.cutoutsLayout,self.ui, self.logger,2*drow+3, 0, drow, 10)
-        #self.ui.cutoutsLayout.addWidget(self.cutout, row, col, drow, dcol)
-
-
-
-    def clear_cutouts(self):
-        self.rcutout.canvas.delete_all_objects()
-        self.hacutout.canvas.delete_all_objects()
-    def connect_setup_menu(self):
-        self.ui.actionR_coadd.triggered.connect(self.get_rcoadd_file)
-        self.ui.actionHa_coadd_2.triggered.connect(self.get_hacoadd_file)
-        self.ui.actionNSA_catalog_path.triggered.connect(self.getnsafile)
-        self.ui.actionAGC_catalog_path.triggered.connect(self.getagcfile)
-    def get_rcoadd_file(self):
-        fname = QtWidgets.QFileDialog.getOpenFileName()
-        if len(fname[0]) < 1:
-            print('invalid filename')
-        else:
-            self.rcoadd_fname = fname[0]
-            #print(self.rcoadd_fname)
-            self.load_rcoadd()
-            #self.le.setPixmap(QPixmap(fname))
-    def get_hacoadd_file(self):
-        fname = QtWidgets.QFileDialog.getOpenFileName()
-        if len(fname[0]) < 1:
-            print('invalid filename')
-        else:
-            
-            self.hacoadd_fname = fname[0]
-            #print(self.hacoadd_fname)
-            self.load_hacoadd()
-            #self.le.setPixmap(QPixmap(fname))
-    def getnsafile(self):
-        fname = QtWidgets.QFileDialog.getOpenFileName()
-        if len(fname[0]) < 1:
-            print('invalid filename')
-        else:
-            self.nsa_fname = fname[0]
-            self.nsa = galaxy_catalog(self.nsa_fname,nsa=True)
-        print('Got NSA catalog with {} lines!'.format(len(self.nsa.cat)))
-        self.defcat = self.nsa
-        #self.le.setPixmap(QPixmap(fname))
-    def getagcfile(self):
-        fname = QtWidgets.QFileDialog.getOpenFileName()
-        if len(fname[0]) < 1:
-            print('invalid filename')
-        else:
-            self.agc_fname = fname[0]
-            self.agc = galaxy_catalog(self.agc_fname,agc=True)
-            self.agcflag = True
 
 		
-    def connect_ha_menu(self):
-        #print('working on this')
-        #extractAction.triggered.connect(self.close_application)
-
-        self.ui.actionhalpha4.triggered.connect(lambda: self.set_hafilter('4'))
-        self.ui.actionhalpha8.triggered.connect(lambda: self.set_hafilter('8'))
-        self.ui.actionhalpha12.triggered.connect(lambda: self.set_hafilter('12'))
-        self.ui.actionhalpha16.triggered.connect(lambda: self.set_hafilter('16'))
-        self.ui.actioninthalpha.triggered.connect(lambda: self.set_hafilter('inthalpha'))
-        self.ui.actionintha6657.triggered.connect(lambda: self.set_hafilter('intha6657'))
-        self.ui.actionsienaha.triggered.connect(lambda: self.set_hafilter('sienaha'))        
-    def set_hafilter(self,filterid):
-        #print('setting ha filter to ',filterid)
-        self.hafilter = filterid
-        print('halpha filter = ',self.hafilter)
-        self.filter_trace = filter_trace(self.hafilter)
-        self.zmin = self.filter_trace.minz_trans10
-        self.zmax = self.filter_trace.maxz_trans10
-        #self.get_zcut()
-    def get_zcut(self):
-        self.zmax=(((lmax[self.hafilter])/6563.)-1)
-        self.zmin=(((lmin[self.hafilter])/6563.)-1)
-    def connect_halpha_type_menu(self):
-        ha_types = ['Ha Emission','No Ha']
-        for name in ha_types:
-            self.ui.haTypeComboBox.addItem(str(name))
-        self.ui.haTypeComboBox.activated.connect(self.set_halpha_type)
-    def set_halpha_type(self,hatype):
-        self.halpha_type = hatype
-        #print(hatype)
-        try:
-            if int(hatype) == 0:
-                self.haflag[self.igal]=True
-                self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
-        except AttributeError:
-            print('make sure you selected a galaxy')
-    def connect_comment_menu(self):
-        comment_types = ['Cont Sub Prob','merger/tidal','scat light','asym R', 'asym Ha','fore. star', 'fore. gal','edge-on','part cov','nuc ha']
-        for name in comment_types:
-            self.ui.commentComboBox.addItem(str(name))
-        self.ui.commentComboBox.activated.connect(self.set_comment)
-    def set_comment(self,comment):
-        col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG','NUC_HA']
-        self.table[col_names[int(comment)]][self.igal] = not(self.table[col_names[int(comment)]][self.igal])
-        self.update_gui_table_cell(self.igal,col_names[int(comment)],str(True))
-
-    def set_prefix(self,prefix):
-        self.prefix = prefix
-        #print('prefix for output files = ',self.prefix)
-    def set_filter_ratio(self,ratio):
-        try:
-            self.filter_ratio = float(ratio)
-            self.subtract_images()
-            self.ui.filterRatioLineEdit.setText(str(ratio))
-        except:
-            print('did not understand.  try again')
-    def set_cutout_size(self,size):
-        try:
-            self.cutout_size_arcsec = int(size)*u.arcsec
-            self.cutout_size_arcsec = int(size)            
-            self.display_cutouts()
-            self.ui.cutoutSizeLineEdit.setText(str(size))            
-        except:
-            print('Trouble plotting cutouts')
-            print('make sure galaxy is selected')
-            self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))            
-
-    def check_previous_ha_psf(self):
-        '''
-        check for data from previous runs, including
-        - psf file
-        - data table with results for all/subset of galaxies
-        - filter ratio
-        '''
-
-        # check for halpha psf
-        basename = os.path.basename(self.hacoadd_fname)
-        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
-        if os.path.exists(psf_image_name):
-            self.psf_haimage_name = psf_image_name
-        else:
-            self.psf_haimage_name = None
-    def check_previous_r_psf(self):
-        '''
-        check for data from previous runs, including
-        - psf file
-        - data table with results for all/subset of galaxies
-        - filter ratio
-        '''
-        # check for rband psf
-        basename = os.path.basename(self.rcoadd_fname)
-        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
-        if os.path.exists(psf_image_name):
-            self.psf_image_name = psf_image_name
-        else:
-            self.psf_image_name = None
-
-    def find_galaxies(self):
-        print('getting galaxies in FOV')
-        flag = self.get_gal_list()
-        if flag == False:
-            return
-
-
-        ##
-        # rewrite to get the size from JM's ephot, +/- 3*SMA_SB24
-        #
-        # 3 is too small for most galaxies - forgot to convert radius to diameter
-        # ran with 2*2.5, and this was tight for a lot of galaxies.  increasing size by 50%
-        ##
-        scale = 2*2.5*1.5
-
-        # this is the total length in one dimension
-        # the scale factor includes an extra factor of 2 to convert radius to diameter
-        self.cutout_sizes = self.radius_arcsec*scale/self.pixelscale
-        
-        #start_time = time.perf_counter()        
-        #print('getting object sizes from segmentation image')
-        #if 'HDI' is in self.rcoadd_fname:
-        #    scale = 3.5
-        #else:
-        #    scale = 1.75
-        #self.cutout_sizes = getobjectsize(self.rcoadd_fname,np.array(self.gximage,'i'),np.array(self.gyimage,'i'),scale=scale)
-        #print('...done with segmentation image in {:2f} sec'.format(time.perf_counter()-start_time))
-        #print('...sorry for the wait')
-        #print('\t cutout sizes = ',self.cutout_sizes)
-              
-        # convert to arcsec
-        self.cutout_sizes_arcsec = self.cutout_sizes*self.pixelscale*u.arcsec
-        #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)
-        # check to see if any are outside the allowed range
-
-
-        ##
-        # SKIPPING MIN/MAX RESET - would rather correct values in source catalogs
-        ##
-        for i,s in enumerate(self.cutout_sizes_arcsec):
-            if s > self.global_max_cutout_size:
-                self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
-                self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
-            elif s < self.global_min_cutout_size:
-                self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
-                self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale                
-        #print('after comparing with max/min size limits:')
-        #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
-        # set up the output table that will store results from various fits
-        self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
-
-        if not self.auto:
-            # plot location of galaxies in the coadd image
-            self.mark_galaxies()
-
-            # populate a button that contains list
-            # of galaxies in the field of view,
-            # user can select from list to set the active galaxy
-            for name in self.galid:
-                self.ui.wgalid.addItem(str(name))
-            print(len(self.galid),' galaxies in FOV')
-            self.ui.wgalid.activated.connect(self.select_galaxy)
-
-        # get transmission correction for each galaxy
-        # add prefix to figure that is created by filter_trace.get_trans_correction        
-        figfile = f"{self.prefix}-galaxies_in_filter.png"        
-        self.filter_correction= self.filter_trace.get_trans_correction(self.table['REDSHIFT'],outfile=figfile)
-        #print(self.filter_correction)
-        self.table['FILT_COR'] = self.filter_correction
-
-
-        
-    def get_gal_list(self):
-        #
-        # get list of NSA galaxies on image viewer
-        #
-        # for reference:
-        # self.r, header_r = fits.getdata(self.rcoadd_fname,header=True)
-        # self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
-        #
-        n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
-
-        #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
-        #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
-        try:
-            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
-        except AttributeError:
-            print('Warning: no catalog defined.')
-            print('Make sure you set the path to the NSA/Virgo parent catalog')
-        try:
-            print('min and max redshift = ',self.zmin,self.zmax)
-            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
-            
-        except AttributeError:
-            print('problem finding galaxies.')
-            print('make sure you selected a filter!')
-            return False
-        
-        #print('keepflag = ',keepflag)
-        print('number of galaxies in FOV = ',sum(keepflag))
-        # check weight image to make sure the galaxy actually has data
-        # reject galaxies who have zero in the weight image
-        px,py = self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
-        self.xpixel = px
-        self.ypixel = py
-        if self.rweight_flag and self.haweight_flag:
-            rweight = fits.getdata(self.rweight)
-            haweight = fits.getdata(self.haweight)
-            # multiply weights
-            # result will equal zero if exposure is zero in either image
-            weight = rweight * haweight
-            # check location of pixels to make sure weight is not zero
-            # this will have the length = # of galaxies that have keepflag True
-            offimage = (weight[np.array(py[keepflag],'i'),np.array(px[keepflag],'i')] == 0)
-            # store another array that has the indices in original keepflag array
-            # where keepflag = True
-            # need to take [0] element because np.where is weird
-            keepindex = np.where(keepflag)[0]
-            # change value of keepflag for galaxies that are off the image
-            keepflag[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
-            #print(offimage)
-        # cut down NSA catalog to keep information only for galaxies within FOV
-        #print('number of galaxies in FOV = ',sum(keepflag))
-        if sum(keepflag) == 0:
-            print('WARNING: no NSA galaxies in FOV')
-            print('\t make sure you have selected the right filter!')
-            return
-        if self.prefix is None:
-            print('you need to set the prefix')
-            print('try again!')
-            return
-        self.defcat.cull_catalog(keepflag,self.prefix)
-    
-        if self.virgo:
-            self.nsa.cull_catalog(keepflag,self.prefix)
-            self.radius_arcsec = self.radius_arcsec[keepflag]
-        #self.gra=self.nsa.cat.RA
-        #self.gdec=self.nsa.cat.DEC
-        #self.gradius=self.nsa.cat.SERSIC_TH50
-        #self.galid=self.nsa.cat.NSAID
-        #self.gredshift = self.nsa.cat.Z
-        #self.gzdist= self.nsa.cat.ZDIST
-        self.gximage,self.gyimage =self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
-        # set up a boolean array to track whether Halpha emission is present
-
-        if self.agcflag:
-            try:
-                px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
-            except AttributeError:
-                px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)
-
-            keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,zmin=self.zmin,zmax=self.zmax)
-            #print('number of AGC galaxies in FOV = ',sum(keepagc))
-            if self.rweight_flag and self.haweight_flag:
-                offimage = (weight[np.array(py[keepagc],'i'),np.array(px[keepagc],'i')] == 0)
-                # store another array that has the indices in original keepflag array
-                # where keepflag = True
-                # need to take [0] element because np.where is weird
-                keepindex = np.where(keepagc)[0]
-                # change value of keepagc for galaxies that are off the image
-                keepagc[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
-
-            print('number of AGC galaxies in FOV = ',sum(keepagc))
-            self.agc.cull_catalog(keepagc, self.prefix)
-            if sum(keepagc) == 0:
-                self.agcflag = False
-            else:
-                try:
-                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
-                except AttributeError:
-                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)        
-            #print(self.agcximage)
-            #print(self.agcyimage)
-
-        return True
-        
-    def mark_galaxies(self):
-        #
-        # using code in TVMark.py as a guide for adding shapes to canvas
-        #
-        #
-
-        objlist = []
-        markcolor='cyan'
-        markwidth=1
-        size = cutout_scale*self.gradius
-        size = self.cutout_sizes
-        #size[size > self.global_max_cutout_size] = self.global_max_cutout_size
-        #size[size < self.global_min_cutout_size] = self.global_min_cutout_size
-        
-        for i,x in enumerate(self.gximage):
-            obj = self.coadd.dc.Box(
-                x=x, y=self.gyimage[i], \
-                xradius=size[i]/2,yradius=size[i]/2, \
-                #xradius=100,yradius=100, \
-                color=markcolor, linewidth=markwidth)
-            glabel = self.coadd.dc.Text(x-50,self.gyimage[i]+60,\
-                                        str(self.galid[i]), color=markcolor)
-            objlist.append(obj)
-            objlist.append(glabel)
-        if self.agcflag:
-            for i,x in enumerate(self.agcximage):
-                #print(x,self.agcyimage[i],self.agc.cat.AGCNUMBER[i])
-                obj = self.coadd.dc.Box(
-                    x=x, y=self.agcyimage[i], xradius=75,\
-                    yradius=75, color='purple', linewidth=markwidth)
-                glabel = self.coadd.dc.Text(x-40,self.agcyimage[i]+40,\
-                                        str(self.agc.cat.AGCnr[i]), color='purple')
-                objlist.append(obj)
-                objlist.append(glabel)
-            
-        self.markhltag = self.coadd.canvas.add(self.coadd.dc.CompoundObject(*objlist))
-        self.coadd.fitsimage.redraw()
-    def initialize_output_arrays(self):
-        ngal = len(self.galid)
-
-        # galfit output
-        self.gal_xc = np.zeros((ngal,2),'f')
-        self.gal_xc = np.zeros((ngal,2),'f')
-        self.gal_mag = np.zeros((ngal,2),'f')
-        self.gal_n = np.zeros((ngal,2),'f')
-        self.gal_re = np.zeros((ngal,2),'f')
-        self.gal_PA = np.zeros((ngal,2),'f')
-        self.gal_BA = np.zeros((ngal,2),'f')
-        self.gal_sky = np.zeros((ngal,2),'f')
-        
-    def link_files(self):
-        # these are the sextractor files that we need
-        # set up symbolic links from sextractor directory to the current working directory
-        sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
-        for file in sextractor_files:
-            if not os.path.exists(file):
-                os.system('ln -s '+self.sepath+'/'+file+' .')
-    def clean_links(self):
-        # clean up symbolic links to sextractor files
-        # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
-        sextractor_files=['default.sex.HDI','default.param','default.conv','default.nnw']
-        for file in sextractor_files:
-            os.system('unlink '+file)
-
-        # remove catalog
-    def get_filter_ratio(self):
-        #
-        # get ratio of Halpha to Rband filters
-        # 
-        # cannabalizing HalphaImaging/uat_find_filter_ratio.py
-        #
-
-        ##
-        # Look for ZP info in headers
-        ##
-        try:
-            header = fits.getheader(self.rcoadd_fname)
-            #rZP = header['PHOTZP']
-            #header = fits.getheader(self.hacoadd_fname)
-            #hZP = header['PHOTZP']
-            #dm = hZP-rZP
-            #ave = 10**(dm/2.5) # f2/f1
-
-            ave = header['FRATIOZP']
-            runse = False
-        except KeyError:
-            self.link_files()
-            current_dir = os.getcwd()
-            image_dir = os.path.dirname(self.rcoadd_fname)
-            #os.chdir(image_dir)
-
-            runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
-            ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
-            print(ave,std)
-            runse = True
-            #plt.show()
-            #os.chdir(current_dir)
-        self.filter_ratio = ave
-        self.reset_ratio = ave
-        self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
-        self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
-
-        self.subtract_images()
-        if not self.auto:
-            self.ui.filterRatioLineEdit.setText(str(self.filter_ratio))
-        #if not self.auto:
-        #    self.setup_ratio_slider()
-        if runse:
-            self.clean_links()
-
-            # the following lines remove the SE files, but we shouldn't do this
-            # it takes a while to run SE.  Should keep the catalogs
-            images = [self.rcoadd_fname, self.hacoadd_fname]
-            for im in images:
-                catfile = os.path.basename(im).split('.fits')[0]+'.cat'
-                os.remove(catfile)
-    def subtract_images(self,overwrite=False):
-        # use the ZP subtracted images
-        self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS-ZP.fits'
-        
-        if os.path.exists(self.hacoadd_cs_fname) and not overwrite:
-            # don't need to subtract images
-            self.halpha_cs = fits.getdata(self.hacoadd_cs_fname)
-        else:
-            try:
-                self.halpha_cs = self.ha - self.filter_ratio*self.r
-                fits.writeto(self.hacoadd_cs_fname,self.halpha_cs,header=self.ha_header,overwrite=True)           
-            except AttributeError:
-                print('WARNING: no filter ratio')
-
-        if not self.auto:
-            # display continuum subtracted Halpha image in the large frame
-            self.coadd.fitsimage.set_autocut_params('zscale')
-            self.coadd.fitsimage.set_data(self.halpha_cs)
-        
-    def key_press_func(self,key):
-        print(key)
-        if key == 'r':
-            z = self.coadd.fitsimage.settings.get_setting('zoomlevel')
-            print('zoom = ',z)
-            p = self.coadd.fitsimage.settings.get_setting('pan')
-            print('pan = ',p)
-
-            self.coadd.fitsimage.set_data(self.r)
-            self.coadd.fitsimage.zoom_to(z.value)
-            self.coadd.fitsimage.panset_xy(p.value[0],p.value[1])
-            self.coadd.canvas.redraw()
-        elif key == 'h':
-            try:
-                self.coadd.fitsimage.set_data(self.halpha_cs)
-            except AttributeError:
-                print('no continuum subtracted image yet - get filter ratio')
-                self.coadd.fitsimage.set_data(self.ha)
-        elif key == 'u': # unidentified object!
-            x,y = self.coadd.fitsimage.get_last_data_xy()
-            x = float(x)
-            y = float(y)
-            self.uco_x.append(x)
-            self.uco_y.append(y)
-            ra,dec = self.coadd_wcs.wcs_pix2world(x,y,0)
-            self.uco_ra.append(ra)
-            self.uco_dec.append(dec)
-            if len(self.uco_id) == 0:
-                self.uco_id.append(1)
-            else:
-                self.uco_id.append(np.max(self.uco_id)+1)
-            self.write_uco_table()
-        elif key == 'down':
-            '''
-            up arrow will go to previous galaxy in the list
-            '''
-            #print(self.igal)
-            if self.igal == (len(self.ra)-1):
-                self.igal = 0
-            else:
-                self.igal += 1
-                self.ui.wgalid.setCurrentIndex(self.igal)
-                self.select_galaxy(self.igal)
-            #print(self.igal)
-        elif key == 'up':
-            '''
-            down arrow will go to previous galaxy in the list
-            '''
-            if self.igal == 0: 
-                self.igal = len(self.ra)-1
-            else:
-                self.igal -= 1
-                self.ui.wgalid.setCurrentIndex(self.igal)
-                self.select_galaxy(self.igal)
-
-    def setup_ratio_slider(self):
-        self.ui.ratioSlider.setRange(0,100)
-        self.ui.ratioSlider.setValue(50)
-        self.ui.ratioSlider.setSingleStep(1)
-        #self.ui.ratioSlider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-        #self.ui.ratioSlider.setFocusPolicy(QtCore.StrongFocus)
-        self.ui.ratioSlider.valueChanged.connect(self.ratio_slider_changed)
-    def ratio_slider_changed(self, value):
-        #print(self.minfilter_ratio, self.maxfilter_ratio, self.filter_ratio)
-        delta = self.maxfilter_ratio - self.minfilter_ratio
-        self.filter_ratio = self.minfilter_ratio + (delta)/100.*self.ui.ratioSlider.value()
-        #print(value,' ratio slider changed to', round(self.filter_ratio,4))
-        try:
-            self.subtract_images(overwrite=True)
-            self.display_cutouts()
-        except:
-            print('Trouble plotting cutouts')
-            print('make sure galaxy is selected')
-    def setup_cutout_slider(self):
-        self.ui.cutoutSlider.setRange(0,100)
-        self.ui.cutoutSlider.setValue(50)
-        self.ui.cutoutSlider.setSingleStep(1)
-        #self.ui.ratioSlider.setTickPosition(QtWidgets.QSlider.TicksBelow)
-        #self.ui.ratioSlider.setFocusPolicy(QtCore.StrongFocus)
-        self.ui.cutoutSlider.valueChanged.connect(self.cutout_slider_changed)
-    def cutout_slider_changed(self, value):
-        #print(self.minfilter_ratio, self.maxfilter_ratio, self.filter_ratio)
-        delta = self.maxcutout_size - self.mincutout_size
-        #self.cutout_size = self.mincutout_size + (delta)/100.*value
-        self.cutout_size = self.cutout_sizes[self.igal]
-        self.cutout_size_arcsec = self.cutout_sizes_arcsec[self.igal]        
-        #print(value,' ratio slider changed to', round(self.filter_ratio,4))
-        try:
-            self.display_cutouts()
-        except:
-            print('Trouble plotting cutouts')
-            print('make sure galaxy is selected')
-    def clear_comment_field(self):
-        self.ui.commentLineEdit.clear()
-    def select_galaxy(self,id):
-
-        print('selecting a galaxy')
-        self.igal = self.ui.wgalid.currentIndex()
-        if self.virgo:
-            self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
-        else:
-            self.rcutout_label.setText('r-band '+str(self.nsa2['NSAID'][self.igal]))            
-        self.rcutout_label.show()
-                                   
-                                   
-        print('active galaxy = ',self.igal)
-        # when galaxy is selected from list, trigger
-        # cutout imaages
-        self.get_galaxy_cutout()
-    def get_galaxy_cutout(self):
-        # scale cutout size according to NSA Re
-        #size = cutout_scale*self.gradius[self.igal]
-        # updating to use the size from segmentation image from photutils
-        size_arcsec = self.cutout_sizes_arcsec[self.igal]
-        # set the min size to 100x100 pixels (43"x43")
-        print('size, global min, global max = ',size_arcsec,self.global_min_cutout_size,self.global_max_cutout_size)
-        size = max(self.global_min_cutout_size,size_arcsec)
-        if size > self.global_max_cutout_size:
-            size = self.global_max_cutout_size
-        print('new cutout size = ',size, self.igal, self.gradius[self.igal])
-        self.reset_size = size.value
-        self.cutout_size_arcsec = size
-        self.cutout_size = size.value/self.pixelscale
-        self.mincutout_size = 0.2*self.cutout_size
-        self.maxcutout_size = 3.*self.cutout_size
-        # only do this when running gui (as opposed to automatically)
-        if not self.auto:
-            self.ui.cutoutSizeLineEdit.setText(str(self.cutout_size))
-            self.reset_cutout_size()
-            self.reset_cutout_ratio()
-            pass
-        self.display_cutouts()
-
-        
-
-        # updating on march 5, 2021 to make cutout directory name unique
-        # to prevent accidentally writing over data
-        # add date and pointing
-
-        header = self.ha_header
-
-        # date is stored in epoch for HDI data
-
-
-        
-        try:
-            # store time 
-            t = header['EPOCH']
-            # convert to year, month,day
-            t = Time(t,format='decimalyear')
-        except KeyError:
-            # try format expected for INT data
-            try:
-                t = Time(header['DATE-OBS'],format='isot')
-            except KeyError:
-                # putting in a place holder b/c older (2017)
-                # HDI coadds don't have epoch in the header.
-                t = Time('2017-05-20T00:00:00.0',format='isot')
-        dateobs = t.iso.split()[0].replace('-','')
-
-        # get instrument
-        try:
-            instrument = self.ha_header['INSTRUME']
-            if instrument.find('hdi') > -1:
-                instrument='HDI'
-            elif instrument.find('Mosaic') > -1:
-                instrument='MOSAIC'
-        except KeyError:
-            instrument='INT'
-
-        # read in object
-        o = header['OBJECT']
-        if instrument == '90prime':
-            # this should be the VFID of the primary target
-            pointing = o.split('_')[0]
-            instrument = 'BOK'
-        else:
-            try:
-
-                if (o.find('197') > -1) | (o.find('227') > -1): #INT, may data
-                    pnumber = o.split('-')[1]
-                else:
-                    # try to identify format
-                    #print(o,len(o))
-                    print(o)
-                    if len(o.split()) > 1:
-                        split_string=' '
-                        pnumber = int(o.split(split_string)[1])
-                        #print('object names contain ',split_string)        
-                    elif len(o.split('-')) > 1:
-                        split_string='-'
-                        pnumber = int(o.split(split_string)[1])
-                        #print('object names contain ',split_string)
-                    elif len(o.split('_')) > 1:
-                        split_string='_'
-                        #print('object names contain ',split_string)                     
-                        pnumber = int(o.split(split_string)[1])
-                        print('testing')
-                if (o.find('lm') > -1)| (o.find('LM') > -1):
-                    # low-mass pointing
-                    prefix = "lmp"
-                else:
-                    prefix = "p"
-            
-                pointing = "{}{:03d}".format(prefix,pnumber)
-
-            except ValueError:
-                pointing=self.rcoadd_fname.replace('R.fits','')
-            except UnboundLocalError:
-                pointing = o
-
-
-            if self.rcoadd_fname.find('nNGC5846') > -1:
-                pointing = os.path.basename(self.rcoadd_fname.replace('R.fits',''))
-        # first pass of mask
-        # radial profiles
-        # save latest of mask
-        if self.virgo:
-            nedname = self.NEDname[self.igal].replace(" ","")
-            nedname = nedname.replace("[","")
-            nedname = nedname.replace("]","")
-            nedname = nedname.replace("/","")
-
-            instrument,dateobs,pointing = get_params_from_name(self.prefix)
-            
-            
-            cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,instrument,dateobs,pointing)
-            
-        else:
-            cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
-            
-    
-
-        
-        ## create the output directory to store the cutouts and figures
-        self.cutoutdir = 'cutouts/'+cprefix+'/'
-        if not os.path.exists('cutouts'):
-            os.mkdir('cutouts')
-        if not os.path.exists(self.cutoutdir):
-            os.mkdir(self.cutoutdir)
-
-            
-        self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
-        self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
-        self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
-
-        #if self.prefix is None:
-        #    self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
-        #    self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
-        #    self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'   
-        #else:
-        #    self.cutout_name_r = self.cutoutdir+cprefix+'-'+self.prefix+'-R.fits'
-        #    self.cutout_name_ha = self.cutoutdir+cprefix+'-'+self.prefix+'-CS.fits'
-        #    self.cutout_name_hawc = self.cutoutdir+cprefix+'-'+self.prefix+'-Ha.fits'            
-
-
-        t = self.cutout_name_r.split('.fit')
-        self.mask_image_name=t[0]+'-mask.fits'
-        if not self.auto:
-            if os.path.exists(self.mask_image_name):
-                self.display_mask(self.mask_image_name)
-            else:
-                # clear mask frame
-                self.maskcutout.fitsimage.clear()
-
-            self.rcutout.canvas.delete_all_objects()
-            self.hacutout.canvas.delete_all_objects()            
-            self.clear_comment_field()
-
-        self.write_cutouts()
-    def display_cutouts(self):
-        position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
-        
-        try:
-            #print('in display cutouts')
-            #print('\t cutout size pix = {:.1f}'.format(self.cutout_size))
-            #print('\t cutout size arcsec = {:.1f}'.format(self.cutout_size_arcsec.value))
-            print(self.cutout_size_arcsec)
-            self.cutoutR = Cutout2D(self.r.data, position, self.cutout_size_arcsec, wcs=self.coadd_wcs, mode='trim') #require entire image to be on parent image
-            #cutoutHa = Cutout2D(self.ha.data, position, self.size, wcs=self.coadd_wcs, mode = 'trim')
-            ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
-            #print(ymin,ymax,xmin,xmax)
-            if not self.auto:
-                self.rcutout.load_image(self.r[ymin:ymax,xmin:xmax])
-                self.hacutout.load_image(self.halpha_cs[ymin:ymax,xmin:xmax])
-                #cutoutR.plot_on_original(color='white')
-        except nddata.utils.PartialOverlapError:# PartialOverlapError:
-            print('galaxy is only partially covered by mosaic - skipping ',self.galid[self.igal])
-            return
-        except nddata.utils.NoOverlapError:# PartialOverlapError:
-            print('galaxy is not covered by mosaic - skipping ',self.galid[self.igal])
-            return
-
-    def reset_cutout_size(self):
-        self.cutout_size = self.reset_size
-        self.update_images()
-        #self.ui.cutoutSlider.setValue(50)
-    def reset_cutout_ratio(self):
-        self.filter_ratio = self.reset_ratio
-        self.update_images()
-        #self.ui.ratioSlider.setValue(50)
-    def update_images(self):
-        self.subtract_images(overwrite=True)
-        self.display_cutouts()
-
-        
-    def write_cutouts(self):
-        #print(ymin,ymax,xmin,xmax)
-        print('in write_cutouts')
-        try:
-            self.table['FILTER_RATIO'][self.igal] = self.filter_ratio
-        except AttributeError:
-            print('Warning - could not set filter ratio in table')
-            print('I think something is wrong')
-
-        w = WCS(self.rcoadd_fname)
-        try:
-            ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
-        except AttributeError:
-            print('make sure you have selected a galaxy and saved the cutout')
-            return
-        #print('got here, so that is good')
-        newfile = fits.PrimaryHDU()
-        #print('how about here?')
-        newfile.data = self.r[ymin:ymax,xmin:xmax]
-        #print('or here?')        
-        newfile.header = self.r_header
-        newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        #print('or maybe here?')                
-        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        #print('or maybe here??')                
-        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        #print('or maybe here???')                        
-        newfile.header.set('ID',str(self.galid[self.igal]))
-        #print('or maybe here????')                        
-        newfile.header.set('SERSTH50',float('{:.2f}'.format(self.gradius[self.igal])))
-        #print('trying to add exptime now')
-        # set the exposure time to 1 sec
-        # for some reason, in the coadded images produced by swarp, the gain has been corrected
-        # to account for image units in ADU/s, but the exptime was not adjusted.
-        # this will impact galfit magnitudes if we don't correct it here.
-        # alternatively, we could fix it right after running swarp
-        newfile.header['EXPTIME']=1.0
-
-        
-
-        # add PSF image
-
-        # add coadded image
-
-        
-        #print('saving r-band cutout')
-        fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
-
-        # saving Ha CS Cutout as fits image
-        newfile1 = fits.PrimaryHDU()
-        newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
-        newfile1.header = self.ha_header
-        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile.header.set('ID',str(self.galid[self.igal]))
-
-        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
-        newfile.header['EXPTIME']=1.0 
-        fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
-        #print('saving halpha cutout')
-
-        # saving Ha with continuum Cutout as fits image
-        newfile1 = fits.PrimaryHDU()
-        newfile1.data = self.ha[ymin:ymax,xmin:xmax]
-        newfile1.header = self.ha_header
-        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile.header.set('ID',str(self.galid[self.igal]))
-
-        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
-        newfile.header['EXPTIME']=1.0 
-        fits.writeto(self.cutout_name_hawc, newfile1.data, header = newfile1.header, overwrite=True)
-        #print('saving halpha w/continuum cutout')
-        # write bounding box to output table
-        # save this for later
-        ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
-        bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))
-        self.table['BBOX'][self.igal] = bbox
-        if not self.auto:
-            self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
-    def make_mask(self):
-        #current_dir = os.getcwd()
-        #image_dir = os.path.dirname(self.rcoadd_fname)
-        #os.chdir(image_dir)
-        try:
-            self.write_cutouts()
-        except AttributeError:
-            print('are you rushing to make a mask w/out selecting galaxies?')
-            print('try selecting filter, then selecting galaxies')
-            return
-        try:
-            self.mwindow = QtWidgets.QWidget()
-            self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/')
-            self.mui.mask_saved.connect(self.display_mask)
-            self.mui.setupUi(self.mwindow)
-            self.mwindow.show()
-        except AttributeError:
-            print('Hey - make sure you selected a galaxy!')
-        #os.chdir(current_dir)
-        
-    def display_mask(self, mask_image_name):
-        t = self.cutout_name_r.split('.fit')
-        self.mask_image_name=t[0]+'-mask.fits'
-        #self.mask_image = mask_image_name
-        self.maskcutout.load_file(self.mask_image_name)
-        self.mask_image_exists = True
-    def build_psf(self):
-        # check to see if R-band PSF images exist
-        coadd_header = fits.getheader(self.rcoadd_fname)
-
-
-        basename = os.path.basename(self.rcoadd_fname)
-        psf_image_name = basename.split('.fits')[0]+'-psf.fits'
-        if psf_image_name.find('-shifted') > -1:
-            psf_image_name = psf_image_name.replace('-shifted','')
-        basename = os.path.basename(self.hacoadd_fname)
-        psf_image_name_ha = basename.split('.fits')[0]+'-psf.fits'
-        psf_image_name = os.path.join(self.psfdirectory,psf_image_name)
-        psf_image_name_ha = os.path.join(self.psfdirectory,psf_image_name_ha).replace('-CS','')
-        print('\nPSF NAME = ',psf_image_name,'\n')
-        if os.path.exists(psf_image_name):
-            # get fwhm from the image header
-            # and oversampling
-            print("LOADING EXISTING PSF IMAGE")
-            header = fits.getheader(psf_image_name)
-            self.psf = psfimage()           
-            self.psf.fwhm = header['FWHM'] # in pixels
-            self.psf.fwhm_arcsec = self.psf.fwhm*self.pixelscale
-            self.oversampling = float(header['OVERSAMP'])
-            # if psf is in another directory, create a link to the current directory
-            # this will avoid having a long filename b/c galfit does not handle long filenames
-
-            ##
-            # GALFIT does not handle the long image name - it craps out
-            #
-            # that must be why I copied the psf image to r-psf.fits
-            # need to figure out another way so that I can run them in parallel
-            ##
-            #self.psf_image_name = psf_image_name
-
-            ##
-            # changing to use the psf without copying to current directory
-            ##
-            outname = os.path.basename(psf_image_name)
-            command = f'ln -s {psf_image_name} {outname}'
-            #print('running: ',command)
-            os.system(command)
-            #self.psf_image_name = 'r-psf.fits'
-            self.psf_image_name = outname
-
-
-            
-        else:
-            print('oversampling = ',self.oversampling)
-            print('PSF RESULTS FOR R-BAND COADDED IMAGE')
-            self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
-            self.psf.run_all()
-            self.psf_image_name = self.psf.psf_image_name
-            
-        print('\nPSF NAME = ',psf_image_name_ha,'\n')
-        if os.path.exists(psf_image_name_ha):
-            # get fwhm from the image header
-            # and oversampling
-            print("LOADING EXISTING HALPHA PSF IMAGE")            
-            header = fits.getheader(psf_image_name_ha)
-            self.hapsf = psfimage()
-            self.hapsf.fwhm = header['FWHM'] # in pixels
-            self.hapsf.fwhm_arcsec = self.hapsf.fwhm*self.pixelscale
-
-            # if psf is in another directory, create a link to the current directory
-            # this will avoid having a long filename b/c galfit does not handle long filenames
-
-            #self.psf_haimage_name = psf_image_name
-            #command = 'cp {} ha-psf.fits'.format(psf_image_name)
-            #print('running: ',command)
-            #os.system(command)
-            #self.psf_haimage_name = 'ha-psf.fits'
-
-            outname = os.path.basename(psf_image_name_ha)
-            command = f'ln -s {psf_image_name_ha} {outname}'
-            #print('running: ',command)
-            os.system(command)
-            self.psf_haimage_name = outname
-            
-        else:
-            print('PSF RESULTS FOR HA COADDED IMAGE')
-            self.hapsf = psf_parent_image(image=self.hacoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
-            self.hapsf.run_all()
-            self.psf_haimage_name = self.hapsf.psf_image_name
-
-    def add_psf_to_table(self):
-        fields = ['R_FWHM','H_FWHM']
-        values = [self.psf.fwhm_arcsec,self.hapsf.fwhm_arcsec]
-        for i,f in enumerate(fields):
-            for j in range(len(self.table)):
-                self.table[f][j]=values[i]
-        pass
-    def run_galfit(self, ncomp=1, asym=0, ha=0):
-        if self.psf_image_name is None:
-            print('WARNING: psf could not be found')
-            print('Please run build_psf')
-            return
-        self.add_psf_to_table()
-        self.ncomp = ncomp
-        self.asym=asym
-        self.galha = ha
-        print('running galfit with ',ncomp,' components')
-        #self.gwindow = QtWidgets.QWidget()
-        '''
-        if self.testing:
-            self.ncomp = ncomp
-            self.galfit = galfitwindow(self.gwindow, self.logger, image = 'MKW8-18037-R.fits', mask_image = 'MKW8-18037-R-mask.fits', psf='MKW8_R.coadd-psf.fits', psf_oversampling=2, ncomp=ncomp)
-        else:
-            self.galfit = galfitwindow(self.gwindow, self.logger, image = self.cutout_name_r, mask_image = self.mask_image_name, psf=self.psf.psf_image_name, psf_oversampling = self.oversampling, ncomp=ncomp)
-        self.galfit.model_saved.connect(self.galfit_save)        
-        self.galfit.setupUi(self.gwindow)
-
-        self.gwindow.show()
-        '''
-        try:
-            if ha:
-                self.galimage = self.cutout_name_ha
-                # setup psfimage
-                psf = self.psf_haimage_name
-                psf_oversampling = self.oversampling
-            else:
-                self.galimage = self.cutout_name_r
-                # setup psfimage
-                psf = self.psf_image_name
-                psf_oversampling = self.oversampling
-        except AttributeError:
-            print('make sure you selected a galaxy')
-            return
-        try:
-            if not self.auto:
-                self.gwindow = QtWidgets.QWidget()
-            #self.gwindow.aboutToQuit.connect(self.galfit_closed)
-
-            
-            if (ncomp == 1) & (asym == 0):
-                #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
-                print('GALFIT psf image = ',psf)
-                if self.auto:
-                    self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
-                else:
-                    self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)                
-            elif (ncomp == 1) & (asym == 1):
-                #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80,asym=1)
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=5,nsersic=2, convolution_size=80,asym=1)                
-            elif ncomp == 2:
-                # use results from 1 component fit as input
-                try:
-                    mag = self.table['GAL_MAG'][self.igal]
-                    re = self.table['GAL_RE'][self.igal]
-                    BA = self.table['GAL_BA'][self.igal]
-                    PA = self.table['GAL_BA'][self.igal]
-                
-                except KeyError:
-                    print('WARNING!!!!')
-                    print('trouble reading galfit results from data table')
-                    print('make sure you run 1 component fit first')
-                    return
-                ########################
-                # assume bulge contains 20% of light for initial guess
-                ########################
-                mag_disk = mag+.25
-                mag_bulge = mag + 1.75
-        
-                ########################
-                # require n=1 for disk, n=4 for bulge (allow bulge to vary)
-                # also start PA=0 and BA=1 for bulge
-                ########################
-                nsersic_disk=1
-                nsersic_bulge=4
-        
-                ########################
-                # set re=1.5*re_initial for disk
-                # set re = 0.5*re_initial for bulge
-                ########################
-                re1=1.2*re
-                re2=.5*re
-                    
-                self.galfit = galfitwindow(self.gwindow, self.logger, image = galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=re1, mag=mag_disk, BA=BA, PA=PA,nsersic=nsersic_disk,nsersic2=nsersic_bulge,mag2=mag_bulge, rad2=re2, fitn=False, fitn2=True, convolution_size=80)
-
-            if not self.auto:
-                self.galfit.model_saved.connect(self.galfit_save)        
-                self.galfit.setupUi(self.gwindow)
-                self.gwindow.show()
-            else:
-                self.galfit_save(None)
-        except ValueError:
-            print('WARNING - ERROR RUNNING GALFIT!!!')
-            print('Make sure you have measured the PSF and made a mask!')
-            print("error:", sys.exc_info()[0])
-        #except:
-        #    print("Unexpected error:", sys.exc_info()[0])
-        #    raise
-    def galfit_save(self,msg):
-        print('galfit model saved!!!',msg)
-        if self.testing:
-            self.ncomp = int(msg)
-            print('ncomp = ',self.ncomp)
-        if self.galha:
-            prefix = 'GAL_H'
-        else:
-            prefix = 'GAL_'
-        if (self.ncomp == 1) & (self.asym == 0):
-            if self.galha:
-                self.galfit_hresults = self.galfit.galfit_results
-            else:
-                self.galfit_results = self.galfit.galfit_results
-            fields = ['XC','YC','MAG','RE','N','BA','PA']
-            values = np.array(self.galfit.galfit_results[:-2])[:,0].tolist()
-            for i,f in enumerate(fields):
-                colname = prefix+f
-                if i == 3: # multiply radius by pixel scale
-                    self.table[colname][self.igal]=values[i]*self.pixelscale
-                else:
-                    self.table[colname][self.igal]=values[i]
-            fields = ['XC','YC','MAG','RE','N','BA','PA']
-            values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
-            for i,f in enumerate(fields):
-                colname = prefix+f+'_ERR'
-                if i == 3: # convert radius from pixels to arcsec
-                    self.table[colname][self.igal]=values[i]*self.pixelscale
-                else:
-                    self.table[colname][self.igal]=values[i]
-            fields = ['SKY','CHISQ']
-            values = [self.galfit.galfit_results[-2],self.galfit.galfit_results[-1]]
-            for i,f in enumerate(fields):
-                colname = prefix+f
-                self.table[colname][self.igal]=values[i]
-            wcs = WCS(self.galimage)
-            ra,dec = wcs.wcs_pix2world(self.galfit.galfit_results[0][0],self.galfit.galfit_results[1][0],0)
-            self.table[prefix+'RA'][self.igal]=ra
-            self.table[prefix+'DEC'][self.igal]=dec
-            #self.update_gui_table()
-
-            # save results to output table
-            #self.table['GAL_SERSIC'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
-            #self.table['GAL_SERSIC_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
-            #self.table['GAL_SERSIC_SKY'][self.igal] = (self.galfit.galfit_results[-2])
-            #self.table['GAL_SERSIC_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
-            #print(self.table[self.igal])
-        elif (self.ncomp == 1) & (self.asym == 1):
-            if self.galha:
-                self.galfit_haasym_results = self.galfit.galfit_results
-            else:
-                self.galfit_asym_results = self.galfit.galfit_results
-            print('writing results for galfit w/asymmetry')
-            self.table[prefix+'SERSASYM'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
-            self.table[prefix+'SERSASYM_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
-            self.table[prefix+'SERSASYM_ERROR'][self.igal] = (self.galfit.galfit_results[-2])
-            self.table[prefix+'SERSASYM_CHISQ'][self.igal] = (self.galfit.galfit_results[-1])
-            wcs = WCS(self.galimage)
-            ra,dec = wcs.wcs_pix2world(self.galfit.galfit_results[0][0],self.galfit.galfit_results[1][0],0)
-            self.table[prefix+'SERSASYM_RA'][self.igal]=ra
-            self.table[prefix+'SERSASYM_DEC'][self.igal]=dec
-            self.update_gui_table()
-        elif self.ncomp == 2:
-            self.galfit_results2 = self.galfit.galfit_results
-            #print(self.galfit_results2)
-            self.table['GAL_2SERSIC'][self.igal] = np.array(self.galfit_results2[:-2])[:,0]
-            self.table['GAL_2SERSIC_ERR'][self.igal] = np.array(self.galfit_results2[:-2])[:,1]
-            self.table['GAL_2SERSIC_ERROR'][self.igal] = (self.galfit_results2[-2])
-            self.table['GAL_2SERSIC_CHISQ'][self.igal] = (self.galfit_results2[-1])
-            #print(self.table[self.igal])
-        if not self.auto:
-            self.update_gui_table()
-        
-
-    def galfit_ellip_phot(self):
-        '''
-        use galfit ellipse parameters as input for photutils elliptical photometry
-
-        '''
-        ### CLEAR R-BAND CUTOUT CANVAS
-        #self.rcutout.canvas.delete_all_objects()
-
-        ### MAKE SURE GALFIT 1 COMP MODEL WAS RUN
-
-        try:
-            xc,yc,mag,re,n,BA,pa = np.array(self.galfit_results[:-3])[:,0].tolist()
-            #print('GALFIT PA = ',xc,yc,mag,re,n,BA,pa )
-        except AttributeError:
-            print('Warning - galfit 1 comp fit results not found!')
-            print('Make sure you run galfit, then try again.')
-            return
-        
-        ### FIT ELLIPSE
-        #
-        if self.auto:
-            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = None,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
-        else:
-            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter=self.hafilter, filter_ratio=self.filter_ratio,psf=self.psf_image_name,psf_ha=self.psf_haimage_name)            
-        #fields = ['XC','YC','MAG','RE','N','BA','PA']
-
-        # TRANSFORM THETA
-        # GALFIT DEFINES THETA RELATIVE TO Y AXIS
-        # PHOT UTILS DEFINES THETA RELATIVE TO X AXIS
-        THETA = pa + 90 # in degrees
-        print('THETA = ',THETA)
-        self.e.run_with_galfit_ellipse(xc,yc,BA=BA,THETA=THETA)
-        self.e.plot_profiles()
-        #os.chdir(current_dir)
-
-        '''
-        fields = ['ASYM','ASYM_ERR','ASYM2','ASYM2_ERR']
-        values = [self.e.asym, self.e.asym_err, self.e.asym2,self.e.asym2_err]
-        for i,f in enumerate(fields):
-            colname = 'GAL_'+f
-            self.table[colname][self.igal]=values[i]
-        self.update_gui_table()
-        '''
-
-        # fit profiles
-        self.fit_profiles(prefix='GAL')
-        # save results
-        self.write_profile_fits(prefix='GAL_')
-        if not self.auto:
-            self.draw_ellipse_results(color='cyan')
-
-    def photutils_ellip_phot(self):
-        #current_dir = os.getcwd()
-        #image_dir = os.path.dirname(self.rcoadd_fname)
-        #os.chdir(image_dir)
-
-        ### CLEAR R-BAND CUTOUT CANVAS
-        #self.rcutout.canvas.delete_all_objects()
-
-        ### FIT ELLIPSE
-        #
-        if self.auto:
-            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = None,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)
-        else:
-            self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name)            
-        self.e.run_for_gui()
-        self.e.plot_profiles()
-        #os.chdir(current_dir)
-
-        ### SAVE DATA TO TABLE
-
-        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
-                  'AREA',\
-                  'SUM','SUM_MAG','ASYM','ASYM_ERR',\
-                  'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
-        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
-                  self.e.gini,self.e.gini2,\
-                  self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
-                  self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
-                  self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
-        for i,f in enumerate(fields):
-            colname = 'ELLIP_'+f
-            #print(colname)
-            self.table[colname][self.igal]=float('%.2e'%(values[i]))
-
-        # update sky noise
-        fields = ['R_SKYNOISE','H_SKYNOISE']
-        values = [self.e.im1_skynoise,self.e.im2_skynoise]
-        for i,f in enumerate(fields):
-            print(values[i])
-            self.table[colname] = values[i]
-        wcs = WCS(self.cutout_name_r)
-        ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
-        self.table['ELLIP_RA'][self.igal]=ra
-        self.table['ELLIP_DEC'][self.igal]=dec
-
-        # TODO - write out phot table
-
-        qtable = self.e.cat.to_table()
-        phot_table_name = self.cutout_name_r.replace('.fits','-photuil_tab.fits')
-        qtable.write()
-        if not self.auto:
-            self.update_gui_table()
-
-        # convert theta to degrees, and subtract 90 to get angle relative to y axis
-        #self.e.theta = np.degrees(self.e.theta) - 90
-        # fit profiles
-        self.fit_profiles()
-        # save results
-        self.write_profile_fits()
-        if not self.auto:
-            self.draw_ellipse_results(color='magenta')
-    def fit_profiles(self,prefix=None):
-        #current_dir = os.getcwd()
-        #image_dir = os.path.dirname(self.rcoadd_fname)
-        #os.chdir(image_dir)
-        if prefix is None:
-            rphot_table = self.cutout_name_r.split('.fits')[0]+'-phot.fits'
-            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-phot.fits'
-        else:
-            rphot_table = self.cutout_name_r.split('.fits')[0]+'-'+prefix+'-phot.fits'
-            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-'+prefix+'-phot.fits'
-
-        self.rfit = rprofile(self.cutout_name_r, rphot_table, label='R')
-        self.rfit.becky_measurements()
-        self.hafit = haprofile(self.cutout_name_ha, haphot_table, label=r"$H\alpha$")
-        #if self.hafit.fit_flag:
-        self.hafit.becky_measurements()
-        self.hafit.get_r24_stuff(self.rfit.iso_radii[self.rfit.isophotes == 24.][0][0])
-        both = dualprofile(self.rfit,self.hafit)
-        both.make_3panel_plot()
-        
-    def draw_ellipse_results(self, color='cyan'):
-        # mark r24
-        markcolor=color#, 'yellow', 'cyan']
-        markwidth=1
-        #print('inside draw_ellipse_results')
-        image_frames = [self.rcutout, self.hacutout]
-        radii = self.rfit.iso_radii[:,0][0:2]
-        objlist = []
-        for i,im in enumerate(image_frames):
-            for r in radii:
-                #print('r = ',r)
-                r = r/self.pixelscale
-                #print('r = ',r)
-                obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
-                objlist.append(obj)
-            if i == 1: # add R17 for Halpha image
-                r = self.hafit.iso_radii[:,0][1]/self.pixelscale
-                obj =im.dc.Ellipse(self.e.xcenter,self.e.ycenter,r, r*(1-self.e.eps), rot_deg = np.degrees(self.e.theta), color=markcolor,linewidth=markwidth)
-                objlist.append(obj)
-            self.markhltag = im.canvas.add(im.dc.CompoundObject(*objlist))
-            im.fitsimage.redraw()
-        # mark R17 in halpha image
-        
-        
-    def write_profile_fits(self,prefix=None):
-        fields = ['R24','R25','R26','R24V','R25V',\
-                  'R_F25','R_F50','R_F75',\
-                  'M24','M25','M26',\
-                  'F_30R24','F_R24','C30',\
-                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
-        d = self.rfit
-        values = [d.iso_radii[0],d.iso_radii[1],d.iso_radii[2],d.iso_radii[3],d.iso_radii[4],\
-                  d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
-                  d.iso_mag[0],d.iso_mag[1],d.iso_mag[2],\
-                  d.flux_30r24,d.flux_r24,d.c30,\
-                  d.petrorad,d.petroflux_erg,d.petror50,d.petror90,d.petrocon,d.petromag
-                  ]
-        for i,f in enumerate(fields):
-            if prefix is None:
-                colname = f
-            else:
-                colname = prefix+f
-            #print(colname, values[i])
-            self.table[colname][self.igal]=float('%.2e'%(values[i][0]))
-            self.table[colname+'_ERR'][self.igal]=float('%.2e'%(values[i][1]))
-            
-        fields = ['R16','R17','R_F25','R_F50','R_F75','M16','M17','F_30R24','F_R24','C30','R_F95R24','F_TOT',\
-                  'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
-        d = self.hafit
-        values = [d.iso_radii[0],d.iso_radii[1],\
-                  d.flux_radii[0],d.flux_radii[1],d.flux_radii[2],\
-                  d.iso_mag[0],d.iso_mag[1],\
-                  d.flux_30r24,d.flux_r24,d.c30,d.flux_95r24, d.total_flux,\
-                  d.petrorad,d.petroflux_erg,d.petror50,d.petror90,d.petrocon,d.petromag
-                  ]
-        for i,f in enumerate(fields):
-            if prefix is None:
-                colname = 'H'+f
-            else:
-                colname = prefix+'H'+f
-
-            #print(colname,values[i])
-            self.table[colname][self.igal]=float('{:.2e}'.format(values[i][0]))
-            self.table[colname+'_ERR'][self.igal]=float('{:.2e}'.format(values[i][1]))
-
-        # SFR conversion from Kennicutt and Evans (2012)
-        # log (dM/dt/Msun/yr) = log(Lx) - logCx
-        logCx = 41.27
-        print(len(self.hafit.total_flux),len(self.gzdist))
-        L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.gzdist[self.igal]).cgs.value**2)
-        #print(L)
-        detect_flag = L > 0
-        self.sfr = np.zeros(len(L),'d')
-        self.sfr[detect_flag] = np.log10(L[detect_flag]) - logCx
-        if prefix is None:
-            colname='LOG_SFR_HA'
-        else:
-            colname=prefix+'LOG_SFR_HA'
-        #print('sfr = ',self.sfr)
-        #print(self.sfr[0], self.sfr[1])
-        self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
-        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
-        self.table[colname+'_FLAG'][self.igal]=detect_flag[0]
-        # inner ssfr
-        a = self.hafit.flux_30r24
-        b = self.rfit.flux_30r24
-        self.inner_ssfr = a[0]/b[0]
-        self.inner_ssfr_err = ratio_error(a[0],b[0],a[1],b[1])
-        if prefix is None:
-            colname='SSFR_IN'
-        else:
-            colname = prefix+'SSFR_IN'
-        self.table[colname][self.igal]=float('%.2e'%(self.inner_ssfr))
-        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.inner_ssfr_err))
-        # outer ssfr
-        c = self.hafit.flux_r24
-        d = self.rfit.flux_r24
-        self.outer_ssfr = (c[0] - a[0])/(d[0] - b[0])
-        self.outer_ssfr_err = ratio_error(c[0] - a[0],d[0] - b[0],np.sqrt(a[1]**2 + c[1]**2),np.sqrt(b[1]**2 + d[1]**2))
-        if prefix is None:
-            colname='SSFR_OUT'
-        else:
-            colname=prefix+'SSFR_OUT'
-        self.table[colname][self.igal]=float('%.2e'%(self.outer_ssfr))
-        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.outer_ssfr_err))
-        self.write_fits_table()        
-        if not self.auto:
-            self.update_gui_table()
-
-    def closeEvent(self, event):
-        # send signal that window is closed
-
-        # write the data table
-        print('writing fits table')
-        self.table.write_fits_table()
-        #event.accept()
 
         
 class galaxy_catalog():
-    def __init__(self,catalog,nsa=False,agc=False,virgo=False):
+    def __init__(self,catalog,nsa=False,agc=False,virgo=False,sizecat=None):
         self.cat = fits.getdata(catalog)
         self.cat = Table(self.cat)
         self.catalog_name = catalog
@@ -2927,6 +3115,10 @@ class galaxy_catalog():
         self.virgoflag = virgo
         if self.agcflag:
             self.check_ra_colname()
+        if sizecat is not None:
+            self.sizecat = sizecat
+        else:
+            self.sizecat = None
     def check_ra_colname(self):
         # make sure the catalog has RA and DEC
         # columns that are named RA and DEC
@@ -2939,7 +3131,7 @@ class galaxy_catalog():
             
     def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,weight_image=None, agcflag=False,virgoflag=False):
 
-        print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
+        #print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
@@ -3050,7 +3242,8 @@ if __name__ == "__main__":
     ## UPDATED TO USE ARGPARSE
     #################################
     if not args.auto:
-        ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,csimage=args.csimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
+        ui = hafunctions(MainWindow, logger, sepath = sepath, args=args)        
+        #ui = hafunctions(MainWindow, logger, sepath = sepath, testing=args.testing,nebula=args.nebula,virgo=args.virgo,laptop=args.laptop,pointing=args.pointing,rimage=args.rimage,haimage=args.haimage,csimage=args.csimage,filter=args.filter,tabledir=args.tabledir,psfdir=args.psfdir)
         if os.getenv("HOME").find('/home/') > -1: # special case for when running on linux laptop
             x = MainWindow.width()*.7
             y = MainWindow.height()*.7
