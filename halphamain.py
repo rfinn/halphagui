@@ -385,7 +385,7 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         ax.add_patch(r)
 
         
-class create_output_table():
+class create_output_table(output_table_view):
     """
     output table that stores all of the measured values for each galaxy in FOV
     """
@@ -740,6 +740,8 @@ class create_output_table():
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
         e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
         e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
+        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
+        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA',description='area from ellipse')
         e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2,description='total flux from ellipse')
         e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag,description='mag from ellipse')
@@ -936,6 +938,36 @@ class create_output_table():
             c = Column(np.zeros(self.ngalaxies,'bool'),name=n,description=descriptions[i])
             self.table.add_column(c)
             
+    def append_column(self, variable, var_name, var_dtype=None, var_unit=None):
+        if (var_dtype != None) & (var_unit != None):
+            z = Column(variable, name=var_name, dtype = var_dype, unit  = var_unit)
+        elif (var_dtype != None) & (var_unit == None):
+            z = Column(variable, name=var_name, dtype = var_dype)
+        elif (var_dtype == None) & (var_unit != None):
+            z = Column(variable, name=var_name, unit  = var_unit)
+        else:
+            z = Column(variable, name=var_name)
+        self.table.add_column(z)
+    def write_fits_table(self):
+        if (self.igal is not None) & (not self.auto):
+            #print(self.ui.commentLineEdit.text())
+            t = str(self.ui.commentLineEdit.text())
+            if len(t) > 1:
+                self.table['COMMENT'][self.igal] = t
+                self.update_gui_table_cell(self.igal, 'COMMENT',t)
+        #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
+        if self.prefix is not None:
+            # this is not working when running gui - need to feed in the r-band image name
+            telescope,dateobs,p = get_params_from_name(self.prefix)
+            for i in range(len(self.table)):
+                self.table['POINTING'][i] = self.prefix
+                self.table['TEL'][i] = telescope
+                self.table['DATE-OBS'] = dateobs
+        self.table.write(self.output_table, format='fits', overwrite=True)
+
+class output_table_view():
+    """ methods that interact with the gui  """
+    
     def update_gui_table(self):
 
         self.ui.tableWidget.setColumnCount(len(self.table.columns))
@@ -968,16 +1000,7 @@ class create_output_table():
         #item = self.tableWidget.horizontalHeaderItem(0)
         #item.setText(_translate("MainWindow", "ID"))
         self.write_fits_table()
-    def append_column(self, variable, var_name, var_dtype=None, var_unit=None):
-        if (var_dtype != None) & (var_unit != None):
-            z = Column(variable, name=var_name, dtype = var_dype, unit  = var_unit)
-        elif (var_dtype != None) & (var_unit == None):
-            z = Column(variable, name=var_name, dtype = var_dype)
-        elif (var_dtype == None) & (var_unit != None):
-            z = Column(variable, name=var_name, unit  = var_unit)
-        else:
-            z = Column(variable, name=var_name)
-        self.table.add_column(z)
+
     def update_gui_table_cell(self,row,col,item):
         # row will be igal, so that's easy
         # how to make it easy to get the right column number?
@@ -997,23 +1020,7 @@ class create_output_table():
         else:
             print('could not match column name ',col)
         self.write_fits_table()
-    def write_fits_table(self):
-        if (self.igal is not None) & (not self.auto):
-            #print(self.ui.commentLineEdit.text())
-            t = str(self.ui.commentLineEdit.text())
-            if len(t) > 1:
-                self.table['COMMENT'][self.igal] = t
-                self.update_gui_table_cell(self.igal, 'COMMENT',t)
-        #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
-        if self.prefix is not None:
-            # this is not working when running gui - need to feed in the r-band image name
-            telescope,dateobs,p = get_params_from_name(self.prefix)
-            for i in range(len(self.table)):
-                self.table['POINTING'][i] = self.prefix
-                self.table['TEL'][i] = telescope
-                self.table['DATE-OBS'] = dateobs
-        self.table.write(self.output_table, format='fits', overwrite=True)
-
+    
 class uco_table():
     '''
     table for collecting positions of objects that are not in NSA or AGC catalogs
@@ -2033,13 +2040,14 @@ class hamodel():
         #os.chdir(current_dir)
 
         ### SAVE DATA TO TABLE
-
         fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
+                  'M20','HM20',
                   'AREA',\
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
                   self.e.gini,self.e.gini2,\
+                  self.e.M20_1,self.e.M20_2,\                  
                   self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
@@ -2059,10 +2067,7 @@ class hamodel():
         self.table['ELLIP_RA'][self.igal]=ra
         self.table['ELLIP_DEC'][self.igal]=dec
 
-        # TODO - write out phot table
-
-
-
+        # TODONE - write out phot table
         colnames = ['area',
                     'background_mean',
                     'bbox_xmax',
@@ -2104,8 +2109,6 @@ class hamodel():
         self.e.cat.add_extra_property('PHOT_R30',r30)
         self.e.cat.add_extra_property('PHOT_R50',r50)
         self.e.cat.add_extra_property('PHOT_R90',r90)
-
-        # calculate M20 here, or in photwrapper?
 
         #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
         #c2 = Column(data=np.array(r50[self.e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
