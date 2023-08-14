@@ -2118,7 +2118,7 @@ class hamodel():
                     'kron_fluxerr',
                     'kron_radius',
                     'local_background',
-                    'moments', # multi-dimensional
+                    'moments', 
                     'moments_central',
                     'orientation',
                     'perimeter',
@@ -2147,7 +2147,7 @@ class hamodel():
 
         qtable = self.e.cat[self.e.objectIndex].to_table(colnames)
         
-        phot_table_name = self.cutout_name_r.replace('.fits','-photuil_tab.fits')
+        phot_table_name = self.cutout_name_r.replace('.fits','-photutil_tab.fits')
         
         qtable.write(phot_table_name,format='fits',overwrite=True)
         
