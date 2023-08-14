@@ -212,11 +212,11 @@ class buildmask():
 
         # add ellipse params to imheader
         if self.ellipseparams is not None:
-            print("HEY!!!")
-            print()
-            print("Writing central ellipse parameters to header")
-            print(self.ellipseparams)
-            print()
+            #print("HEY!!!")
+            #print()
+            #print("Writing central ellipse parameters to header")
+            #print(self.ellipseparams)
+            #print()
             xc,yc,r,BA,PA = self.ellipseparams
             self.imheader.set('ELLIP_XC',float(xc),comment='XC of mask ellipse')
             self.imheader.set('ELLIP_YC',float(yc),comment='YC of mask ellipse')
@@ -538,7 +538,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             wcs = WCS(fits.getheader(image))
             
             # get x and y coord of galaxy from (RA,DEC) using mask wcs
-            print(f"\nobject RA={self.objra:.4f}, DEC={self.objdec:.4f}\n")
+            #print(f"\nobject RA={self.objra:.4f}, DEC={self.objdec:.4f}\n")
             self.xpixel,self.ypixel = wcs.wcs_world2pix(self.objra,self.objdec,0)
             
             # convert sma to pixels using pixel scale from mask wcs

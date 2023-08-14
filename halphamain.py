@@ -799,8 +799,8 @@ class create_output_table(output_table_view):
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
         e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
         e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
-        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
-        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
+        e5a = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
+        e6a = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA',description='area from ellipse')
         e8 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2,description='total flux from ellipse')
         e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag,description='mag from ellipse')
@@ -812,7 +812,7 @@ class create_output_table(output_table_view):
         e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
         e16 = Column(np.zeros(self.ngalaxies,'f'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
         e17 = Column(np.zeros(self.ngalaxies,'f'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6, e7,e8, e9, e10, e11, e12, e13,e14,e15,e16,e17])
+        self.table.add_columns([e1,e2,e3,e4,e5,e6,e5a,e6a,e7,e8, e9, e10, e11, e12, e13,e14,e15,e16,e17])
     def add_profile_fit(self):
         #####################################################################
         # profile fitting using galfit geometry
