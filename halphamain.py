@@ -797,8 +797,8 @@ class create_output_table(output_table_view):
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel',description='ycentroid from ellipse')
         e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS',description='axis ratio from ellipse')
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
-        e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
-        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
+        #e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
+        #e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
         e8 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
         e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA',description='area from ellipse')
@@ -2085,6 +2085,7 @@ class hamodel():
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
         # update sky noise
         fields = ['R_SKYNOISE','H_SKYNOISE']
         values = [self.e.im1_skynoise,self.e.im2_skynoise]
