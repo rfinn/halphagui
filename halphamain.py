@@ -2278,7 +2278,7 @@ class haview():
     def setup_gui(self): # view
         #print(MainWindow)
 
-
+        self.ui = Ui_MainWindow()        
         self.ui.setupUi(MainWindow)
         #self.ui.setGeometry(0,0,400,300)
         #self.ui.setFont(QtGui.Qfont('Arial',10))
@@ -2799,11 +2799,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         #if self.auto:
         #    matplotlib.use('TkAgg')
         self.obsyear = args.obsyear
-        self.ui = Ui_MainWindow()        
+
         if not(self.auto):
             self.setup_gui()
         self.prefix = args.prefix
-        if self.prefix is not None:
+        if (self.prefix is not None) and not(self.auto):
             self.set_prefix_on_gui(self.prefix)
         self.testing = args.testing
         self.draco = args.draco
