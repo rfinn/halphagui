@@ -218,8 +218,8 @@ class buildmask():
             print(self.ellipseparams)
             print()
             xc,yc,r,BA,PA = self.ellipseparams
-            self.imheader.set('ELLIP_XC',xc[0],comment='XC of mask ellipse')
-            self.imheader.set('ELLIP_YC',yc[0],comment='YC of mask ellipse')
+            self.imheader.set('ELLIP_XC',float(xc),comment='XC of mask ellipse')
+            self.imheader.set('ELLIP_YC',float(yc),comment='YC of mask ellipse')
             self.imheader.set('ELLIP_A',r,comment='SMA of mask ellipse')
             self.imheader.set('ELLIP_BA',BA,comment='BA of mask ellipse')
             self.imheader.set('ELLIP_PA',np.degrees(PA),comment='PA (deg) of mask ellipse')
