@@ -1660,7 +1660,7 @@ class hamodel():
         newfile.header['EXPTIME']=1.0
 
         # subtract the sky, but we need the mask - no we don't!
-        skysub_data,rmed,rstd = imutils.subtract.median.sky(newfile.data,getstd=True)
+        skysub_data,rmed,rstd = imutils.subtract_median_sky(newfile.data,getstd=True)
         newfile.data -= rmed
         newfile.header.set('SKYMED',rmed)
         newfile.header.set('SKYSTD',rstd)        
@@ -1687,7 +1687,7 @@ class hamodel():
         newfile1.header['EXPTIME']=1.0
 
         # subtract sky from CS Halpha image
-        skysub_hdata,hmed,hstd = imutils.subtract.median.sky(newfile1.data,getstd=True)
+        skysub_hdata,hmed,hstd = imutils.subtract_median_sky(newfile1.data,getstd=True)
 
         newfile1.data -= hmed
         newfile1.header.set('SKYMED',hmed)
@@ -1714,7 +1714,7 @@ class hamodel():
         newfile2.header['EXPTIME']=1.0
 
         # subtract sky from Halpha image
-        skysub_hdata,hmed,hstd = imutils.subtract.median.sky(newfile2.data,getstd=True)
+        skysub_hdata,hmed,hstd = imutils.subtract_median_sky(newfile2.data,getstd=True)
 
         newfile2.data -= hmed
         newfile2.header.set('SKYMED',hmed)
