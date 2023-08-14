@@ -387,6 +387,62 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
                       fill=False)
         ax.add_patch(r)
 
+class output_table_view():
+    """ methods that interact with the gui  """
+    
+    def update_gui_table(self):
+
+        self.ui.tableWidget.setColumnCount(len(self.table.columns))
+        self.ui.tableWidget.setRowCount(len(self.table))
+        
+        self.ui.tableWidget.setHorizontalHeaderLabels(self.table.colnames)
+
+        '''
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(0, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(1, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(2, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(3, item)
+        item = QtWidgets.QTableWidgetItem()
+        self.tableWidget.setHorizontalHeaderItem(4, item)
+        '''
+        if self.igal is not None:
+            #print(self.ui.commentLineEdit.text())
+            self.table['COMMENT'][self.igal] = str(self.ui.commentLineEdit.text())
+            
+        for col, c in enumerate(self.table.columns):
+            #item = self.ui.tableWidget.horizontalHeaderItem(col)
+            #item.setText(_translate("MainWindow", self.table.columns[col].name))
+            for row in range(len(self.table[c])):
+                item = self.table[row][col]
+                self.ui.tableWidget.setItem(row,col,QtWidgets.QTableWidgetItem(str(item)))
+        #item = self.tableWidget.horizontalHeaderItem(0)
+        #item.setText(_translate("MainWindow", "ID"))
+        self.write_fits_table()
+
+    def update_gui_table_cell(self,row,col,item):
+        # row will be igal, so that's easy
+        # how to make it easy to get the right column number?
+        #
+        # easiest is to pass the column name, and
+        # then match the column name to find the
+
+        colmatch = False
+        for i,c in enumerate(self.table.colnames):
+            if c == col:
+                ncol = i
+                colmatch = True
+                break
+        if colmatch:    
+            self.ui.tableWidget.setItem(row,ncol,QtWidgets.QTableWidgetItem(str(item)))
+            self.table[row][col]=item
+        else:
+            print('could not match column name ',col)
+        self.write_fits_table()
+
         
 class create_output_table(output_table_view):
     """
@@ -968,61 +1024,6 @@ class create_output_table(output_table_view):
                 self.table['DATE-OBS'] = dateobs
         self.table.write(self.output_table, format='fits', overwrite=True)
 
-class output_table_view():
-    """ methods that interact with the gui  """
-    
-    def update_gui_table(self):
-
-        self.ui.tableWidget.setColumnCount(len(self.table.columns))
-        self.ui.tableWidget.setRowCount(len(self.table))
-        
-        self.ui.tableWidget.setHorizontalHeaderLabels(self.table.colnames)
-
-        '''
-        item = QtWidgets.QTableWidgetItem()
-        self.tableWidget.setHorizontalHeaderItem(0, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableWidget.setHorizontalHeaderItem(1, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableWidget.setHorizontalHeaderItem(2, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableWidget.setHorizontalHeaderItem(3, item)
-        item = QtWidgets.QTableWidgetItem()
-        self.tableWidget.setHorizontalHeaderItem(4, item)
-        '''
-        if self.igal is not None:
-            #print(self.ui.commentLineEdit.text())
-            self.table['COMMENT'][self.igal] = str(self.ui.commentLineEdit.text())
-            
-        for col, c in enumerate(self.table.columns):
-            #item = self.ui.tableWidget.horizontalHeaderItem(col)
-            #item.setText(_translate("MainWindow", self.table.columns[col].name))
-            for row in range(len(self.table[c])):
-                item = self.table[row][col]
-                self.ui.tableWidget.setItem(row,col,QtWidgets.QTableWidgetItem(str(item)))
-        #item = self.tableWidget.horizontalHeaderItem(0)
-        #item.setText(_translate("MainWindow", "ID"))
-        self.write_fits_table()
-
-    def update_gui_table_cell(self,row,col,item):
-        # row will be igal, so that's easy
-        # how to make it easy to get the right column number?
-        #
-        # easiest is to pass the column name, and
-        # then match the column name to find the
-
-        colmatch = False
-        for i,c in enumerate(self.table.colnames):
-            if c == col:
-                ncol = i
-                colmatch = True
-                break
-        if colmatch:    
-            self.ui.tableWidget.setItem(row,ncol,QtWidgets.QTableWidgetItem(str(item)))
-            self.table[row][col]=item
-        else:
-            print('could not match column name ',col)
-        self.write_fits_table()
     
 class uco_table():
     '''
