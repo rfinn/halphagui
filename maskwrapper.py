@@ -189,7 +189,7 @@ class buildmask():
             self.maskdat[self.maskdat == self.center_object] = 0
         if self.objsma is not None:
             # remove central objects within elliptical aperture
-            print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
+            #print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
             self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
         else:
             self.ellipseparams = None
