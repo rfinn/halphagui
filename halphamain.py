@@ -2690,7 +2690,7 @@ class hacontroller():
         self.igal = self.ui.wgalid.currentIndex()
         if self.virgo:
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
-            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal]*1.2,self.BA[self.igal],self.PA[self.igal]+90]
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
             #print("new galaxy params = ",self.objparams)
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()

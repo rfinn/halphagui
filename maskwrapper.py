@@ -208,6 +208,16 @@ class buildmask():
                 self.maskdat[self.maskdat == objID] = 0.
     def write_mask(self):
         """ write out mask image """
+
+        # add ellipse params to imheader
+        if self.ellipseparams is not None:
+            xc,yc,r,BA,PA = self.ellipseparams
+            self.imheader.set('ELLIP_XC',xc,comment='XC of mask ellipse')
+            self.imheader.set('ELLIP_YC',yc,comment='YC of mask ellipse')
+            self.imheader.set('ELLIP_A',r,comment='SMA of mask ellipse')
+            self.imheader.set('ELLIP_BA',BA,comment='BA of mask ellipse')
+            self.imheader.set('ELLIP_PA',np.degrees(PA),comment='PA (deg) of mask ellipse')
+        
         fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
         invmask = self.maskdat > 0.
         invmask = np.array(~invmask,'i')
