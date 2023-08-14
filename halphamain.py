@@ -2277,7 +2277,7 @@ class haview():
 
     def setup_gui(self): # view
         #print(MainWindow)
-        self.ui = Ui_MainWindow()
+
 
         self.ui.setupUi(MainWindow)
         #self.ui.setGeometry(0,0,400,300)
@@ -2799,6 +2799,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         #if self.auto:
         #    matplotlib.use('TkAgg')
         self.obsyear = args.obsyear
+        self.ui = Ui_MainWindow()        
         if not(self.auto):
             self.setup_gui()
         self.prefix = args.prefix
