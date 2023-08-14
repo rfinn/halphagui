@@ -214,6 +214,7 @@ class buildmask():
             print("HEY!!!")
             print()
             print("Writing central ellipse parameters to header")
+            print(self.ellipseparams)
             print()
             xc,yc,r,BA,PA = self.ellipseparams
             self.imheader.set('ELLIP_XC',xc,comment='XC of mask ellipse')
