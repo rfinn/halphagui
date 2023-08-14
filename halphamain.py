@@ -1694,8 +1694,8 @@ class hamodel():
         newfile1.header.set('SKYSTD',hstd)
 
         # print sky stats
-        print("subtracted {rmed:.3f} ADU from r-band cutout")
-        print("subtracted {hmed:.3f} ADU from halpha cutout")        
+        print(f"subtracted {rmed:.3f} ADU from r-band cutout")
+        print(f"subtracted {hmed:.3f} ADU from halpha cutout")        
 
         
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
@@ -2080,8 +2080,11 @@ class hamodel():
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             #print(colname)
-            self.table[colname][self.igal]=float('%.2e'%(values[i]))
-
+            try:
+                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
         # update sky noise
         fields = ['R_SKYNOISE','H_SKYNOISE']
         values = [self.e.im1_skynoise,self.e.im2_skynoise]
