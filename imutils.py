@@ -2,7 +2,7 @@
 
 from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
-import ccdproc
+#import ccdproc
 from photutils import make_source_mask
 from astropy.io.fits import Header
 import numpy as np
