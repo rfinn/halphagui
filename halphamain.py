@@ -89,6 +89,9 @@ import filterratio as runse
 from filter_transmission import filter_trace
 
 from join_catalogs import join_cats, make_new_cats
+
+import imutils
+
 #from uat_mask import mask_image
 # filter information
 
@@ -1613,12 +1616,13 @@ class hamodel():
         t = self.cutout_name_r.split('.fit')
         self.mask_image_name=t[0]+'-mask.fits'
 
+
         self.write_cutouts()
 
         #self.display_cutouts() - moved this to calling function in controller
 
 
-
+        
     def write_cutouts(self): # MVC - model
         #print(ymin,ymax,xmin,xmax)
         #print('in write_cutouts')
@@ -1634,20 +1638,17 @@ class hamodel():
         except AttributeError:
             print('make sure you have selected a galaxy and saved the cutout')
             return
-        #print('got here, so that is good')
+
         newfile = fits.PrimaryHDU()
-        #print('how about here?')
         newfile.data = self.r[ymin:ymax,xmin:xmax]
-        #print('or here?')        
+        # add sky subtraction here
+        
         newfile.header = self.r_header
         newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        #print('or maybe here?')                
         newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        #print('or maybe here??')                
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        #print('or maybe here???')                        
         newfile.header.set('ID',str(self.galid[self.igal]))
-        #print('or maybe here????')                        
+
         newfile.header.set('SERSTH50',float('{:.2f}'.format(self.gradius[self.igal])))
         #print('trying to add exptime now')
         # set the exposure time to 1 sec
@@ -1657,8 +1658,13 @@ class hamodel():
         # alternatively, we could fix it right after running swarp
         newfile.header['EXPTIME']=1.0
 
+        # subtract the sky, but we need the mask - no we don't!
+        skysub_data,rmed,rstd = imutils.subtract.median.sky(newfile.data,getstd=True)
+        newfile.data -= rmed
+        newfile.header.set('SKYMED',rmed)
+        newfile.header.set('SKYSTD',rstd)        
         
-
+        
         # add PSF image
 
         # add coadded image
@@ -1672,31 +1678,50 @@ class hamodel():
         newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
         newfile1.header = self.ha_header
         newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile.header.set('ID',str(self.galid[self.igal]))
+        newfile1.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile1.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile1.header.set('ID',str(self.galid[self.igal]))
 
-        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
-        newfile.header['EXPTIME']=1.0 
+        newfile1.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile1.header['EXPTIME']=1.0
+
+        # subtract sky from CS Halpha image
+        skysub_hdata,hmed,hstd = imutils.subtract.median.sky(newfile1.data,getstd=True)
+
+        newfile1.data -= hmed
+        newfile1.header.set('SKYMED',hmed)
+        newfile1.header.set('SKYSTD',hstd)
+
+        # print sky stats
+        print("subtracted {rmed:.3f} ADU from r-band cutout")
+        print("subtracted {hmed:.3f} ADU from halpha cutout")        
+
+        
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
         #print('saving halpha cutout')
 
         # saving Ha with continuum Cutout as fits image
-        newfile1 = fits.PrimaryHDU()
-        newfile1.data = self.ha[ymin:ymax,xmin:xmax]
-        newfile1.header = self.ha_header
-        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile.header.set('ID',str(self.galid[self.igal]))
+        newfile2 = fits.PrimaryHDU()
+        newfile2.data = self.ha[ymin:ymax,xmin:xmax]
+        newfile2.header = self.ha_header
+        newfile2.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        newfile2.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile2.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile2.header.set('ID',str(self.galid[self.igal]))
 
-        newfile.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
-        newfile.header['EXPTIME']=1.0 
-        fits.writeto(self.cutout_name_hawc, newfile1.data, header = newfile1.header, overwrite=True)
+        newfile2.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile2.header['EXPTIME']=1.0
 
+        # subtract sky from Halpha image
+        skysub_hdata,hmed,hstd = imutils.subtract.median.sky(newfile2.data,getstd=True)
 
-
+        newfile2.data -= hmed
+        newfile2.header.set('SKYMED',hmed)
+        newfile2.header.set('SKYSTD',hstd)
         
+        fits.writeto(self.cutout_name_hawc, newfile2.data, header = newfile2.header, overwrite=True)
+
+        # save bounding box info
         ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
         bbox = '[{:d}:{:d},{:d}:{:d}]'.format(int(xmin),int(xmax),int(ymin),int(ymax))
         self.table['BBOX'][self.igal] = bbox
@@ -2927,6 +2952,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
                               sepath='~/github/halphagui/astromatic/',auto=self.auto,\
                               objparams=self.objparams,unmaskellipse=True)
                                   
+        # subtract the sky, using the mask image, and resave cutouts
         
         # run galfit
         self.run_galfit(ncomp=1,ha=False)
