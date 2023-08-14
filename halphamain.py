@@ -2148,7 +2148,7 @@ class hamodel():
         qtable = self.e.cat[self.e.objectIndex].to_table(colnames)
         
         phot_table_name = self.cutout_name_r.replace('.fits','-photutil_tab.fits')
-        
+        qtable = Table(qtable)
         qtable.write(phot_table_name,format='fits',overwrite=True)
         
        
