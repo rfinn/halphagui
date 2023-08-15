@@ -2951,7 +2951,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.get_galaxy_cutout()
         
         # create mask
-        self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+        self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],1.5*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
 
         self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
                               sepath='~/github/halphagui/astromatic/',auto=self.auto,\
