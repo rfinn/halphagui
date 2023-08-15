@@ -2695,7 +2695,7 @@ class hacontroller():
         self.igal = self.ui.wgalid.currentIndex()
         if self.virgo:
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
-            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],1.5*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
             #print("new galaxy params = ",self.objparams)
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
@@ -3100,14 +3100,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # get sizes for galaxies - will use this to unmask central region
         # need to cut this catalog based on keepflag
         ##
-        scalefactor = 1.5
+
         ephot = Table.read(ephot_fname)
-        self.radius_arcsec = scalefactor*ephot['SMA_SB24']
+        self.radius_arcsec = ephot['SMA_SB24']
         #self.radius_arcsec = ephot['SMA_SB23.5']
 
         # for galaxies with SMA_SB24=0, set radius to value in main table 
         noradius_flag = self.radius_arcsec == 0
-        self.radius_arcsec[noradius_flag] = scalefactor*self.vf.cat['radius'][noradius_flag]
+        self.radius_arcsec[noradius_flag] = self.vf.cat['radius'][noradius_flag]
 
         # also save BA and PA from John's catalog
         # use the self.radius_arcsec for the sma
