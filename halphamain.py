@@ -3102,8 +3102,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         ##
 
         ephot = Table.read(ephot_fname)
-        #self.radius_arcsec = ephot['SMA_SB24']
-        self.radius_arcsec = ephot['SMA_SB23.5']
+        self.radius_arcsec = ephot['SMA_SB24']
+        #self.radius_arcsec = ephot['SMA_SB23.5']
 
         # for galaxies with SMA_SB24=0, set radius to value in main table 
         noradius_flag = self.radius_arcsec == 0
