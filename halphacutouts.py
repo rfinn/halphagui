@@ -39,7 +39,7 @@ class Ui_MainWindow(object):
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(0)
         self.tableWidget.setRowCount(0)
-        self.gridLayout.addWidget(self.tableWidget, 1, 0, 1, 2)
+       self.gridLayout.addWidget(self.tableWidget, 1, 0, 1, 2)
         self.rightButtons = QtWidgets.QWidget(self.rightFrame)
         self.rightButtons.setObjectName("rightButtons")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.rightButtons)

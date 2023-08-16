@@ -120,7 +120,7 @@ cutout_scale = 14
 # now in terms of R25 for
 cutout_scale = 2.5
 
-
+mask_scalefactor = 1 # number to multiple R24 by
 ######################################################
 ## FUNCTIONS
 ######################################################
@@ -2695,7 +2695,7 @@ class hacontroller():
         self.igal = self.ui.wgalid.currentIndex()
         if self.virgo:
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
-            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],1.5*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
             #print("new galaxy params = ",self.objparams)
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
@@ -2951,7 +2951,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.get_galaxy_cutout()
         
         # create mask
-        self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],1.5*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+        self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
 
         self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
                               sepath='~/github/halphagui/astromatic/',auto=self.auto,\

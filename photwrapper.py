@@ -98,6 +98,8 @@ def get_M20(catalog,objectIndex):
 
     objNumber = catalog.label[objectIndex]
     dat = catalog.data_ma[objectIndex]
+
+    # create flag for pixels associated with object in segmentation map
     goodflag = catalog.segment[objectIndex] == objNumber
 
     xc,yc = catalog.cutout_centroid[objectIndex]
@@ -115,7 +117,7 @@ def get_M20(catalog,objectIndex):
     # get pixel value of 80th percentile, so that top 20% have values higher than this
     threshold_brightest20 = scoreatpercentile(dat[goodflag].flatten(),80)
 
-    brightest20 = dat > threshold_brightest20
+    brightest20 = dat >= threshold_brightest20
 
     # second moment of brightest 20
     Sum_Mi = np.sum(dat[goodflag & brightest20]*distsq[goodflag & brightest20])
