@@ -270,7 +270,9 @@ class buildmask():
         #pscale = pscalex.deg * 3600 # pixel scale in arcsec
         flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)
         # add criteria for proper motion cut
-        pmflag = (brightstar['pmra'] < 5) & (brightstar['pmdec']<5)
+        # oops - had < 5 instead of > 5!
+        # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
+        pmflag = (brightstar['pmra'] > 5) & (brightstar['pmdec']>5)
         flag = flag & pmflag
         if np.sum(flag) > 0:
             # add stars to mask according to the magnitude-radius relation

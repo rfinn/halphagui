@@ -1225,9 +1225,13 @@ class hamodel():
         # SKIPPING MIN/MAX RESET - would rather correct values in source catalogs
         ##
         for i,s in enumerate(self.cutout_sizes_arcsec):
-            if s > self.global_max_cutout_size:
-                self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
-                self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
+            # the cutouts for the biggest galaxies are getting cut short,
+            # so commenting this part out
+            
+            #if s > self.global_max_cutout_size:
+            #    self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
+            #    self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
+            
             elif s < self.global_min_cutout_size:
                 self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
                 self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale
@@ -1475,8 +1479,14 @@ class hamodel():
         # set the min size to 100x100 pixels (43"x43")
         #print('size, global min, global max = ',size_arcsec,self.global_min_cutout_size,self.global_max_cutout_size)
         size = max(self.global_min_cutout_size,size_arcsec)
-        if size > self.global_max_cutout_size:
-            size = self.global_max_cutout_size
+
+        ##
+        # cutouts for biggest galaxies are too small, so commenting this out
+        ##
+        #if size > self.global_max_cutout_size:
+        #    size = self.global_max_cutout_size
+
+        
         #print('new cutout size = ',size, self.igal, self.gradius[self.igal])
         self.reset_size = size.value
         self.cutout_size_arcsec = size
