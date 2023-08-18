@@ -801,7 +801,8 @@ class create_output_table(output_table_view):
         e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
         e8 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
-        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_AREA',description='area from ellipse')
+        e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_UNMASKED_AREA',description='unmasked source area from photutils')
+        e9b = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_TOTAL_AREA',description='total source area from photutils')
         e10 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM', unit = u.erg/u.s/u.cm**2,description='total flux from ellipse')
         e11 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_SUM_MAG', unit = u.mag,description='mag from ellipse')
         e12 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_ASYM',description='asym from ellipse')
@@ -812,7 +813,7 @@ class create_output_table(output_table_view):
         e17 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
         e18 = Column(np.zeros(self.ngalaxies,'f'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
         e19 = Column(np.zeros(self.ngalaxies,'f'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8, e9, e10, e11, e12, e13,e14,e15,e16,e17,e18,e19])
+        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19])
     def add_profile_fit(self):
         #####################################################################
         # profile fitting using galfit geometry
@@ -2078,13 +2079,14 @@ class hamodel():
         ### SAVE DATA TO TABLE
         fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
                   'M20','HM20',
-                  'AREA',\
+                  'UNMASKED_AREA','TOTAL_AREA'\
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
                   self.e.gini,self.e.gini2,\
                   self.e.M20_1,self.e.M20_2,\
                   self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
+                  self.e.cat[self.e.objectIndex].segment_area.value*self.pixelscale*self.pixelscale,\
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
