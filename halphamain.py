@@ -1233,7 +1233,7 @@ class hamodel():
             #    self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
             #    self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
             
-            elif s < self.global_min_cutout_size:
+            if s < self.global_min_cutout_size:
                 self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
                 self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale
                 
