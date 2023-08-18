@@ -1199,7 +1199,7 @@ class hamodel():
         # 3 is too small for most galaxies - forgot to convert radius to diameter
         # ran with 2*2.5, and this was tight for a lot of galaxies.  increasing size by 50%
         ##
-        scale = 2*2.5*1.5
+        scale = 2*2.5
 
         # this is the total length in one dimension
         # the scale factor includes an extra factor of 2 to convert radius to diameter
@@ -2079,14 +2079,15 @@ class hamodel():
         ### SAVE DATA TO TABLE
         fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
                   'M20','HM20',
-                  'UNMASKED_AREA','TOTAL_AREA'\
+                  'UNMASKED_AREA','TOTAL_AREA',\
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
                   self.e.gini,self.e.gini2,\
                   self.e.M20_1,self.e.M20_2,\
                   self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
-                  self.e.cat[self.e.objectIndex].segment_area.value*self.pixelscale*self.pixelscale,\
+                  #self.e.cat[self.e.objectIndex].segment_area.value*self.pixelscale*self.pixelscale,\
+                  self.e.masked_pixel_area,\
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):

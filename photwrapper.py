@@ -128,6 +128,26 @@ def get_M20(catalog,objectIndex):
     M20 = np.log10(Sum_Mi/Mtot)
     return M20
 
+def get_fraction_masked_pixels(catalog,objectIndex):
+    """ 
+    get area in the segmentation image, 
+    masked area, and fraction of pixels masked
+    """
+
+    objNumber = catalog.label[objectIndex]
+    dat = catalog.data[objectIndex]    
+    masked_dat = catalog.data_ma[objectIndex]
+
+    # create flag for pixels associated with object in segmentation map
+    goodflag = catalog.segment[objectIndex] == objNumber
+
+    # get number of pixels in the original segmentation image
+    number_total = np.sum(goodflag)
+
+    number_masked = number_total - np.sum(goodflag & masked_dat.mask)
+
+    return number_total, number_masked, number_masked/number_total
+
 # read in image and mask
 
 # identify source for photometry
@@ -251,6 +271,7 @@ class ellipse():
         self.get_ellipse_guess()
         self.measure_phot()
         self.get_all_M20()
+        self.get_all_frac_masked_pixels()        
         self.calc_sb()
         self.convert_units()
         self.get_image2_gini()
@@ -360,8 +381,16 @@ class ellipse():
             allM20 = M20*np.ones(len(self.cat))
             self.cat2.add_extra_property('M20',allM20)
             self.M20_2 = M20
-
             
+    def get_all_frac_masked_pixels(self):
+        # as a kludge, I am going to set all objects' masked fraction equal to this value
+        # in the end, I will only keep the value for the central object...
+        ntotal,nmasked,frac_masked = get_fraction_masked_pixels(self.cat,self.objectIndex)
+        allfmasked = frac_masked*np.ones(len(self.cat))
+        self.cat.add_extra_property('MASKEDFRAC',allfmasked)
+        self.masked_fraction = allfmasked
+        self.pixel_area = ntotal
+        self.masked_pixel_area = ntotal - nmasked
     def get_sky_noise(self):
         '''
         * get the noise in image1 and image2 
