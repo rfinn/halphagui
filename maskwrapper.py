@@ -30,7 +30,14 @@ NOTES:
 
 TESTING
 
-python 
+/home/rfinn/research/Virgo-dev/maskwrapper-test/VFID0610-rectangle//VFID0610-NGC5985-INT-20190530-p040
+
+
+objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+
+
+python ~/github/halphagui/maskwrapper.py --image VFID0610-NGC5985-INT-20190530-p040-R.fits --haimage VFID0610-NGC5985-INT-20190530-p040-CS.fits --sepath ~/github/halphagui/astromatic/ --gaiapath /home/rfinn/research/legacy/gaia-mask-dr9.virgo.fits --objra 234.90448 --objdec 59.33198 --objsma 139.25 --objBA .496 --objPA 104.646
+
 
 '''
 
@@ -277,7 +284,8 @@ class buildmask():
         # add criteria for proper motion cut
         # oops - had < 5 instead of > 5!
         # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
-        pmflag = (brightstar['pmra'] > 5) & (brightstar['pmdec']>5)
+        pmflag = np.sqrt(brightstar['pmra']**2 + brightstar['pmdec']**2) > 5
+        #pmflag = np.ones(len(flag),'bool')
         flag = flag & pmflag
         if np.sum(flag) > 0:
             # add stars to mask according to the magnitude-radius relation
@@ -297,8 +305,8 @@ class buildmask():
                 pixel_mask = circle_pixels(float(xstar[i]),float(ystar[i]),float(radpixels[i]),self.xmax,self.ymax)
                 #print(f"number of pixels masked for star {i} = {np.sum(pixel_mask)}")
                 #print('xcursor, ycursor = ',self.xcursor, self.ycursor)
-                print("\nshape of pixel_mask = ",pixel_mask.shape)
-                print("\nshape of gaia_mask = ",self.gaia_mask.shape)                
+                #print("\nshape of pixel_mask = ",pixel_mask.shape)
+                #print("\nshape of gaia_mask = ",self.gaia_mask.shape)                
                 self.gaia_mask[pixel_mask] = mask_value*np.ones_like(self.gaia_mask)[pixel_mask]
 
             # add gaia stars to main mask                
@@ -640,6 +648,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.grow_mask()
             self.grow_mask()
             self.grow_mask()
+            self.grow_mask()            
         
         if not self.auto:
             self.display_cutouts()
