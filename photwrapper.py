@@ -453,8 +453,11 @@ class ellipse():
 
         # TODONE - need to be able to handle objects that are not at the center - should have option to pass in RA/DEC and then do like in maskwrapper
         if self.objra is not None:
-            xc = self.xcenter
-            yc = self.xcenter
+            print()
+            print("getting object position from RA and DEC")
+            print()
+            xc = self.xcenter_ra
+            yc = self.ycenter_dec
         else:
             ydim,xdim = self.image.shape
             xc = xdim/2
@@ -464,6 +467,23 @@ class ellipse():
         # save object ID as the row in table with source that is closest to center
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
         #print(self.objectIndex)
+
+        if self.objra is not None:
+            # check that distance of this object is not far from the original position
+            xcat = self.cat.xcentroid[self.objectIndex]
+            ycat = self.cat.ycentroid[self.objectIndex]
+
+            offset = np.sqrt((xcat-self.xcenter_ra)**2 + (ycat-self.ycenter_dec)**2)
+            if offset > 100:
+                print()
+                print("Hold the horses - something is not right!!!")
+            
+
+            print("")            
+            print(f"comparing xcenter {xcat:.1f} and from ra {self.xcenter_ra:.1f}")
+            print(f"comparing ycenter {ycat:.1f} and from dec {self.ycenter_dec:.1f}")
+            print()
+        
     def run_statmorph(self):
         '''
         run statmorph on image1 and image2 (if provided).
