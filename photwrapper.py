@@ -181,14 +181,30 @@ class ellipse():
     * psf_ha        - used by statmorph
 
     '''
-    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None):
+    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None,objra=None,objdec=None):
         '''  inputs described above '''
 
         self.image, self.header = fits.getdata(image, header=True)
         self.image_name = image
 
         # get image dimensions - will use this to determine the max sma to measure
-        self.ximage_max, self.yimage_max = self.image.shape
+        self.yimage_max, self.ximage_max = self.image.shape
+
+        self.objra = objra
+        self.objdec = objdec
+        
+        # check to see if obj position is passed in - need to do this for off-center objects
+        if (objra is not None): # unmask central elliptical region around object
+            # get wcs from mask image
+            wcs = WCS(self.header)
+            
+            # get x and y coord of galaxy from (RA,DEC) using mask wcs
+            #print(f"\nobject RA={self.objra:.4f}, DEC={self.objdec:.4f}\n")
+            self.xpixel,self.ypixel = wcs.wcs_world2pix(self.objra,self.objdec,0)
+            
+            # convert sma to pixels using pixel scale from mask wcs
+            self.pixel_scale = wcs.pixel_scale_matrix[1][1]
+            #self.objsma_pixels = self.objsma/(self.pixel_scale*3600)
         
         # image 2 is designed to be the Halpha image, but it can be any second
         # image whereby you define the ellipse geometry using image 1, and
@@ -433,9 +449,15 @@ class ellipse():
         object is stored as self.objectIndex
         '''
 
-        # TODO - need to be able to handle objects that are not at the center - should have option to pass in RA/DEC and then do like in maskwrapper
-        xdim,ydim = self.image.shape
-        distance = np.sqrt((self.cat.xcentroid - xdim/2.)**2 + (self.cat.ycentroid - ydim/2.)**2)        
+        # TODONE - need to be able to handle objects that are not at the center - should have option to pass in RA/DEC and then do like in maskwrapper
+        if self.objra is not None:
+            xc = self.xcenter
+            yc = self.xcenter
+        else:
+            ydim,xdim = self.image.shape
+            xc = xdim/2
+            yc = ydim/2            
+        distance = np.sqrt((self.cat.xcentroid - xc)**2 + (self.cat.ycentroid - yc)**2)        
         #distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
