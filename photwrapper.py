@@ -202,7 +202,8 @@ class ellipse():
             # get x and y coord of galaxy from (RA,DEC) using mask wcs
             #print(f"\nobject RA={self.objra:.4f}, DEC={self.objdec:.4f}\n")
             self.xcenter,self.ycenter = wcs.wcs_world2pix(self.objra,self.objdec,0)
-            
+            self.xcenter_ra = self.xcenter
+            self.ycenter_dec = self.ycenter            
             # convert sma to pixels using pixel scale from mask wcs
             self.pixel_scale = wcs.pixel_scale_matrix[1][1]
             #self.objsma_pixels = self.objsma/(self.pixel_scale*3600)
@@ -647,6 +648,13 @@ class ellipse():
         #self.ycenter = obj.ycentroid.value
         self.xcenter = obj.xcentroid
         self.ycenter = obj.ycentroid
+
+
+        if self.objra is not None:
+            print("")            
+            print(f"comparing xcenter {self.xcenter:.1f} and from ra {self.xcenter_ra:.1f}")
+            print(f"comparing ycenter {self.ycenter:.1f} and from dec {self.ycenter_dec:.1f}")
+            print()
         self.position = (obj.xcentroid, obj.ycentroid)
 
         self.sma = obj.semimajor_sigma.value * r
