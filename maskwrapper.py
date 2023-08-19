@@ -292,6 +292,8 @@ class buildmask():
                 pixel_mask = circle_pixels(float(xstar[i]),float(ystar[i]),float(radpixels[i]),self.xmax,self.ymax)
                 #print(f"number of pixels masked for star {i} = {np.sum(pixel_mask)}")
                 #print('xcursor, ycursor = ',self.xcursor, self.ycursor)
+                print("\nshape of pixel_mask = ",pixel_mask.shape)
+                print("\nshape of gaia_mask = ",self.gaia_mask.shape)                
                 self.gaia_mask[pixel_mask] = mask_value*np.ones_like(self.gaia_mask)[pixel_mask]
 
             # add gaia stars to main mask                

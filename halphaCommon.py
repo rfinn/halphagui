@@ -42,7 +42,7 @@ def circle_pixels(xc,yc,r,ximage,yimage):
     #if (xc < 0) | (xc > ximage) | (yc < 0) | (yc > yimage):
     #    print('invalid central coordinates in circle_pixels')
         
-    rows,cols = np.mgrid[0:ximage,0:yimage]
+    rows,cols = np.mgrid[0:yimage,0:ximage]
     distance = np.sqrt((rows-yc)**2+(cols-xc)**2)
     pixel_flag = distance < r
     return pixel_flag
