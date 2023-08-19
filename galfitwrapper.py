@@ -76,12 +76,12 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         # define fit area as the complete size of the input image
         # this assumes that the user is providing a cutout rather than a large mosaic image
         if xmaxfit == None:
-            self.xmaxfit = self.image_data.shape[0]
+            self.xmaxfit = self.image_data.shape[1]
         else:
             self.xmaxfit = xmaxfit
 
         if ymaxfit == None:
-            self.ymaxfit = self.image_data.shape[1]
+            self.ymaxfit = self.image_data.shape[0]
         else:
             self.ymaxfit = ymaxfit
         self.xminfit = xminfit

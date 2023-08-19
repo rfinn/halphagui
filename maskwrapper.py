@@ -27,6 +27,11 @@ NOTES:
 - rewrote using a class
 
 # TODO: 2023-02-09: this program relies on source extractor.  I should rewrite to use photutils instead.
+
+TESTING
+
+python 
+
 '''
 
 import os
