@@ -104,7 +104,7 @@ def remove_central_objects(mask, sma=20, BA=1, PA=0, xc=None,yc=None):
 
     """
     # changing the xmax and ymax - if the ellipse looks wrong, then swap back
-    xmax,ymax = mask.shape
+    ymax,xmax = mask.shape
     # set center of ellipse as the center of the image
     if (xc is None) and (yc is None):
         xc,yc = xmax//2,ymax//2
