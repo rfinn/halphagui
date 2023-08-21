@@ -1197,9 +1197,12 @@ class hamodel():
         # rewrite to get the size from JM's ephot, +/- 3*SMA_SB24
         #
         # 3 is too small for most galaxies - forgot to convert radius to diameter
-        # ran with 2*2.5, and this was tight for a lot of galaxies.  increasing size by 50%
+        # ran with 2*2.5, and this was tight for a lot of galaxies.
+        # increasing size by 50% (2.5*1.5 = 15/4 = 3.75 so rounding to 4)
         ##
         scale = 2*2.5
+        # ROSE - DON'T CHANGE THIS ANYMORE!!!!!!!
+        scale = 2*4        
 
         # this is the total length in one dimension
         # the scale factor includes an extra factor of 2 to convert radius to diameter
