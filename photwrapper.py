@@ -112,7 +112,7 @@ def get_M20(catalog,objectIndex):
     dat = catalog.data_ma[objectIndex]
 
     # create flag for pixels associated with object in segmentation map
-    goodflag = catalog.segment[objectIndex] == objNumber
+    segflag = catalog.segment[objectIndex] == objNumber
 
     # get the center coordinates of the object
     xc,yc = catalog.cutout_centroid[objectIndex]
@@ -129,26 +129,27 @@ def get_M20(catalog,objectIndex):
     distsq = (X-xc)**2 + (Y-yc)**2
 
     # second Moment total
-    # good flag ensures that we are just counting the pixels assoc with object
-    Mtot = np.sum(dat[goodflag]*distsq[goodflag])
+    # segflag ensures that we are just counting the pixels assoc with object
+    second_moment_tot = np.sum(dat[segflag]*distsq[segflag])
 
     ##
     # getting the second moment of 20% highest pixels
     ##
     
-    # first get pixel value of 80th percentile, so that top 20% have values higher than this
-    threshold_brightest20 = scoreatpercentile(dat[goodflag].flatten(),80)
+    # first get pixel value of 80th percentile,
+    # so that top 20% of pixels have values higher than this
+    threshold_brightest20 = scoreatpercentile(dat[segflag].flatten(),80)
 
     # define flag for pixels that are > 80th percentile
     brightest20 = dat > threshold_brightest20
 
     # sum the second moment of brightest 20
-    Sum_Mi_20 = np.sum(dat[goodflag & brightest20]*distsq[goodflag & brightest20])
+    second_moment_20 = np.sum(dat[segflag & brightest20]*distsq[segflag & brightest20])
 
     # now calculate M20 as
     # M20 = log10(Sum_Mi/Mtot)
 
-    M20 = np.log10(Sum_Mi_20/Mtot)
+    M20 = np.log10(second_moment_20/second_moment_tot)
 
     # I am getting the inverse effect, where I find M20 correlates with Gini whereas it should be
     # inversely correlated - no idea why...
