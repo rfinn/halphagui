@@ -89,6 +89,14 @@ def get_M20(catalog,objectIndex):
     calculate M20 according to Lotz+2004 for central object only
     https://iopscience.iop.org/article/10.1086/421849/fulltext/  
 
+    PARAMS:
+    * catalog - this is a photutils.SourceCatalog
+    * objectIndex - the object number in the catalog
+
+    RETURNS:
+    * M20
+
+    NOTES:
     cat.data_ma = A 2D MaskedArray cutout from the data using the minimal bounding box of the source.
     cat.segment = A 2D ndarray cutout of the segmentation image using the minimal bounding box of the source.
     cat.cutout_centroid = The (x, y) coordinate, relative to the cutout data, of the centroid within the isophotal source segment.
@@ -98,35 +106,53 @@ def get_M20(catalog,objectIndex):
     # summed over all pixels assigned to the segmentation map
 
     objNumber = catalog.label[objectIndex]
+
+    # data_ma returns a 2D array with the unmasked values
+    # using the min bounding box that fits the galaxy    
     dat = catalog.data_ma[objectIndex]
 
     # create flag for pixels associated with object in segmentation map
     goodflag = catalog.segment[objectIndex] == objNumber
 
+    # get the center coordinates of the object
     xc,yc = catalog.cutout_centroid[objectIndex]
 
     # can't make sense of moments that photutils includes in the catalog, so recalculating here
+
     ymax,xmax = catalog.data_ma[objectIndex].shape
+
+    # create a meshgrid to represent pixels in segmentation
     X,Y = np.meshgrid(np.arange(xmax),np.arange(ymax))
 
     # calculate distance of each point from center of galaxy
+    # this is for 2nd order moment
     distsq = (X-xc)**2 + (Y-yc)**2
 
     # second Moment total
+    # good flag ensures that we are just counting the pixels assoc with object
     Mtot = np.sum(dat[goodflag]*distsq[goodflag])
-    Fluxtot = np.sum(dat[goodflag])
-    # get pixel value of 80th percentile, so that top 20% have values higher than this
+
+    ##
+    # getting the second moment of 20% highest pixels
+    ##
+    
+    # first get pixel value of 80th percentile, so that top 20% have values higher than this
     threshold_brightest20 = scoreatpercentile(dat[goodflag].flatten(),80)
 
-    brightest20 = dat >= threshold_brightest20
+    # define flag for pixels that are > 80th percentile
+    brightest20 = dat > threshold_brightest20
 
-    # second moment of brightest 20
-    Sum_Mi = np.sum(dat[goodflag & brightest20]*distsq[goodflag & brightest20])
+    # sum the second moment of brightest 20
+    Sum_Mi_20 = np.sum(dat[goodflag & brightest20]*distsq[goodflag & brightest20])
 
     # now calculate M20 as
     # M20 = log10(Sum_Mi/Mtot)
 
-    M20 = np.log10(Sum_Mi/Mtot)
+    M20 = np.log10(Sum_Mi_20/Mtot)
+
+    # I am getting the inverse effect, where I find M20 correlates with Gini whereas it should be
+    # inversely correlated - no idea why...
+    
     return M20
 
 def get_fraction_masked_pixels(catalog,objectIndex):
