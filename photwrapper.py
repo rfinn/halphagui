@@ -521,7 +521,7 @@ class ellipse():
             ydim,xdim = self.image.shape
             xc = xdim/2
             yc = ydim/2            
-        distance = np.sqrt((self.cat.xcentroid - xc)**2 + (self.cat.ycentroid - yc)**2)        
+        distance = np.sqrt((np.array(self.cat.xcentroid) - xc)**2 + (np.array(self.cat.ycentroid) - yc)**2)        
         #distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
 
