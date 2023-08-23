@@ -779,7 +779,12 @@ class ellipse():
         else:
             self.theta = obj.orientation.to(u.rad).value # orientation in radians
         # EllipticalAperture gives rotation angle in radians from +x axis, CCW
-        self.aperture = EllipticalAperture(self.position, self.sma, self.b, theta=self.theta)
+        try:
+            self.aperture = EllipticalAperture(self.position, self.sma, self.b, theta=self.theta)
+        except ValueError:
+            print("\nTrouble in paradise...")
+            print(self.position,self.sma,self.b,self.theta)
+            sys.exit()
         # EllipseGeometry using angle in radians, CCW from +x axis
         self.guess = EllipseGeometry(x0=self.xcenter,y0=self.ycenter,sma=self.sma,eps = self.eps, pa = self.theta)
     def draw_guess_ellipse(self):
