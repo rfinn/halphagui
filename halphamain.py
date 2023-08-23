@@ -797,7 +797,7 @@ class create_output_table(output_table_view):
         #####################################################################
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel',description='xcentroid from ellipse')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel',description='ycentroid from ellipse')
-        e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIPC_EPS',description='axis ratio from ellipse')
+        e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS',description='axis ratio from ellipse')
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
         e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
         e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_HGINI',description='gini coeff method 2')
