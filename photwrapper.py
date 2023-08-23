@@ -529,10 +529,11 @@ class ellipse():
 
         if len(distance) > 1:
             try:
-                self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
+                self.objectIndex = np.arange(len(distance))[(np.array(distance) == min(distance))][0]
             except IndexError:
                 print("another $#@$# version change???",np.arange(len(distance))[(distance == min(distance))],len(distance))
-                print(self.cat.xcentroid, xc)
+                print('x vars: ',self.cat.xcentroid, xc)
+                print('y vars: ', self.cat.xcentroid, xc)                
                 print(self.cat)
                 sys.exit()
         else:
