@@ -22,9 +22,11 @@ from photutils import detect_threshold, detect_sources
 #from photutils import source_properties
 from photutils.segmentation import SourceCatalog
 
+from photutils import make_source_mask
 from photutils import Background2D, MedianBackground
 from photutils import EllipticalAperture
 from photutils.utils import calc_total_error
+
 from photutils.isophote import EllipseGeometry, Ellipse
 from photutils import aperture_photometry
 from photutils.morphology import gini
@@ -38,7 +40,7 @@ from astropy.table import Table, Column
 from astropy.visualization import SqrtStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
 
-from astropy.stats import sigma_clip
+from astropy.stats import sigma_clip, SigmaClip,sigma_clipped_stats
 from astropy.visualization import simple_norm
 
 
@@ -135,12 +137,19 @@ def get_M20(catalog,objectIndex):
     ##
     # getting the second moment of 20% highest pixels
     ##
-    
-    # first get pixel value of 80th percentile,
-    # so that top 20% of pixels have values higher than this
-    threshold_brightest20 = scoreatpercentile(dat[segflag].flatten(),80)
 
-    # define flag for pixels that are > 80th percentile
+    # using https://github.com/vrodgom/statmorph/blob/master/statmorph/statmorph.py#L1430    
+    # Calculate threshold pixel value
+    # TODONE - update to fix M20
+    sorted_pixelvals = np.sort(dat.flatten())
+    flux_fraction = np.cumsum(sorted_pixelvals) / np.sum(sorted_pixelvals)
+    sorted_pixelvals_20 = sorted_pixelvals[flux_fraction >= 0.8]
+
+    threshold_brightest20 = sorted_pixelvals_20[0]
+
+    #threshold_brightest20 = scoreatpercentile(dat[segflag].flatten(),80)
+
+    # define flag for pixels that contain top 20% of total flux
     brightest20 = dat > threshold_brightest20
 
     # sum the second moment of brightest 20
@@ -151,9 +160,6 @@ def get_M20(catalog,objectIndex):
 
     M20 = np.log10(second_moment_20/second_moment_tot)
 
-    # I am getting the inverse effect, where I find M20 correlates with Gini whereas it should be
-    # inversely correlated - no idea why...
-    
     return M20
 
 def get_fraction_masked_pixels(catalog,objectIndex):
@@ -324,7 +330,7 @@ class ellipse():
             self.get_asymmetry()
         except:
             print("WARNING: problem measuring asymmetry")
-        print("running statmorph")
+        #print("running statmorph")
         #self.run_statmorph()
         self.write_phot_tables()
         self.write_phot_fits_tables()
@@ -384,34 +390,59 @@ class ellipse():
         #    self.draw_phot_results_mpl()
         #else:
         #    self.draw_phot_results()
-    def detect_objects(self, snrcut=1.5,npixels=10):
+    def detect_objects(self, snrcut=2,npixels=20):
         ''' 
         run photutils detect_sources to find objects in fov.  
         you can specify the snrcut, and only pixels above this value will be counted.
         
         this also measures the sky noise as the mean of the threshold image
         '''
+        # this is not right, because the mask does not include the galaxy
+        # updating based on photutils documentation
+        # https://photutils.readthedocs.io/en/stable/background.html
+        
+        # get a rough background estimate
+        sigma_clip = SigmaClip(sigma=3.0, maxiters=10)
         if self.mask_flag:
-            self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
-            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
-            #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
-            self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
-            if self.image2 is not None:
-                # measure halpha properties using same segmentation image
-                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+            threshold = detect_threshold(self.image, nsigma=snrcut,sigclip_sigma=3.0, mask=self.boolmask)
         else:
-            self.threshold = detect_threshold(self.image, nsigma=snrcut)
-            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
-            #self.cat = source_properties(self.image, self.segmentation)
-            self.cat = SourceCatalog(self.image, self.segmentation)
-            if self.image2 is not None:
-                # measure halpha properties using same segmentation image
-                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
-            
-        # get average sky noise per pixel
-        # threshold is the sky noise at the snrcut level, so need to divide by this
-        self.sky_noise = np.mean(self.threshold)/snrcut
-        #self.tbl = self.cat.to_table()
+            threshold = detect_threshold(self.image, nsigma=snrcut,sigclip_sigma=3.0)
+
+        segmentation = detect_sources(self.image, threshold, npixels=npixels)
+
+
+        # make an object mask, expanding the area using a circular footprint
+        #mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)        
+        mask = make_source_mask(self.image,1.5,10,dilate_size=11)
+        plt.figure()
+        plt.imshow(mask,origin="lower")
+        mean, median, std = sigma_clipped_stats(self.image, sigma=3.0, mask=mask)
+
+        # now make a new segmentation image based on the new noise estimate
+        # default is 1.5*std
+        self.segmentation = detect_sources(self.image, snrcut*std, npixels=npixels)
+        self.sky = mean
+
+        # subtract the sky, again...
+
+        self.image -= self.sky
+        
+        self.sky_noise = std        
+
+        #threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+        #segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
+        #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+        self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
+        
+        if self.image2 is not None:
+            # measure halpha properties using same segmentation image
+            mean, median, std = sigma_clipped_stats(self.image2, sigma=3.0, mask=mask)            
+            self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+            self.sky2 = mean
+            self.sky2_noise = std
+
+            # subtract sky
+            self.image2 -= self.sky2
     def get_all_M20(self):
         # as a kludge, I am going to set all objects' M20 equal to this value
         # in the end, I will only keep the value for the central object...
@@ -442,29 +473,29 @@ class ellipse():
         * noise is stored as SKYERR in image header
           - units of sky noise are erg/s/cm^2/arcsec^2
         '''
+
+        # I already calculate this in detect_objects
         # get sky noise for image 1
-        if self.mask_flag:
-            threshold = detect_threshold(self.image, nsigma=1,mask=self.boolmask)
-        else:
-            threshold = detect_threshold(self.image, nsigma=snrcut)
+        #if self.mask_flag:
+        #    threshold = detect_threshold(self.image, nsigma=1,mask=self.boolmask)
+        #else:
+        #    threshold = detect_threshold(self.image, nsigma=snrcut)
 
         # add sky noise to image 1 header
-        sky_noise_erg = np.mean(threshold)*self.uconversion1/self.pixel_scale**2
+        
+        sky_noise_erg = self.sky_noise*self.uconversion1/self.pixel_scale**2
         print('r sky noise = ',sky_noise_erg)
-        self.header.set('SKYNOISE','{:.2f}'.format(np.mean(threshold)),'sky noise in ADU')        
+        self.header.set('PHOT_SKY','{:.2f}'.format(self.sky),'sky in ADU')                
+        self.header.set('SKYNOISE','{:.2f}'.format(self.sky_noise),'sky noise in ADU')        
         self.header.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
         # save files
         fits.writeto(self.image_name,self.image,header=self.header,overwrite=True)
         self.im1_skynoise = sky_noise_erg
         # get sky noise for image 2
         if self.image2 is not None:
-            if self.mask_flag:
-                threshold = detect_threshold(self.image2, nsigma=1,mask=self.boolmask)
-            else:
-                threshold = detect_threshold(self.image2, nsigma=snrcut)
-            # add sky noise to image 2 header
-            sky_noise_erg = np.mean(threshold)*self.uconversion2/self.pixel_scale**2
-            self.header2.set('SKYNOISE','{:.2f}'.format(np.mean(threshold)),'sky noise in ADU')        
+            sky_noise_erg = self.sky2_noise*self.uconversion2/self.pixel_scale**2
+            self.header.set('PHOT_SKY','{:.2f}'.format(self.sky2),'sky in ADU')                            
+            self.header2.set('SKYNOISE','{:.2f}'.format(self.sky2_noise),'sky noise in ADU')        
             self.header2.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
             
 
@@ -494,7 +525,14 @@ class ellipse():
         # save object ID as the row in table with source that is closest to center
         self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
         #print(self.objectIndex)
-
+        if self.image2 is not None:
+            # the object index in cat 2 is not necessarily the same
+            # not sure if this is something I changed or if this has always been the case...
+            
+            distance = np.sqrt((self.cat2.xcentroid - xc)**2 + (self.cat2.ycentroid - yc)**2)        
+            # save object ID as the row in table with source that is closest to center
+            self.objectIndex2 = np.arange(len(distance))[(distance == min(distance))][0]
+            
         if self.objra is not None:
             # check that distance of this object is not far from the original position
             xcat = self.cat.xcentroid[self.objectIndex]
@@ -526,6 +564,8 @@ class ellipse():
         segmap = self.segmentation.data == self.cat.label[self.objectIndex]
         segmap_float = ndi.uniform_filter(np.float64(segmap), size=10)
         segmap = segmap_float > 0.5
+
+
         if self.mask_image is not None:
             mask = self.mask_image > 0
         else:
@@ -561,12 +601,12 @@ class ellipse():
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut, mask=self.boolmask)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10,mask=self.boolmask)
             #self.cat2 = source_properties(self.image2, self.segmentation2, mask=self.boolmask)
-            self.cat2 = SourceCatalog(self.image2, self.segmentation2, mask=self.boolmask)            
+            cat2 = SourceCatalog(self.image2, self.segmentation2, mask=self.boolmask)            
         else:
             self.threshold2 = detect_threshold(self.image2, nsigma=snrcut)
             self.segmentation2 = detect_sources(self.image2, self.threshold2, npixels=10)
             #self.cat2 = source_properties(self.image2, self.segmentation2)
-            self.cat2 = SourceCatalog(self.image2, self.segmentation2)            
+            cat2 = SourceCatalog(self.image2, self.segmentation2)            
 
         '''
         select pixels associated with rband image in the segmentation
@@ -577,9 +617,9 @@ class ellipse():
 
         #self.tbl = self.cat.to_table()
         self.gini2 = gini(self.image2[self.gini_pixels])
-        self.source_sum2 = np.sum(self.image2[self.gini_pixels])
-        self.source_sum2_erg = self.uconversion1*self.source_sum2
-        self.source_sum2_mag = self.magzp2 - 2.5*np.log10(self.source_sum2)
+        #self.source_sum2 = np.sum(self.image2[self.gini_pixels])
+        #self.source_sum2_erg = self.uconversion1*self.source_sum2
+        #self.source_sum2_mag = self.magzp2 - 2.5*np.log10(self.source_sum2)
     def get_asymmetry(self):
         '''
         * goal is to measure the assymetry of the galaxy about its center
@@ -621,10 +661,15 @@ class ellipse():
         print('asymmetry = {:.3f}+/-{:.3f}'.format(self.asym,self.asym_err))
         
         if self.image2_flag:
+            print("getting asym for image2")
+            # using the same segmentation image at for r-band
+            # is this the correct thing to do?  does segmentation2.data need to be > 0?
             self.object_pixels2 = (self.segmentation.data == self.cat.label[self.objectIndex]) & (self.segmentation2.data > 0.)
 
             #xc = self.cat.xcentroid[self.objectIndex].value
             #yc = self.cat.ycentroid[self.objectIndex].value
+
+            # using the r-band centroid
             xc = self.cat.xcentroid[self.objectIndex]
             yc = self.cat.ycentroid[self.objectIndex]
             row,col = np.where(self.object_pixels2)
@@ -987,6 +1032,10 @@ class ellipse():
         if self.image2_flag:
             self.flux2_erg = self.uconversion2*self.flux2
             self.flux2_err_erg = self.uconversion2*self.flux2_err
+            self.source_sum2 = self.cat2.segment_flux[e.objectIndex]
+            self.source_sum2_erg = self.uconversion2*self.cat2.segment_flux[e.objectIndex]
+            self.source_sum2_mag = self.magzp2 - 2.5*np.log10(self.source_sum)
+            
 
             self.mag2 = self.magzp2 - 2.5*np.log10(self.flux2)
             self.mag2_err = self.mag2 - (self.magzp2 - 2.5*np.log10(self.flux2 + self.flux2_err))
@@ -1178,6 +1227,7 @@ class ellipse():
         plt.show()
     def plot_profiles(self):
         ''' enclosed flux and surface brightness profiles, save figure '''
+        plt.close("all")        
         plt.figure(figsize=(10,4))
         plt.subplots_adjust(wspace=.3)
         plt.subplot(2,2,1)
@@ -1209,7 +1259,7 @@ class ellipse():
             plt.gca().set_yscale('log')
         #plt.show()
         plt.savefig(self.image_name.split('.fits')[0]+'-enclosed-flux.png')
-        plt.close("all")
+
         
 if __name__ == '__main__':
     image = 'MKW8-18216-R.fits'

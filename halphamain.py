@@ -663,6 +663,8 @@ class create_output_table(output_table_view):
         g4 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HDEC', unit=u.deg,description='HA center DEC from galfit')
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_RA', unit=u.deg,description='R-band center RA from photutil centroid')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_DEC', unit=u.deg,description='R-band center DEC from photutil centroid')
+        e1a = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HRA', unit=u.deg,description='Halpha center RA from photutil centroid')
+        e2a = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HDEC', unit=u.deg,description='Halpha center DEC from photutil centroid')
         c9 = Column(self.haflag, name='HA_FLAG',description='shows HA emission')
         c10 = Column(np.ones(self.ngalaxies,'f'),name='FILT_COR',unit='', description='max filt trans/trans at gal z')
         c11 = Column(np.zeros(self.ngalaxies,'f'),name='R_FWHM',unit=u.arcsec, description='R FWHM in arcsec')
@@ -671,7 +673,7 @@ class create_output_table(output_table_view):
         c14 = Column(np.zeros(self.ngalaxies,dtype='|S3'),name='TEL', description='telescope/instrument')
         c15 = Column(np.zeros(self.ngalaxies,dtype='i'),name='DATE-OBS', description='string specifying date of observation')                        
 
-        self.table.add_columns([g1,g2,g3,g4,e1,e2,c9,c10,c11,c12,c13,c14,c15])
+        self.table.add_columns([g1,g2,g3,g4,e1,e2,e1a,e2a,c9,c10,c11,c12,c13,c14,c15])
     def add_nsa(self):
         # add some useful info from NSA catalog (although matching to NSA could be done down the line)
         r = 22.5 - 2.5*np.log10(self.nsa2['NMGY'][:,4])
@@ -795,10 +797,10 @@ class create_output_table(output_table_view):
         #####################################################################
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel',description='xcentroid from ellipse')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel',description='ycentroid from ellipse')
-        e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS',description='axis ratio from ellipse')
+        e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIPC_EPS',description='axis ratio from ellipse')
         e4 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_THETA', unit=u.degree,description='position angle from ellipse')
         e5 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_GINI',description='gini coeff from ellipse')
-        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_GINI2',description='gini coeff method 2')
+        e6 = Column(np.zeros(self.ngalaxies), name='ELLIP_HGINI',description='gini coeff method 2')
         e7 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_M20',description='M20 for r image')
         e8 = Column(np.zeros(self.ngalaxies), name='ELLIP_HM20',description='M20 for Halpha image ')
         e9 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_UNMASKED_AREA',description='unmasked source area from photutils')
@@ -811,9 +813,22 @@ class create_output_table(output_table_view):
         e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag,description='HA mag from ellipse')
         e16 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM',description='HA asymmetry from ellipse')
         e17 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
-        e18 = Column(np.zeros(self.ngalaxies,'f'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
-        e19 = Column(np.zeros(self.ngalaxies,'f'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
-        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19])
+        e18 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
+        e19 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
+        e20 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKY',description='R sky level in ADU')
+        e21 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKY',description='HA sky level in ADU')
+
+        # photutils radii
+        e22 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_R30',description='photutils R flux frac 30')
+        e23 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_R50',description='photutils R flux frac 50')
+        e24 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_R90',description='photutils R flux frac 90')
+        
+        e22 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_HR30',description='photutils Halpha flux frac 30')
+        e23 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_HR50',description='photutils Halpha flux frac 50')
+        e24 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_HR90',description='photutils Halpha flux frac 90')        
+
+        
+        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19,e20,e21])
     def add_profile_fit(self):
         #####################################################################
         # profile fitting using galfit geometry
@@ -2083,17 +2098,17 @@ class hamodel():
         #os.chdir(current_dir)
 
         ### SAVE DATA TO TABLE
-        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','GINI2',\
+        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','HGINI',\
                   'M20','HM20',
                   'UNMASKED_AREA','TOTAL_AREA',\
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
         values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
-                  self.e.gini,self.e.gini2,\
+                  self.e.cat.gini[self.e.objectIndex],self.e.cat2.gini[self.e.objectIndex],\
                   self.e.M20_1,self.e.M20_2,\
                   self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
                   #self.e.cat[self.e.objectIndex].segment_area.value*self.pixelscale*self.pixelscale,\
-                  self.e.masked_pixel_area,\
+                  self.e.masked_pixel_area*self.pixelscale*self.pixelscale,\
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
@@ -2113,8 +2128,12 @@ class hamodel():
             self.table[colname] = values[i]
         wcs = WCS(self.cutout_name_r)
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
+        
+        ra2,dec2 = wcs.wcs_pix2world(self.e.cat2.xcentroid[e.objectIndex],self.e.cat2.ycentriod[e.objectIndex],0)        
         self.table['ELLIP_RA'][self.igal]=ra
         self.table['ELLIP_DEC'][self.igal]=dec
+        self.table['ELLIP_HRA'][self.igal]=ra2
+        self.table['ELLIP_HDEC'][self.igal]=dec2
 
         # TODONE - write out phot table
         colnames = ['area',
@@ -2159,6 +2178,35 @@ class hamodel():
         self.e.cat.add_extra_property('PHOT_R50',r50)
         self.e.cat.add_extra_property('PHOT_R90',r90)
 
+        r30 = self.e.cat2.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
+        r50 = self.e.cat2.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
+        r90 = self.e.cat2.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
+
+        self.e.cat2.add_extra_property('PHOT_R30',r30)
+        self.e.cat2.add_extra_property('PHOT_R50',r50)
+        self.e.cat2.add_extra_property('PHOT_R90',r90)
+        
+        # write these out to the main table
+        fields = ['R30','R50','R90',\
+                  'HR30','HR50','HR90']
+        
+        values = [self.e.cat['PHOT_R30'][e.objectIndex],\
+                  self.e.cat['PHOT_R50'][e.objectIndex],\
+                  self.e.cat['PHOT_R90'][e.objectIndex],\
+                  self.e.cat2['PHOT_R30'][e.objectIndex],\
+                  self.e.cat2['PHOT_R50'][e.objectIndex],\
+                  self.e.cat2['PHOT_R90'][e.objectIndex]]
+        for i,f in enumerate(fields):
+            colname = 'ELLIP_'+f
+            #print(colname)
+            try:
+                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+
+        
         #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
         #c2 = Column(data=np.array(r50[self.e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
         #c3 = Column(data=r90[self.e.objectIndex],name='PHOTR90',unit='arcsec',description='photutils fluxfrac_radius')
