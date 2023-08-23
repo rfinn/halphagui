@@ -521,7 +521,7 @@ class ellipse():
             ydim,xdim = self.image.shape
             xc = xdim/2
             yc = ydim/2            
-        distance = np.sqrt((np.array(self.cat.xcentroid) - xc)**2 + (np.array(self.cat.ycentroid) - yc)**2)        
+        distance = np.sqrt((np.ma.array(self.cat.xcentroid) - xc)**2 + (np.ma.array(self.cat.ycentroid) - yc)**2)        
         #distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
 
@@ -529,7 +529,7 @@ class ellipse():
 
         if len(distance) > 1:
             try:
-                self.objectIndex = np.arange(len(distance))[(np.array(distance) == min(distance))][0]
+                self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
             except IndexError:
                 print("another $#@$# version change???",np.arange(len(distance))[(distance == min(distance))],len(distance))
                 print('x vars: ',self.cat.xcentroid, xc)
@@ -544,7 +544,7 @@ class ellipse():
             # the object index in cat 2 is not necessarily the same
             # not sure if this is something I changed or if this has always been the case...
             
-            distance = np.sqrt((self.cat2.xcentroid - xc)**2 + (self.cat2.ycentroid - yc)**2)        
+            distance = np.sqrt((np.ma.array(self.cat2.xcentroid) - xc)**2 + (np.ma.array(self.cat2.ycentroid) - yc)**2)        
             # save object ID as the row in table with source that is closest to center
             self.objectIndex2 = np.arange(len(distance))[(distance == min(distance))][0]
             
