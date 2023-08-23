@@ -531,6 +531,8 @@ class ellipse():
                 self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
             except IndexError:
                 print("another $#@$# version change???",np.arange(len(distance))[(distance == min(distance))],len(distance))
+                print(self.cat.xcentroid, xc)
+                sys.exit()
         else:
             self.objectIndex = 0
             print("WARNING: only one object in the SourceCatalog!",distance)
