@@ -763,7 +763,7 @@ class ellipse():
             print(f"comparing ycenter {self.ycenter:.1f} and from dec {self.ycenter_dec:.1f}")
             print()
         self.position = (obj.xcentroid, obj.ycentroid)
-
+        print(self.position,self.xcenter,obj.xcentroid,self.ycenter,obj.ycentroid)
         self.sma = obj.semimajor_sigma.value * r
         self.start_size = self.sma
         self.b = obj.semiminor_sigma.value * r
