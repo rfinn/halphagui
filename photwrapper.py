@@ -523,7 +523,14 @@ class ellipse():
         distance = np.sqrt((self.cat.xcentroid - xc)**2 + (self.cat.ycentroid - yc)**2)        
         #distance = np.sqrt((self.cat.xcentroid.value - xdim/2.)**2 + (self.cat.ycentroid.value - ydim/2.)**2)
         # save object ID as the row in table with source that is closest to center
-        self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
+
+        # check to see if len(distance) is > 1
+
+        if len(distance) > 1:
+            self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
+        else:
+            self.objectIndex = 0
+            print("WARNING: only one object in the SourceCatalog!",distance)
         #print(self.objectIndex)
         if self.image2 is not None:
             # the object index in cat 2 is not necessarily the same
