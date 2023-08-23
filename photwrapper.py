@@ -430,8 +430,8 @@ class ellipse():
         
         self.sky_noise = std        
 
-        #threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
-        #segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
+        threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+        segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
         #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
         self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
         
@@ -443,7 +443,7 @@ class ellipse():
             self.sky2_noise = std
 
             # subtract sky
-            #self.image2 -= self.sky2
+            self.image2 -= self.sky2
     def get_all_M20(self):
         # as a kludge, I am going to set all objects' M20 equal to this value
         # in the end, I will only keep the value for the central object...
