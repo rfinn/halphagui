@@ -3038,11 +3038,11 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
 
         # run galfit ellip phot
         # use try in case fit fails
-        self.galfit_ellip_phot()        
-        #try:
-        #    self.galfit_ellip_phot()
-        #except:
-        #    print('WARNING: problem running galfit ellip phot')
+        #self.galfit_ellip_phot()        
+        try:
+            self.galfit_ellip_phot()
+        except:
+            print('WARNING: problem running galfit ellip phot')
         
         # run phot util ellip phot
         # use try in case fit fails
