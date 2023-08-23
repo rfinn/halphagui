@@ -2191,12 +2191,12 @@ class hamodel():
         fields = ['R30','R50','R90',\
                   'HR30','HR50','HR90']
         
-        values = [self.e.cat['PHOT_R30'][self.e.objectIndex],\
-                  self.e.cat['PHOT_R50'][self.e.objectIndex],\
-                  self.e.cat['PHOT_R90'][self.e.objectIndex],\
-                  self.e.cat2['PHOT_R30'][self.e.objectIndex],\
-                  self.e.cat2['PHOT_R50'][self.e.objectIndex],\
-                  self.e.cat2['PHOT_R90'][self.e.objectIndex]]
+        values = [self.e.cat.PHOT_R30[self.e.objectIndex],\
+                  self.e.cat.PHOT_R50[self.e.objectIndex],\
+                  self.e.cat.PHOT_R90[self.e.objectIndex],\
+                  self.e.cat2.PHOT_R30[self.e.objectIndex],\
+                  self.e.cat2.PHOT_R50[self.e.objectIndex],\
+                  self.e.cat2.PHOT_R90[self.e.objectIndex]]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             #print(colname)
