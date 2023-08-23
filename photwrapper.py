@@ -533,7 +533,7 @@ class ellipse():
             except IndexError:
                 print("another $#@$# version change???",np.arange(len(distance))[(distance == min(distance))],len(distance))
                 print('x vars: ',self.cat.xcentroid, xc)
-                print('y vars: ', self.cat.xcentroid, xc)                
+                print('y vars: ', self.cat.ycentroid, yc)                
                 print(self.cat)
                 sys.exit()
         else:
