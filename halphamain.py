@@ -2201,11 +2201,17 @@ class hamodel():
             colname = 'ELLIP_'+f
             #print(colname)
             try:
-                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+                self.table[colname][self.igal]=float('%.2e'%(values[i].value))
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
+            except TypeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            
 
         
         #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
