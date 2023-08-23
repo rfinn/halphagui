@@ -426,7 +426,7 @@ class ellipse():
 
         # subtract the sky, again...
         print("\nsky value = ",self.sky)
-        self.image -= self.sky
+        #self.image -= self.sky
         
         self.sky_noise = std        
 
@@ -443,7 +443,7 @@ class ellipse():
             self.sky2_noise = std
 
             # subtract sky
-            self.image2 -= self.sky2
+            #self.image2 -= self.sky2
     def get_all_M20(self):
         # as a kludge, I am going to set all objects' M20 equal to this value
         # in the end, I will only keep the value for the central object...
