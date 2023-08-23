@@ -391,7 +391,7 @@ class ellipse():
         #    self.draw_phot_results_mpl()
         #else:
         #    self.draw_phot_results()
-    def detect_objects(self, snrcut=2,npixels=20):
+    def detect_objects(self, snrcut=1.5,npixels=11):
         ''' 
         run photutils detect_sources to find objects in fov.  
         you can specify the snrcut, and only pixels above this value will be counted.
@@ -415,8 +415,8 @@ class ellipse():
         # make an object mask, expanding the area using a circular footprint
         #mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)        
         mask = make_source_mask(self.image,1.5,10,dilate_size=11)
-        plt.figure()
-        plt.imshow(mask,origin="lower")
+        #plt.figure()
+        #plt.imshow(mask,origin="lower")
         mean, median, std = sigma_clipped_stats(self.image, sigma=3.0, mask=mask)
 
         # now make a new segmentation image based on the new noise estimate
@@ -425,7 +425,7 @@ class ellipse():
         self.sky = mean
 
         # subtract the sky, again...
-
+        print("\nsky value = ",self.sky)
         self.image -= self.sky
         
         self.sky_noise = std        
