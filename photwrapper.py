@@ -527,7 +527,10 @@ class ellipse():
         # check to see if len(distance) is > 1
 
         if len(distance) > 1:
-            self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
+            try:
+                self.objectIndex = np.arange(len(distance))[(distance == min(distance))][0]
+            except IndexError:
+                print("another $#@$# version change???",np.arange(len(distance))[(distance == min(distance))],len(distance))
         else:
             self.objectIndex = 0
             print("WARNING: only one object in the SourceCatalog!",distance)
