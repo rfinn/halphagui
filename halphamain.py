@@ -2114,13 +2114,13 @@ class hamodel():
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             #print(colname)
-            self.table[colname][self.igal]=float('%.2e'%(values[i]))            
-            #try:
-            #    self.table[colname][self.igal]=float('%.2e'%(values[i]))
-            #except KeyError:
-            #    print("KeyError: ",colname)
-            #    print("\ntable column names: \n",self.table.colnames)
-            #    sys.exit()
+            #self.table[colname][self.igal]=float('%.2e'%(values[i]))            
+            try:
+                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
         # update sky noise
         fields = ['R_SKYNOISE','H_SKYNOISE']
         values = [self.e.im1_skynoise,self.e.im2_skynoise]
