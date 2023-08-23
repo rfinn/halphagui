@@ -1032,7 +1032,7 @@ class ellipse():
         if self.image2_flag:
             self.flux2_erg = self.uconversion2*self.flux2
             self.flux2_err_erg = self.uconversion2*self.flux2_err
-            self.source_sum2 = self.cat2.segment_flux[e.objectIndex]
+            self.source_sum2 = self.cat2.segment_flux[self.objectIndex]
             self.source_sum2_erg = self.uconversion2*self.cat2.segment_flux[self.objectIndex]
             self.source_sum2_mag = self.magzp2 - 2.5*np.log10(self.source_sum)
             
