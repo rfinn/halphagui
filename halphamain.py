@@ -2130,7 +2130,7 @@ class hamodel():
         wcs = WCS(self.cutout_name_r)
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
         
-        ra2,dec2 = wcs.wcs_pix2world(self.e.cat2.xcentroid[e.objectIndex],self.e.cat2.ycentriod[e.objectIndex],0)        
+        ra2,dec2 = wcs.wcs_pix2world(self.e.cat2.xcentroid[self.e.objectIndex],self.e.cat2.ycentriod[self.e.objectIndex],0)        
         self.table['ELLIP_RA'][self.igal]=ra
         self.table['ELLIP_DEC'][self.igal]=dec
         self.table['ELLIP_HRA'][self.igal]=ra2
