@@ -1298,13 +1298,13 @@ class hamodel():
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
         try:
-            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
         except AttributeError:
             print('Warning: no catalog defined.')
             print('Make sure you set the path to the NSA/Virgo parent catalog')
         try:
             print(f'min and max redshift = {self.zmin:.3f}, {self.zmax:.3f}')
-            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
             
         except AttributeError:
             print('problem finding galaxies.')
@@ -1366,7 +1366,7 @@ class hamodel():
             except AttributeError:
                 px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)
 
-            keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,zmin=self.zmin,zmax=self.zmax)
+            keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
             #print('number of AGC galaxies in FOV = ',sum(keepagc))
             if self.rweight_flag and self.haweight_flag:
                 offimage = (weight[np.array(py[keepagc],'i'),np.array(px[keepagc],'i')] == 0)
@@ -3242,17 +3242,42 @@ class galaxy_catalog():
             self.cat.rename_column('radeg','RA')
             self.cat.rename_column('decdeg','DEC')            
             
-    def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,weight_image=None, agcflag=False,virgoflag=False):
+    def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=False,virgoflag=False):
 
         #print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
 
+        # use function from havirgo web common
+        
         px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
         #print('in galaxies_in_fov: px={},py={}'.format(px,py))
-        onimageflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
+        keepflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
         #print('number of galaxies on image, before z cut = ',sum(onimageflag))
+        
+        # should also check the weight image and remove galaxies with weight=0
+        # this won't take care of images with partial exposures, but we can deal with that later...
+        # TODO - how to handle images with partial exposures, meaning only part of galaxy is in FOV?
+        if imagename is not None:
+            if imagename.find('shifted.fits') > -1:
+                weightimage = imagename.replace('-r-shifted.fits','-r.weight-shifted.fits')
+            else:
+                weightimage = imagename.replace('.fits','.weight.fits')
+            if 'MOS' not in imagename:
+                if os.path.exists(weightimage):
+                    print()
+                    print("cross checking object locations with weight image")
+                    print()
+                    whdu = fits.open(weightimage)
+                    # just check center position?
+                    int_px = np.array(px,'i')
+                    int_py = np.array(py,'i')        
+                    centerpixvals = whdu[0].data[int_py[keepflag],int_px[keepflag]]
+                    # weight image will have value > 0 if there is data there
+                    weightflag = centerpixvals > 0
+                    keepflag[keepflag] = keepflag[keepflag] & weightflag
+
         try:
             if agcflag:
                 zFlag1 = (self.cat.vopt/3.e5 > zmin) & (self.cat.vopt/3.e5 < zmax)
@@ -3270,7 +3295,7 @@ class galaxy_catalog():
             return None
 
         #print('number of galaxies on image, after z cut = ',sum(zFlag & onimageflag))
-        return (zFlag & onimageflag)
+        return (zFlag & keepflag)
 
     def cull_catalog(self, keepflag,prefix):
         self.cat = self.cat[keepflag]
