@@ -498,7 +498,7 @@ class ellipse():
             mean, median, std = sigma_clipped_stats(self.image2, sigma=3.0, mask=mask)            
             #self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
             self.sky2 = mean
-            self.sky2_noise = std
+            self.sky_noise2 = std
 
             # subtract sky
             self.image2 -= self.sky2
@@ -624,22 +624,22 @@ class ellipse():
         self.im1_skynoise = sky_noise_erg
         # get sky noise for image 2
         if self.image2 is not None:
-            sky_noise_erg2 = self.sky2_noise*self.uconversion2/self.pixel_scale**2
+            sky_noise_erg2 = self.sky_noise2*self.uconversion2/self.pixel_scale**2
             self.header2.set('PHOT_SKY','{:.2f}'.format(self.sky2),'sky in ADU')
-            self.header2.set('SKYNOISE','{:.2f}'.format(self.sky2_noise),'sky noise in ADU')        
+            self.header2.set('SKYNOISE','{:.2f}'.format(self.sky_noise2),'sky noise in ADU')        
             self.header2.set('SKYERR','{:.2e}'.format(sky_noise_erg2),'sky noise in erg/s/cm^2/arcsec^2')
             fits.writeto(self.image2_name,self.image2,header=self.header2,overwrite=True)
             try:
-                sky_noise_erg2 = self.sky2_noise*self.uconversion2/self.pixel_scale**2
+                sky_noise_erg2 = self.sky_noise2*self.uconversion2/self.pixel_scale**2
                 self.header2.set('PHOT_SKY','{:.2f}'.format(self.sky2),'sky in ADU')
-                self.header2.set('SKYNOISE','{:.2f}'.format(self.sky2_noise),'sky noise in ADU')        
+                self.header2.set('SKYNOISE','{:.2f}'.format(self.sky_noise2),'sky noise in ADU')        
                 self.header2.set('SKYERR','{:.2e}'.format(sky_noise_erg2),'sky noise in erg/s/cm^2/arcsec^2')
                 fits.writeto(self.image2_name,self.image2,header=self.header2,overwrite=True)
             
             except AttributeError:
                 print("Warning, self.sky not found, setting to zero")
                 self.sky2 = 0
-                self.sky2_noise = 0
+                self.sky_noise2 = 0
                 sky_noise_erg2 = 0
             
 
