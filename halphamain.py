@@ -3034,7 +3034,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.get_galaxy_cutout()
 
         if self.bad_galaxy:
-            print("\nzero std in sky - this is not real, so skipping galaxy...\n"
+            print("\nzero std in sky - this is not real, so skipping galaxy ",self.cutout_name_r)
+            print()
             return
         # create mask
         self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
