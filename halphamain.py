@@ -795,6 +795,7 @@ class create_output_table(output_table_view):
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
         #####################################################################
+        e0 = Column(np.zeros(self.ngalaxies,'f'), name='BADGAL',description='bad galaxy flag - maybe partial coverage')
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel',description='xcentroid from ellipse')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel',description='ycentroid from ellipse')
         e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS',description='axis ratio from ellipse')
@@ -2107,12 +2108,12 @@ class hamodel():
         #os.chdir(current_dir)
 
         ### SAVE DATA TO TABLE
-        fields = ['XCENTROID','YCENTROID','EPS','THETA','GINI','HGINI',\
+        fields = ['BADGAL','XCENTROID','YCENTROID','EPS','THETA','GINI','HGINI',\
                   'M20','HM20',
                   'UNMASKED_AREA','TOTAL_AREA',\
                   'SUM','SUM_MAG','ASYM','ASYM_ERR',\
                   'HSUM','HSUM_MAG','HASYM','HASYM_ERR']#,'SUM_ERR']
-        values = [self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
+        values = [self.bad_galaxy,self.e.xcenter, self.e.ycenter,self.e.eps, np.degrees(self.e.theta), \
                   self.e.cat.gini[self.e.objectIndex],self.e.cat2.gini[self.e.objectIndex],\
                   self.e.M20_1,self.e.M20_2,\
                   self.e.cat[self.e.objectIndex].area.value*self.pixelscale*self.pixelscale,\
@@ -2121,7 +2122,10 @@ class hamodel():
                   self.e.source_sum_erg, self.e.source_sum_mag,self.e.asym, self.e.asym_err, \
                   self.e.source_sum2_erg,self.e.source_sum2_mag,self.e.asym2,self.e.asym2_err]
         for i,f in enumerate(fields):
-            colname = 'ELLIP_'+f
+            if i == 0:
+                colname = f
+            else:
+                colname = 'ELLIP_'+f
             #print(colname)
             #self.table[colname][self.igal]=float('%.2e'%(values[i]))            
             try:
