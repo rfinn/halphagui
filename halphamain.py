@@ -1217,7 +1217,7 @@ class hamodel():
         ##
         scale = 2*2.5
         # ROSE - DON'T CHANGE THIS ANYMORE!!!!!!!
-        scale = 2*4        
+        #scale = 2*4        
 
         # this is the total length in one dimension
         # the scale factor includes an extra factor of 2 to convert radius to diameter
@@ -3041,18 +3041,19 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
 
         # run galfit ellip phot
         # use try in case fit fails
-        #self.galfit_ellip_phot()        
-        try:
-            self.galfit_ellip_phot()
-        except:
-            print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
+        self.galfit_ellip_phot()        
+        #try:
+        #    self.galfit_ellip_phot()
+        #except:
+        #    print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
         
         # run phot util ellip phot
         # use try in case fit fails
-        try:
-            self.photutils_ellip_phot()
-        except:
-            print('\nWARNING: problem running photutils ellip phot\n',self.cutout_name_r)
+        self.photutils_ellip_phot()
+        #try:
+        #    self.photutils_ellip_phot()
+        #except:
+        #    print('\nWARNING: problem running photutils ellip phot\n',self.cutout_name_r)
         #try:
         #    self.photutils_ellip_phot()
         #except:
