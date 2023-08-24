@@ -403,6 +403,63 @@ class ellipse():
         # https://photutils.readthedocs.io/en/stable/background.html
         
         # get a rough background estimate
+
+        # I already compute sky sigma and store it in header
+        # should look for that and use that as a threshold if it's available
+
+        try:
+            skystd = self.image_header['SKYSTD']
+            self.sky_noise = skystd
+        except KeyError:
+            print("WARNING: SKYSTD not found in ",self.image_name)
+            self.sky_noise = None
+        # get the value for halpha
+        try:
+            skystd = self.image2_header['SKYSTD']
+            self.sky_noise2 = skystd
+        except KeyError:
+            print("WARNING: SKYSTD not found in ",self.image2_name)
+            self.sky_noise2 = None
+
+        
+        if self.mask_flag:
+            if self.sky_noise is not None:
+                self.threshod = self.sky_noise
+            else:
+                self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
+            #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+            self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+        else:
+            if self.sky_noise is not None:
+                self.threshod = self.sky_noise
+            else:
+            
+                self.threshold = detect_threshold(self.image, nsigma=snrcut)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
+            #self.cat = source_properties(self.image, self.segmentation)
+            self.cat = SourceCatalog(self.image, self.segmentation)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+            
+
+
+    def detect_objectsv2(self, snrcut=1.5,npixels=10):
+        ''' 
+        run photutils detect_sources to find objects in fov.  
+        you can specify the snrcut, and only pixels above this value will be counted.
+        
+        this also measures the sky noise as the mean of the threshold image
+        '''
+        # this is not right, because the mask does not include the galaxy
+        # updating based on photutils documentation
+        # https://photutils.readthedocs.io/en/stable/background.html
+        
+        # get a rough background estimate
         sigma_clip = SigmaClip(sigma=3.0, maxiters=10)
         if self.mask_flag:
             threshold = detect_threshold(self.image, nsigma=snrcut,sigclip_sigma=3.0, mask=self.boolmask)
