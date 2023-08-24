@@ -1724,8 +1724,8 @@ class hamodel():
         newfile1.header.set('SKYSTD',hstd)
 
         # print sky stats
-        print(f"subtracted {rmed:.3f} ADU from r-band cutout")
-        print(f"subtracted {hmed:.3f} ADU from halpha cutout")        
+        print(f"subtracted {rmed:.3f} ADU from r-band cutout",rstd)
+        print(f"subtracted {hmed:.3f} ADU from halpha cutout",hstd)        
 
         
         fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
