@@ -3034,7 +3034,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # subtract the sky, using the mask image, and resave cutouts
         
         # run galfit
-        self.run_galfit(ncomp=1,ha=False)
+        try:
+            self.run_galfit(ncomp=1,ha=False)
+        except:
+            print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
 
         # run galfit ellip phot
         # use try in case fit fails
@@ -3042,14 +3045,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         try:
             self.galfit_ellip_phot()
         except:
-            print('WARNING: problem running galfit ellip phot')
+            print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
         
         # run phot util ellip phot
         # use try in case fit fails
         try:
             self.photutils_ellip_phot()
         except:
-            print('\nWARNING: problem running photutils ellip phot\n')
+            print('\nWARNING: problem running photutils ellip phot\n',self.cutout_name_r)
         #try:
         #    self.photutils_ellip_phot()
         #except:
