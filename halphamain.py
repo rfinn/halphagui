@@ -829,7 +829,7 @@ class create_output_table(output_table_view):
         e27 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_HR90',description='photutils Halpha flux frac 90')        
 
         
-        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19,e20,e21,e22,e23,e24,e25,e26,e27])
+        self.table.add_columns([e0,e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19,e20,e21,e22,e23,e24,e25,e26,e27])
     def add_profile_fit(self):
         #####################################################################
         # profile fitting using galfit geometry
