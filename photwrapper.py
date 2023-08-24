@@ -391,7 +391,7 @@ class ellipse():
         #print('measuring converting units')
         self.convert_units()
         #print('writing table')
-        self.get_image2_gini()
+        #self.get_image2_gini()
         self.get_asymmetry()
         self.write_phot_fits_tables(prefix='GAL')
         #if self.use_mpl:
