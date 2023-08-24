@@ -318,7 +318,7 @@ class ellipse():
         self.get_sky_noise()
         '''
         
-        self.detect_objects_old()
+        self.detect_objects()
         self.find_central_object()
         self.get_ellipse_guess()
         self.measure_phot()
@@ -346,7 +346,7 @@ class ellipse():
         replicating run_for_gui(), but taking input ellipse geometry from galfit
 
         '''
-        self.detect_objects_old()
+        self.detect_objects()
         self.find_central_object()
         self.get_ellipse_guess()
 
@@ -418,32 +418,57 @@ class ellipse():
         #plt.figure()
         #plt.imshow(mask,origin="lower")
         mean, median, std = sigma_clipped_stats(self.image, sigma=3.0, mask=mask)
-
-        # now make a new segmentation image based on the new noise estimate
-        # default is 1.5*std
-        self.segmentation = detect_sources(self.image, snrcut*std, npixels=npixels)
         self.sky = mean
+        self.sky_noise = std
+        self.image -= self.sky
 
-        # subtract the sky, again...
-        print("\nsky value = ",self.sky)
-        #self.image -= self.sky
-        
-        self.sky_noise = std        
-
-        #self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
-        #self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
-        #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
-        self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
-        
         if self.image2 is not None:
             # measure halpha properties using same segmentation image
             mean, median, std = sigma_clipped_stats(self.image2, sigma=3.0, mask=mask)            
-            self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+            #self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
             self.sky2 = mean
             self.sky2_noise = std
 
             # subtract sky
             self.image2 -= self.sky2
+        
+        
+        # now make a new segmentation image based on the new noise estimate
+        # default is 1.5*std
+        #self.segmentation = detect_sources(self.image, snrcut*std, npixels=npixels)
+
+
+        # subtract the sky, again...
+        #print("\nsky value = ",self.sky)
+        #self.image -= self.sky
+
+        ##
+        # old code
+        ##
+
+
+        if self.mask_flag:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
+            #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+            self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+        else:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
+            #self.cat = source_properties(self.image, self.segmentation)
+            self.cat = SourceCatalog(self.image, self.segmentation)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+        
+        #self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+        #self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
+        #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+        #self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
+        
     def detect_objects_old(self, snrcut=1.5,npixels=11):
         ''' 
         run photutils detect_sources to find objects in fov.  
