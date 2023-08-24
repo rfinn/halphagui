@@ -1217,6 +1217,7 @@ class hamodel():
         ##
         scale = 2*2.5
         # ROSE - DON'T CHANGE THIS ANYMORE!!!!!!!
+        scale = 2*3 
         #scale = 2*4        
 
         # this is the total length in one dimension
