@@ -317,16 +317,23 @@ class ellipse():
         self.write_phot_fits_tables()
         self.get_sky_noise()
         '''
-        
+
+        print("detect objects")
         self.detect_objects()
-        self.find_central_object()
+        print("find central")        
+        self.find_central_object() 
+        print("find central")               
         self.get_ellipse_guess()
+        print("find central")                
         self.measure_phot()
+        print("find central")                
         self.get_all_M20()
+        print("find central")                
         self.get_all_frac_masked_pixels()        
         self.calc_sb()
+        print("find central")                
         self.convert_units()
-        self.get_image2_gini()
+        #self.get_image2_gini()
         try:
             self.get_asymmetry()
         except:
@@ -410,13 +417,16 @@ class ellipse():
         try:
             skystd = self.header['SKYSTD']
             self.sky_noise = skystd
+            self.sky = self.header['SKYMED']
         except KeyError:
             print("WARNING: SKYSTD not found in ",self.image_name)
             self.sky_noise = None
+
         # get the value for halpha
         try:
-            skystd = self.header2['SKYSTD']
-            self.sky_noise2 = skystd
+
+            self.sky_noise2 = self.header2['SKYSTD']
+            self.sky2 = self.header['SKYMED']            
         except KeyError:
             print("WARNING: SKYSTD not found in ",self.image2_name)
             self.sky_noise2 = None
@@ -599,7 +609,6 @@ class ellipse():
         sky_noise_erg = self.sky_noise*self.uconversion1/self.pixel_scale**2
         print('r sky noise = ',sky_noise_erg)
         try:
-            
             self.header.set('PHOT_SKY','{:.2f}'.format(self.sky),'sky in ADU')
         except AttributeError:
             print("Warning, self.sky not found, setting to zero")
@@ -613,7 +622,7 @@ class ellipse():
         if self.image2 is not None:
 
             try:
-                sky_noise_erg = self.sky2_noise*self.uconversion2/self.pixel_scale**2
+                sky_noise_erg2 = self.sky2_noise*self.uconversion2/self.pixel_scale**2
                 self.header2.set('PHOT_SKY','{:.2f}'.format(self.sky2),'sky in ADU')
                 self.header2.set('SKYNOISE','{:.2f}'.format(self.sky2_noise),'sky noise in ADU')        
                 self.header2.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
@@ -623,11 +632,11 @@ class ellipse():
                 print("Warning, self.sky not found, setting to zero")
                 self.sky2 = 0
                 self.sky2_noise = 0
-                sky_noise_erg = 0
+                sky_noise_erg2 = 0
             
 
-            self.im2_skynoise = sky_noise_erg
-            print('ha sky noise = ',sky_noise_erg)
+            self.im2_skynoise = sky_noise_erg2
+            print('ha sky noise = ',sky_noise_erg2)
 
     def find_central_object(self):
         ''' 
