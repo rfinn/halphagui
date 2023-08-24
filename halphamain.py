@@ -1650,6 +1650,9 @@ class hamodel():
 
         self.write_cutouts()
 
+        if self.bad_galaxy:
+            # exit and move to the next galaxy?
+            pass
         #self.display_cutouts() - moved this to calling function in controller
 
 
@@ -1694,7 +1697,12 @@ class hamodel():
         newfile.data -= rmed
         newfile.header.set('SKYMED',rmed)
         newfile.header.set('SKYSTD',rstd)        
-        
+
+        # need to add a case to handle when sky std is zero.  This happens when object is in wacky region of INT.
+        if rstd == 0:
+            # return to caller and move to the next galaxy
+            self.bad_galaxy = True
+            return
         
         # add PSF image
 
@@ -3021,10 +3029,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         
     def auto_gal(self):
         # run the analysis on an individual galaxy
-
+        self.bad_galaxy = False
         # create cutout
         self.get_galaxy_cutout()
-        
+
+        if self.bad_galaxy:
+            print("\nzero std in sky - this is not real, so skipping galaxy...\n"
+            return
         # create mask
         self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
 
