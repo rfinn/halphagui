@@ -795,7 +795,7 @@ class create_output_table(output_table_view):
         # ellipse output
         # xcentroid, ycentroid, eps, theta, gini, sky_centroid, area, background_mean, source_sum, source_sum_err
         #####################################################################
-        e0 = Column(np.zeros(self.ngalaxies,'f'), name='BADGAL',description='bad galaxy flag - maybe partial coverage')
+        e0 = Column(np.zeros(self.ngalaxies,'bool'), name='BADGAL',description='bad galaxy flag - maybe partial coverage')
         e1 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_XCENTROID', unit='pixel',description='xcentroid from ellipse')
         e2 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_YCENTROID', unit='pixel',description='ycentroid from ellipse')
         e3 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_EPS',description='axis ratio from ellipse')

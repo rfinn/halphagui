@@ -338,6 +338,10 @@ class ellipse():
             self.get_asymmetry()
         except:
             print("WARNING: problem measuring asymmetry")
+            self.asym = -99
+            self.asym_err = -99
+            self.asym2 = -99
+            self.asym2_err = -99
         #print("running statmorph")
         #self.run_statmorph()
         self.write_phot_tables()
@@ -396,6 +400,10 @@ class ellipse():
             self.get_asymmetry()
         except:
             print("\nWARNING: problem calculating asymmetry, probably b/c image is rectangular...")
+            self.asym = -99
+            self.asym_err = -99
+            self.asym2 = -99
+            self.asym2_err = -99
             print()
         self.write_phot_fits_tables(prefix='GAL')
         #if self.use_mpl:
