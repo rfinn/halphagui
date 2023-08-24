@@ -813,7 +813,7 @@ class ellipse():
             print("getting asym for image2")
             # using the same segmentation image at for r-band
             # is this the correct thing to do?  does segmentation2.data need to be > 0?
-            self.object_pixels2 = (self.segmentation.data == self.cat.label[self.objectIndex]) & (self.segmentation2.data > 0.)
+            self.object_pixels2 = (self.segmentation.data == self.cat.label[self.objectIndex]) #& (self.segmentation2.data > 0.)
 
             #xc = self.cat.xcentroid[self.objectIndex].value
             #yc = self.cat.ycentroid[self.objectIndex].value
