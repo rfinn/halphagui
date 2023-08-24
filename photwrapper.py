@@ -424,7 +424,7 @@ class ellipse():
         
         if self.mask_flag:
             if self.sky_noise is not None:
-                self.threshod = self.sky_noise
+                self.threshold = self.sky_noise
             else:
                 self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
@@ -435,7 +435,7 @@ class ellipse():
                 self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
         else:
             if self.sky_noise is not None:
-                self.threshod = self.sky_noise
+                self.threshold = self.sky_noise
             else:
             
                 self.threshold = detect_threshold(self.image, nsigma=snrcut)
