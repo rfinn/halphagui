@@ -3259,6 +3259,7 @@ class galaxy_catalog():
         # should also check the weight image and remove galaxies with weight=0
         # this won't take care of images with partial exposures, but we can deal with that later...
         # TODO - how to handle images with partial exposures, meaning only part of galaxy is in FOV?
+        imagename = image_name
         if imagename is not None:
             if imagename.find('shifted.fits') > -1:
                 weightimage = imagename.replace('-r-shifted.fits','-r.weight-shifted.fits')
