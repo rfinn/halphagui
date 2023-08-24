@@ -318,7 +318,7 @@ class ellipse():
         self.get_sky_noise()
         '''
         
-        self.detect_objects()
+        self.detect_objects_old()
         self.find_central_object()
         self.get_ellipse_guess()
         self.measure_phot()
@@ -346,7 +346,7 @@ class ellipse():
         replicating run_for_gui(), but taking input ellipse geometry from galfit
 
         '''
-        self.detect_objects()
+        self.detect_objects_old()
         self.find_central_object()
         self.get_ellipse_guess()
 
@@ -391,7 +391,7 @@ class ellipse():
         #    self.draw_phot_results_mpl()
         #else:
         #    self.draw_phot_results()
-    def detect_objects(self, snrcut=1.5,npixels=11):
+    def detect_objects(self, snrcut=1.5,npixels=10):
         ''' 
         run photutils detect_sources to find objects in fov.  
         you can specify the snrcut, and only pixels above this value will be counted.
@@ -430,8 +430,8 @@ class ellipse():
         
         self.sky_noise = std        
 
-        threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
-        segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
+        #self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+        #self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
         #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
         self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
         
@@ -444,6 +444,36 @@ class ellipse():
 
             # subtract sky
             self.image2 -= self.sky2
+    def detect_objects_old(self, snrcut=1.5,npixels=11):
+        ''' 
+        run photutils detect_sources to find objects in fov.  
+        you can specify the snrcut, and only pixels above this value will be counted.
+        
+        this also measures the sky noise as the mean of the threshold image
+        '''
+
+        if self.mask_flag:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels, mask=self.boolmask)
+            #self.cat = source_properties(self.image, self.segmentation, mask=self.boolmask)
+            self.cat = SourceCatalog(self.image, self.segmentation, mask=self.boolmask)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+        else:
+            self.threshold = detect_threshold(self.image, nsigma=snrcut)
+            self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
+            #self.cat = source_properties(self.image, self.segmentation)
+            self.cat = SourceCatalog(self.image, self.segmentation)
+            if self.image2 is not None:
+                # measure halpha properties using same segmentation image
+                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+            
+        # get average sky noise per pixel
+        # threshold is the sky noise at the snrcut level, so need to divide by this
+        self.sky_noise = np.mean(self.threshold)/snrcut
+
+
     def get_all_M20(self):
         # as a kludge, I am going to set all objects' M20 equal to this value
         # in the end, I will only keep the value for the central object...
