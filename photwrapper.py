@@ -392,7 +392,11 @@ class ellipse():
         self.convert_units()
         #print('writing table')
         #self.get_image2_gini()
-        self.get_asymmetry()
+        try:
+            self.get_asymmetry()
+        except:
+            print("\nWARNING: problem calculating asymmetry, probably b/c image is rectangular...")
+            print()
         self.write_phot_fits_tables(prefix='GAL')
         #if self.use_mpl:
         #    self.draw_phot_results_mpl()
@@ -775,7 +779,8 @@ class ellipse():
         * going to measure asymmetry from pixels in the segmentation image only, so
 
         '''
-
+        # TODO - need to be able to handle images that are not square
+        
         # for pixels in segmentation image of central object
         # (can't figure out a way to do this without looping
         # calculate delta_x and delta_y from centroid
