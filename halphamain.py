@@ -3049,7 +3049,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         try:
             self.photutils_ellip_phot()
         except:
-            print('WARNING: problem running galfit ellip phot')            
+            print('\nWARNING: problem running photutils ellip phot\n')
         #try:
         #    self.photutils_ellip_phot()
         #except:
