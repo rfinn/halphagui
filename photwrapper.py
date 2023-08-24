@@ -454,7 +454,7 @@ class ellipse():
             self.cat = SourceCatalog(self.image, self.segmentation)
             if self.image2 is not None:
                 # measure halpha properties using same segmentation image
-                self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
+                self.cat2 = SourceCatalog(self.image2, self.segmentation)
             
 
 
