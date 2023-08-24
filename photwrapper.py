@@ -516,7 +516,12 @@ class ellipse():
         
         sky_noise_erg = self.sky_noise*self.uconversion1/self.pixel_scale**2
         print('r sky noise = ',sky_noise_erg)
-        self.header.set('PHOT_SKY','{:.2f}'.format(self.sky),'sky in ADU')                
+        try:
+            
+            self.header.set('PHOT_SKY','{:.2f}'.format(self.sky),'sky in ADU')
+        except AttributeError:
+            print("Warning, self.sky not found, setting to zero")
+            self.sky = 0
         self.header.set('SKYNOISE','{:.2f}'.format(self.sky_noise),'sky noise in ADU')        
         self.header.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
         # save files
@@ -525,7 +530,12 @@ class ellipse():
         # get sky noise for image 2
         if self.image2 is not None:
             sky_noise_erg = self.sky2_noise*self.uconversion2/self.pixel_scale**2
-            self.header.set('PHOT_SKY','{:.2f}'.format(self.sky2),'sky in ADU')                            
+            try:
+                self.header.set('PHOT_SKY','{:.2f}'.format(self.sky2),'sky in ADU')
+            except AttributeError:
+                print("Warning, self.sky not found, setting to zero")
+                self.sky2 = 0
+
             self.header2.set('SKYNOISE','{:.2f}'.format(self.sky2_noise),'sky noise in ADU')        
             self.header2.set('SKYERR','{:.2e}'.format(sky_noise_erg),'sky noise in erg/s/cm^2/arcsec^2')
             
