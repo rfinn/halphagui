@@ -522,6 +522,7 @@ class create_output_table(output_table_view):
             self.add_ellipse()
             self.add_profile_fit()
             self.add_photutils()
+            self.add_statmorph()            
         if not self.nogui:
             self.update_gui_table()
                 
@@ -690,7 +691,13 @@ class create_output_table(output_table_view):
         c1 = Column(np.zeros(len(self.table),dtype='U22'), name='BBOX',description='location of galaxy cutout in mosaic')
         # R-band scale factor for making continuum-subtracted image
         c2 = Column(np.zeros(len(self.table),'f'), name='FILTER_RATIO',description='R/Ha ratio used in cont subtraction')
-        self.table.add_columns([c1,c2])
+        # r-band ZP
+        c3 = Column(np.zeros(len(self.table),'f'), name='RZP',description='R-band ZP')
+        # Halpha ZP        
+        c4 = Column(np.zeros(len(self.table),'f'), name='HZP',description='Halpha ZP')
+        c5 = Column(np.zeros(len(self.table),'f'), name='PIXSCALE',description='Pixel scale')                
+
+        self.table.add_columns([c1,c2,c3,c4,c5])
     def add_galfit_r(self):
         ##############################################3
         ### GALFIT R-BAND FITS
@@ -1002,6 +1009,46 @@ class create_output_table(output_table_view):
         self.table.add_column(Column(np.zeros(self.ngalaxies,dtype='U50'), name='COMMENT'))
         #print(self.table)
         
+    def add_statmorph(self):
+        #####################################################################
+        # statmorph output
+        #####################################################################
+
+        # rband area
+        e1 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_XCENTROID', unit='pixel',description='xcentroid from ellipse')
+        e2 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_YCENTROID', unit='pixel',description='ycentroid from ellipse')
+        e3 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RPETRO_CIRC', unit='arcsec',description='rpetro circ')
+        e4 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RPETRO_ELLIP', unit='arcsec',description='rpetro ellip')
+        e5 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_RHALF_ELLIP', unit='arcsec',description='rhalf ellip')
+        e6 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R20', unit='arcsec',description='R20')
+        e7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_R80', unit='arcsec',description='R80')
+        e8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_GINI',description='statmorph gini')
+        e8b = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_M20',description='statmorph M20')        
+        e9 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_F_GM20',description='statmorph F(G,M20)')
+        e10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S_GM20',description='statmorph S(G,M20)')
+        e11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_C',description='statmorph concentration')
+        e12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_A',description='statmorph asymmetry')
+        e13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S',description='statmorph smoothness')         
+
+        ## Halpha parameters
+        h1 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HXCENTROID', unit='pixel',description='xcentroid from ellipse')
+        h2 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HYCENTROID', unit='pixel',description='ycentroid from ellipse')
+        h3 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRPETRO_CIRC', unit='arcsec',description='rpetro circ')
+        h4 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRPETRO_ELLIP', unit='arcsec',description='rpetro ellip')
+        h5 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HRHALF_ELLIP', unit='arcsec',description='rhalf ellip')
+        h6 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR20', unit='arcsec',description='R20')
+        h7 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HR80', unit='arcsec',description='R80')
+        h8 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HGINI',description='statmorph gini')
+        h8b = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HM20',description='statmorph M20')        
+        h9 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HF_GM20',description='statmorph F(G,M20)')
+        h10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HS_GM20',description='statmorph S(G,M20)')
+        h11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HC',description='statmorph concentration')
+        h12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HA',description='statmorph asymmetry')
+        h13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HS',description='statmorph smoothness')         
+        
+        
+        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8,e8b, e9, e10, e11, e12, e13,\
+                                h1,h2,h3,h4,h5,h6,h7,h8,h8b, h9, h10, h11, h12, h13])
 
     def add_flags(self):
         '''
@@ -1221,6 +1268,10 @@ class hamodel():
         scale = 2*3 
         #scale = 2*4        
 
+        # NOW USING SB25, so going to decrease scale factor to 2
+        scale = 2*1.5
+
+        
         # this is the total length in one dimension
         # the scale factor includes an extra factor of 2 to convert radius to diameter
         self.cutout_sizes = self.radius_arcsec*scale/self.pixelscale
@@ -1509,6 +1560,9 @@ class hamodel():
 
         
         #print('new cutout size = ',size, self.igal, self.gradius[self.igal])
+
+        self.bad_galaxy = False # this will get set to True if the noise in the sky is zero, which happens if gal is in top right corner of INT
+        
         self.reset_size = size.value
         self.cutout_size_arcsec = size
         self.cutout_size = size.value/self.pixelscale
@@ -1651,9 +1705,6 @@ class hamodel():
 
         self.write_cutouts()
 
-        if self.bad_galaxy:
-            # exit and move to the next galaxy?
-            pass
         #self.display_cutouts() - moved this to calling function in controller
 
 
@@ -1667,6 +1718,7 @@ class hamodel():
             print('Warning - could not set filter ratio in table')
             print('I think something is wrong')
 
+
         w = WCS(self.rcoadd_fname)
         try:
             ((ymin,ymax),(xmin,xmax)) = self.cutoutR.bbox_original
@@ -1674,6 +1726,12 @@ class hamodel():
             print('make sure you have selected a galaxy and saved the cutout')
             return
 
+
+        # add other image parameters to table        
+        self.table['RZP'][self.igal] = self.r_header['PHOTZP']
+        self.table['RZP'][self.igal] = self.ha_header['PHOTZP']        
+        self.table['PIXSCALE'][self.igal] = self.pixelscale
+        
         newfile = fits.PrimaryHDU()
         newfile.data = self.r[ymin:ymax,xmin:xmax]
         # add sky subtraction here
@@ -1787,7 +1845,11 @@ class hamodel():
             # and oversampling
             print("LOADING EXISTING PSF IMAGE")
             header = fits.getheader(psf_image_name)
-            self.psf = psfimage()           
+            self.psf_data = fits.getdata(psf_image_name)
+
+            # add attributes
+            self.psf = psfimage()
+            
             self.psf.fwhm = header['FWHM'] # in pixels
             self.psf.fwhm_arcsec = self.psf.fwhm*self.pixelscale
             self.oversampling = float(header['OVERSAMP'])
@@ -2102,6 +2164,8 @@ class hamodel():
             
             self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = None,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name,objra=ra,objdec=dec)
         else:
+            ra = self.defcat.cat['RA'][self.igal]
+            dec = self.defcat.cat['DEC'][self.igal]            
             self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name,objra=ra,objdec=dec )
         self.e.run_for_gui()
         self.e.plot_profiles()
@@ -2225,8 +2289,9 @@ class hamodel():
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
             
+        if self.e.statmorph_flag:
+            self.write_statmorph()
 
-        
         #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
         #c2 = Column(data=np.array(r50[self.e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
         #c3 = Column(data=r90[self.e.objectIndex],name='PHOTR90',unit='arcsec',description='photutils fluxfrac_radius')
@@ -2250,6 +2315,77 @@ class hamodel():
         self.write_profile_fits()
         if not self.auto:
             self.draw_ellipse_results(color='magenta')
+    
+    def write_statmorph(self):
+        #########################################################
+        ## ADD STATMORPH PARAMETERS
+        #########################################################
+
+        
+        # write these out to the main table
+        fields = ['XCENTROID','YCENTROID',\
+                  'RPETRO_CIRC','RPETRO_ELLIP','RHALF_ELLIP',\
+                  'R20','R80',\
+                  'GINI','M20','F_GM20','S_GM20','C','A','S']
+        
+        values = [self.e.morph.xc_centroid,\
+                  self.e.morph.yc_centroid,\
+                  self.e.morph.rpetro_circ*self.pixelscale,\
+                  self.e.morph.rpetro_ellip*self.pixelscale,\
+                  self.e.morph.rhalf_ellip*self.pixelscale,\
+                  self.e.morph.r20*self.pixelscale,\
+                  self.e.morph.r80*self.pixelscale,\
+                  self.e.morph.gini,\
+                  self.e.morph.m20,\
+                  self.e.morph.concentration,\
+                  self.e.morph.asymmetry,\
+                  self.e.morph.smoothness]
+                  
+        for i,f in enumerate(fields):
+            colname = 'SMORPH_'+f
+            #print(colname)
+            try:
+                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            except TypeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+
+        ## Add Halpha values
+        values = [self.e.morph2.xc_centroid,\
+                  self.e.morph2.yc_centroid,\
+                  self.e.morph2.rpetro_cir*self.pixelscale,\
+                  self.e.morph2.rpetro_ellip*self.pixelscale,\
+                  self.e.morph2.rhalf_ellip*self.pixelscale,\
+                  self.e.morph2.r20*self.pixelscale,
+                  self.e.morph2.r80*self.pixelscale,
+                  self.e.morph2.gini,
+                  self.e.morph2.m20,
+                  self.e.morph2.concentration,
+                  self.e.morph2.asymmetry,
+                  self.e.morph2.smoothness]
+                  
+        for i,f in enumerate(fields):
+            colname = 'SMORPH_H'+f
+            #print(colname)
+            try:
+                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+            except KeyError:
+                print("KeyError: ",colname)
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+            except TypeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                print("\ntable column names: \n",self.table.colnames)
+                sys.exit()
+
+        
     def fit_profiles(self,prefix=None):
         #current_dir = os.getcwd()
         #image_dir = os.path.dirname(self.rcoadd_fname)
@@ -3205,8 +3341,17 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         ##
 
         ephot = Table.read(ephot_fname)
-        self.radius_arcsec = ephot['SMA_SB24']
-        #self.radius_arcsec = ephot['SMA_SB23.5']
+
+        
+        #self.radius_arcsec = ephot['SMA_SB24']
+
+        bad_sb25 = ephot['SMA_SB25'] == 0
+
+        self.radius_arcsec = ephot['SMA_SB25']*(~bad_sb25) + 1.35*ephot['SMA_SB24']*bad_sb25
+        # OK, I know what you are thinking, I can't possibly be changing this again...
+
+        # use SMA_SB25 instead of SB24 - this should work better for both high and low SB galaxies
+        # if SMA_SB25 is not available use 1.35*SMA_SB24
 
         # for galaxies with SMA_SB24=0, set radius to value in main table 
         noradius_flag = self.radius_arcsec == 0

@@ -284,7 +284,9 @@ class buildmask():
         # add criteria for proper motion cut
         # oops - had < 5 instead of > 5!
         # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
-        pmflag = np.sqrt(brightstar['pmra']**2 + brightstar['pmdec']**2) > 5
+
+        # changing to make this a SNR > 5 detection, rather than 5 mas min proper motion
+        pmflag = np.sqrt(brightstar['pmra']**2*brightstar['pmra_ivar'] + brightstar['pmdec']**2*brightstar['pmdec_ivar']) > 5
         #pmflag = np.ones(len(flag),'bool')
         flag = flag & pmflag
         if np.sum(flag) > 0:

@@ -266,6 +266,11 @@ class ellipse():
             self.gain = 1.
         self.psf = psf
         self.psf_ha = psf_ha
+
+        if self.psf is not None:
+            self.psf_data = fits.getdata(self.psf)
+        if self.psf_ha is not None:
+            self.hpsf_data = fits.getdata(self.psf)            
         # the mask should identify all pixels in the cutout image that are not
         # associated with the target galaxy
         # these will be ignored when defining the shape of the ellipse and when measuring the photometry
@@ -322,17 +327,19 @@ class ellipse():
         self.detect_objects()
         print("find central")        
         self.find_central_object() 
-        print("find central")               
+        print("find ellipse guess")               
         self.get_ellipse_guess()
-        print("find central")                
+        print("measure phot")                
         self.measure_phot()
-        print("find central")                
+        print("get M20")                
         self.get_all_M20()
-        print("find central")                
-        self.get_all_frac_masked_pixels()        
+        print("get frac masked pixels")                
+        self.get_all_frac_masked_pixels()
+        print("calc sb")         
         self.calc_sb()
-        print("find central")                
+        print("convert units")                
         self.convert_units()
+        print("get asym")        
         #self.get_image2_gini()
         try:
             self.get_asymmetry()
@@ -342,12 +349,25 @@ class ellipse():
             self.asym_err = -99
             self.asym2 = -99
             self.asym2_err = -99
-        #print("running statmorph")
-        #self.run_statmorph()
+        print("running statmorph - please be patient...")
+        print()
+        self.run_statmorph()
+        self.statmorph_flag = True
+        #try:
+        #    
+        #    self.run_statmorph()
+        #    self.statmorph_flag = True
+        #except:
+        #    self.statmorph_flag = False            
+        #    print("WARNING: problem running statmorph")
+        print("writing tables")
         self.write_phot_tables()
         self.write_phot_fits_tables()
         self.get_sky_noise()
 
+        print()
+        print("finished with photutils")
+        print()
         #if self.use_mpl:
         #    self.draw_phot_results_mpl()
         #else:
@@ -740,7 +760,7 @@ class ellipse():
         if self.psf is None:
             source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
         else:
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf,mask=mask)
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
         self.source_morphs = source_morphs
         self.morph = source_morphs[0]
         fig = make_figure(self.morph)
@@ -749,7 +769,7 @@ class ellipse():
         if self.psf_ha is None:
             source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain)
         else:
-            source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain, psf=self.psf_ha)
+            source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
         self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2[0]
         fig2 = make_figure(self.morph2)
