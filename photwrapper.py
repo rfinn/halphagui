@@ -351,15 +351,15 @@ class ellipse():
             self.asym2_err = -99
         print("running statmorph - please be patient...")
         print()
-        self.run_statmorph()
-        self.statmorph_flag = True
-        #try:
-        #    
-        #    self.run_statmorph()
-        #    self.statmorph_flag = True
-        #except:
-        #    self.statmorph_flag = False            
-        #    print("WARNING: problem running statmorph")
+        #self.run_statmorph()
+        3self.statmorph_flag = True
+        try:
+            
+            self.run_statmorph()
+            self.statmorph_flag = True
+        except:
+            self.statmorph_flag = False            
+            print("WARNING: problem running statmorph")
         print("writing tables")
         self.write_phot_tables()
         self.write_phot_fits_tables()
