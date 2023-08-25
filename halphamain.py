@@ -2223,7 +2223,7 @@ class hamodel():
         self.table['ELLIP_DEC'][self.igal]=dec
         self.table['ELLIP_HRA'][self.igal]=ra2
         self.table['ELLIP_HDEC'][self.igal]=dec2
-
+        self.write_fits_table()
         # TODONE - write out phot table
         colnames = ['area',
                     'background_mean',
@@ -2299,10 +2299,10 @@ class hamodel():
                 print("sorry for the shit show...")
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
-            
+        self.write_fits_table()            
         if self.e.statmorph_flag:
             self.write_statmorph()
-
+            self.write_fits_table()
         #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
         #c2 = Column(data=np.array(r50[self.e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
         #c3 = Column(data=r90[self.e.objectIndex],name='PHOTR90',unit='arcsec',description='photutils fluxfrac_radius')
