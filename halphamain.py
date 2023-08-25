@@ -2361,7 +2361,7 @@ class hamodel():
         ## Add Halpha values
         values = [self.e.morph2.xc_centroid,\
                   self.e.morph2.yc_centroid,\
-                  self.e.morph2.rpetro_cir*self.pixelscale,\
+                  self.e.morph2.rpetro_circ*self.pixelscale,\
                   self.e.morph2.rpetro_ellip*self.pixelscale,\
                   self.e.morph2.rhalf_ellip*self.pixelscale,\
                   self.e.morph2.r20*self.pixelscale,\
