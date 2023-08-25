@@ -1028,7 +1028,8 @@ class create_output_table(output_table_view):
         e10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S_GM20',description='statmorph S(G,M20)')
         e11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_C',description='statmorph concentration')
         e12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_A',description='statmorph asymmetry')
-        e13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S',description='statmorph smoothness')         
+        e13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_S',description='statmorph smoothness')
+        e14 = Column(np.zeros(self.ngalaxies,'bool'), name='SMORPH_FLAG',description='statmorph flag')                 
 
         ## Halpha parameters
         h1 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HXCENTROID', unit='pixel',description='xcentroid from ellipse')
@@ -1044,11 +1045,12 @@ class create_output_table(output_table_view):
         h10 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HS_GM20',description='statmorph S(G,M20)')
         h11 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HC',description='statmorph concentration')
         h12 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HA',description='statmorph asymmetry')
-        h13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HS',description='statmorph smoothness')         
+        h13 = Column(np.zeros(self.ngalaxies,'f'), name='SMORPH_HS',description='statmorph smoothness')
+        h14 = Column(np.zeros(self.ngalaxies,'bool'), name='SMORPH_HFLAG',description='statmorph flag')                 
         
         
-        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8,e8b, e9, e10, e11, e12, e13,\
-                                h1,h2,h3,h4,h5,h6,h7,h8,h8b, h9, h10, h11, h12, h13])
+        self.table.add_columns([e1,e2,e3,e4,e5,e6,e7,e8,e8b, e9, e10, e11, e12, e13,e14,\
+                                h1,h2,h3,h4,h5,h6,h7,h8,h8b, h9, h10, h11, h12, h13,h14])
 
     def add_flags(self):
         '''
@@ -2326,7 +2328,8 @@ class hamodel():
         fields = ['XCENTROID','YCENTROID',\
                   'RPETRO_CIRC','RPETRO_ELLIP','RHALF_ELLIP',\
                   'R20','R80',\
-                  'GINI','M20','F_GM20','S_GM20','C','A','S']
+                  'GINI','M20','F_GM20','S_GM20',\
+                  'C','A','S','FLAG']
         
         values = [self.e.morph.xc_centroid,\
                   self.e.morph.yc_centroid,\
@@ -2341,7 +2344,8 @@ class hamodel():
                   self.e.morph.gini_m20_merger,\
                   self.e.morph.concentration,\
                   self.e.morph.asymmetry,\
-                  self.e.morph.smoothness]
+                  self.e.morph.smoothness,\
+                  self.e.morph.flag]
                   
         for i,f in enumerate(fields):
             colname = 'SMORPH_'+f
@@ -2372,7 +2376,8 @@ class hamodel():
                   self.e.morph2.gini_m20_merger,\
                   self.e.morph2.concentration,
                   self.e.morph2.asymmetry,
-                  self.e.morph2.smoothness]
+                  self.e.morph2.smoothness,\
+                  self.e.morph2.flag]
                   
         for i,f in enumerate(fields):
             colname = 'SMORPH_H'+f
