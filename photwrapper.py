@@ -352,7 +352,7 @@ class ellipse():
         print("running statmorph - please be patient...")
         print()
         #self.run_statmorph()
-        3self.statmorph_flag = True
+        #self.statmorph_flag = True
         try:
             
             self.run_statmorph()
