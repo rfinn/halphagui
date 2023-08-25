@@ -3063,19 +3063,19 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
 
         # run galfit ellip phot
         # use try in case fit fails
-        self.galfit_ellip_phot()        
-        #try:
-        #    self.galfit_ellip_phot()
-        #except:
-        #    print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
+        #self.galfit_ellip_phot()        
+        try:
+            self.galfit_ellip_phot()
+        except:
+            print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
         
         # run phot util ellip phot
         # use try in case fit fails
-        self.photutils_ellip_phot()
-        #try:
-        #    self.photutils_ellip_phot()
-        #except:
-        #    print('\nWARNING: problem running photutils ellip phot\n',self.cutout_name_r)
+        #self.photutils_ellip_phot()
+        try:
+            self.photutils_ellip_phot()
+        except:
+            print('\nWARNING: problem running photutils ellip phot\n',self.cutout_name_r)
         #try:
         #    self.photutils_ellip_phot()
         #except:
