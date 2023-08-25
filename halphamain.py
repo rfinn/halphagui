@@ -2337,6 +2337,8 @@ class hamodel():
                   self.e.morph.r80*self.pixelscale,\
                   self.e.morph.gini,\
                   self.e.morph.m20,\
+                  self.e.morph.gini_m20_bulge,\
+                  self.e.morph.gini_m20_merger,\
                   self.e.morph.concentration,\
                   self.e.morph.asymmetry,\
                   self.e.morph.smoothness]
@@ -2362,10 +2364,12 @@ class hamodel():
                   self.e.morph2.rpetro_cir*self.pixelscale,\
                   self.e.morph2.rpetro_ellip*self.pixelscale,\
                   self.e.morph2.rhalf_ellip*self.pixelscale,\
-                  self.e.morph2.r20*self.pixelscale,
-                  self.e.morph2.r80*self.pixelscale,
-                  self.e.morph2.gini,
-                  self.e.morph2.m20,
+                  self.e.morph2.r20*self.pixelscale,\
+                  self.e.morph2.r80*self.pixelscale,\
+                  self.e.morph2.gini,\
+                  self.e.morph2.m20,\
+                  self.e.morph2.gini_m20_bulge,\
+                  self.e.morph2.gini_m20_merger,\
                   self.e.morph2.concentration,
                   self.e.morph2.asymmetry,
                   self.e.morph2.smoothness]
