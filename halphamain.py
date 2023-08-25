@@ -2287,9 +2287,9 @@ class hamodel():
                   self.e.cat2.PHOT_R90[self.e.objectIndex]]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
-            #print(colname)
+            print(colname,values[i])
             try:
-                self.table[colname][self.igal]=float('%.2e'%(values[i].value))
+                self.table[f][self.igal]=float('%.2e'%(values[i].value))
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
