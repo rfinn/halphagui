@@ -2207,13 +2207,13 @@ class hamodel():
         print("before writing skynoise: ",values)
         for i,f in enumerate(fields):
             print(values[i])
-            self.table[colname] = values[i]
+            self.table[colname][self.igal] = values[i]
         fields = ['R_SKY','H_SKY']
         values = [self.e.sky,self.e.sky2]
         print("before writing sky values: ",values)
         for i,f in enumerate(fields):
             print(values[i])
-            self.table[colname] = values[i]
+            self.table[colname][self.igal] = values[i]
 
         wcs = WCS(self.cutout_name_r)
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
