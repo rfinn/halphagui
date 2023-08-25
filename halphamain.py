@@ -2287,7 +2287,7 @@ class hamodel():
                   self.e.cat2.PHOT_R90[self.e.objectIndex].value]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
-            print(colname,values[i])
+            #print(colname,values[i])
             try:
                 self.table[colname][self.igal]=float('%.2e'%(values[i].value))
             except KeyError:
@@ -2299,6 +2299,8 @@ class hamodel():
                 print("sorry for the shit show...")
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
+            except:
+                print("problem writing table element",colname,values[i])
         self.write_fits_table()            
         if self.e.statmorph_flag:
             self.write_statmorph()
