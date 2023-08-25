@@ -2270,7 +2270,12 @@ class hamodel():
 
         # TODO - is this mixing model and view????  ARGGGHHHHHH
         both = dualprofile(self.rfit,self.hafit)
-        both.make_3panel_plot()
+        try:
+            both.make_3panel_plot()
+        except:
+            print()            
+            print("problem making 3panel plot - weird values...")
+            print()
     def write_profile_fits(self,prefix=None): # MVC - model
         fields = ['R24','R25','R26','R24V','R25V',\
                   'R_F25','R_F50','R_F75',\
