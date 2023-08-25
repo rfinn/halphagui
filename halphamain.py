@@ -821,19 +821,19 @@ class create_output_table(output_table_view):
         e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag,description='HA mag from ellipse')
         e16 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM',description='HA asymmetry from ellipse')
         e17 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
-        e18 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
-        e19 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
-        e20 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKY',description='R sky level in ADU')
-        e21 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKY',description='HA sky level in ADU')
+        e18 = Column(np.zeros(self.ngalaxies,'d'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
+        e19 = Column(np.zeros(self.ngalaxies,'d'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
+        e20 = Column(np.zeros(self.ngalaxies,'d'), name='R_SKY',description='R sky level in ADU')
+        e21 = Column(np.zeros(self.ngalaxies,'d'), name='H_SKY',description='HA sky level in ADU')
 
         # photutils radii
-        e22 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_R30',description='photutils R flux frac 30')
-        e23 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_R50',description='photutils R flux frac 50')
-        e24 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_R90',description='photutils R flux frac 90')
+        e22 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_R30',description='photutils R flux frac 30')
+        e23 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_R50',description='photutils R flux frac 50')
+        e24 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_R90',description='photutils R flux frac 90')
         
-        e25 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_HR30',description='photutils Halpha flux frac 30')
-        e26 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_HR50',description='photutils Halpha flux frac 50')
-        e27 = Column(np.zeros(self.ngalaxies,'e'), name='ELLIP_HR90',description='photutils Halpha flux frac 90')        
+        e25 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HR30',description='photutils Halpha flux frac 30')
+        e26 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HR50',description='photutils Halpha flux frac 50')
+        e27 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HR90',description='photutils Halpha flux frac 90')        
 
         
         self.table.add_columns([e0,e1,e2,e3,e4,e5,e6,e7,e8, e9, e9b,e10, e11, e12, e13,e14,e15,e16,e17,e18,e19,e20,e21,e22,e23,e24,e25,e26,e27])
@@ -2204,9 +2204,17 @@ class hamodel():
         # update sky noise
         fields = ['R_SKYNOISE','H_SKYNOISE']
         values = [self.e.im1_skynoise,self.e.im2_skynoise]
+        print("before writing skynoise: ",values)
         for i,f in enumerate(fields):
             print(values[i])
             self.table[colname] = values[i]
+        fields = ['R_SKY','H_SKY']
+        values = [self.e.sky,self.e.sky2]
+        print("before writing sky values: ",values)
+        for i,f in enumerate(fields):
+            print(values[i])
+            self.table[colname] = values[i]
+
         wcs = WCS(self.cutout_name_r)
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
         
