@@ -2204,15 +2204,15 @@ class hamodel():
         # update sky noise
         fields = ['R_SKYNOISE','H_SKYNOISE']
         values = [self.e.im1_skynoise,self.e.im2_skynoise]
-        print("before writing skynoise: ",values)
+        #print("before writing skynoise: ",values)
         for i,f in enumerate(fields):
-            print(values[i])
+            #print(values[i])
             self.table[f][self.igal] = values[i]
         fields = ['R_SKY','H_SKY']
         values = [self.e.sky,self.e.sky2]
-        print("before writing sky values: ",values)
+        #print("before writing sky values: ",values)
         for i,f in enumerate(fields):
-            print(values[i])
+            #print(values[i])
             self.table[f][self.igal] = values[i]
 
         wcs = WCS(self.cutout_name_r)
@@ -2279,17 +2279,17 @@ class hamodel():
         fields = ['R30','R50','R90',\
                   'HR30','HR50','HR90']
         
-        values = [self.e.cat.PHOT_R30[self.e.objectIndex],\
-                  self.e.cat.PHOT_R50[self.e.objectIndex],\
-                  self.e.cat.PHOT_R90[self.e.objectIndex],\
-                  self.e.cat2.PHOT_R30[self.e.objectIndex],\
-                  self.e.cat2.PHOT_R50[self.e.objectIndex],\
-                  self.e.cat2.PHOT_R90[self.e.objectIndex]]
+        values = [self.e.cat.PHOT_R30[self.e.objectIndex].value,\
+                  self.e.cat.PHOT_R50[self.e.objectIndex].value,\
+                  self.e.cat.PHOT_R90[self.e.objectIndex].value,\
+                  self.e.cat2.PHOT_R30[self.e.objectIndex].value,\
+                  self.e.cat2.PHOT_R50[self.e.objectIndex].value,\
+                  self.e.cat2.PHOT_R90[self.e.objectIndex].value]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             print(colname,values[i])
             try:
-                self.table[f][self.igal]=float('%.2e'%(values[i].value))
+                self.table[colname][self.igal]=float('%.2e'%(values[i].value))
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
