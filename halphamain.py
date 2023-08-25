@@ -1731,7 +1731,8 @@ class hamodel():
 
         # add other image parameters to table        
         self.table['RZP'][self.igal] = self.r_header['PHOTZP']
-        self.table['RZP'][self.igal] = self.ha_header['PHOTZP']        
+        
+        self.table['HZP'][self.igal] = self.ha_header['PHOTZP']        
         self.table['PIXSCALE'][self.igal] = self.pixelscale
         
         newfile = fits.PrimaryHDU()
