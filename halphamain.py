@@ -1271,7 +1271,7 @@ class hamodel():
         #scale = 2*4        
 
         # NOW USING SB25, so going to decrease scale factor to 2
-        scale = 2*1.5
+        scale = 2*1.9
 
         
         # this is the total length in one dimension
