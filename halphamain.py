@@ -2196,7 +2196,7 @@ class hamodel():
             #print(colname)
             #self.table[colname][self.igal]=float('%.2e'%(values[i]))            
             try:
-                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
@@ -2289,7 +2289,7 @@ class hamodel():
             colname = 'ELLIP_'+f
             #print(colname,values[i])
             try:
-                self.table[colname][self.igal]=float('%.2e'%(values[i].value))
+                self.table[colname][self.igal]=float('%.4e'%(values[i].value))
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
@@ -2362,7 +2362,7 @@ class hamodel():
             colname = 'SMORPH_'+f
             #print(colname)
             try:
-                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
@@ -2394,7 +2394,7 @@ class hamodel():
             colname = 'SMORPH_H'+f
             #print(colname)
             try:
-                self.table[colname][self.igal]=float('%.2e'%(values[i]))
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))
             except KeyError:
                 print("KeyError: ",colname)
                 print("\ntable column names: \n",self.table.colnames)
@@ -2451,8 +2451,8 @@ class hamodel():
             else:
                 colname = prefix+f
             #print(colname, values[i])
-            self.table[colname][self.igal]=float('%.2e'%(values[i][0]))
-            self.table[colname+'_ERR'][self.igal]=float('%.2e'%(values[i][1]))
+            self.table[colname][self.igal]=float('%.4e'%(values[i][0]))
+            self.table[colname+'_ERR'][self.igal]=float('%.4e'%(values[i][1]))
             
         fields = ['R16','R17','R_F25','R_F50','R_F75','M16','M17','F_30R24','F_R24','C30','R_F95R24','F_TOT',\
                   'PETRO_R','PETRO_FLUX','PETRO_R50','PETRO_R90','PETRO_CON','PETRO_MAG']
@@ -2470,8 +2470,8 @@ class hamodel():
                 colname = prefix+'H'+f
 
             #print(colname,values[i])
-            self.table[colname][self.igal]=float('{:.2e}'.format(values[i][0]))
-            self.table[colname+'_ERR'][self.igal]=float('{:.2e}'.format(values[i][1]))
+            self.table[colname][self.igal]=float('{:.4e}'.format(values[i][0]))
+            self.table[colname+'_ERR'][self.igal]=float('{:.4e}'.format(values[i][1]))
 
         # SFR conversion from Kennicutt and Evans (2012)
         # log (dM/dt/Msun/yr) = log(Lx) - logCx
@@ -2488,8 +2488,8 @@ class hamodel():
             colname=prefix+'LOG_SFR_HA'
         #print('sfr = ',self.sfr)
         #print(self.sfr[0], self.sfr[1])
-        self.table[colname][self.igal]=float('%.2e'%(self.sfr[0]))
-        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.sfr[1]))
+        self.table[colname][self.igal]=float('%.4e'%(self.sfr[0]))
+        self.table[colname+'_ERR'][self.igal]=float('%.4e'%(self.sfr[1]))
         self.table[colname+'_FLAG'][self.igal]=detect_flag[0]
         # inner ssfr
         a = self.hafit.flux_30r24
@@ -2500,8 +2500,8 @@ class hamodel():
             colname='SSFR_IN'
         else:
             colname = prefix+'SSFR_IN'
-        self.table[colname][self.igal]=float('%.2e'%(self.inner_ssfr))
-        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.inner_ssfr_err))
+        self.table[colname][self.igal]=float('%.4e'%(self.inner_ssfr))
+        self.table[colname+'_ERR'][self.igal]=float('%.4e'%(self.inner_ssfr_err))
         # outer ssfr
         c = self.hafit.flux_r24
         d = self.rfit.flux_r24
@@ -2511,8 +2511,8 @@ class hamodel():
             colname='SSFR_OUT'
         else:
             colname=prefix+'SSFR_OUT'
-        self.table[colname][self.igal]=float('%.2e'%(self.outer_ssfr))
-        self.table[colname+'_ERR'][self.igal]=float('%.2e'%(self.outer_ssfr_err))
+        self.table[colname][self.igal]=float('%.4e'%(self.outer_ssfr))
+        self.table[colname+'_ERR'][self.igal]=float('%.4e'%(self.outer_ssfr_err))
         self.write_fits_table()        
         if not self.auto:
             self.update_gui_table()

@@ -6,7 +6,7 @@ from astropy import units as u
 def gaia_stars_in_rectangle(ra, dec, height, width, minmag=None, maxmag=18, pmsnrcut=5):
     """
     Get Gaia stars within a circular aperture.
-    Written by ChatGPT, edited by Rose Finn
+    started by ChatGPT, rewritten by Rose Finn :)
 
     Parameters:
         ra (float): Right ascension in degrees.
@@ -21,6 +21,13 @@ def gaia_stars_in_rectangle(ra, dec, height, width, minmag=None, maxmag=18, pmsn
 
     Returns:
         table: table of Gaia stars within the specified region that have pm snr > 5.
+
+
+    NOTES:
+    
+        explanation of columns can be found here:
+        https://gea.esac.esa.int/archive/documentation/GDR3/Gaia_archive/chap_datamodel/sec_dm_main_source_catalogue/ssec_dm_gaia_source.html
+
     """
     # Define the target coordinates
     target_coord = SkyCoord(ra=ra, dec=dec, unit=(u.degree, u.degree), frame='icrs')
@@ -47,12 +54,19 @@ def gaia_stars_in_rectangle(ra, dec, height, width, minmag=None, maxmag=18, pmsn
 
 
     # Extract relevant columns (you can customize this)
-    selected_columns = ['source_id', 'ra', 'dec', 'phot_g_mean_mag', 'pmra', 'pmdec', 'pmra_error', 'pmdec_error']
+    selected_columns = ['source_id', 'ra', 'dec', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'pmra', 'pmdec', 'pmra_error', 'pmdec_error']
+    
     stars = result[selected_columns]
 
     # Require SNR > 5 in proper motion
-
     keepflag = np.sqrt((stars['pmra']/stars['pmra_error'])**2 + (stars['pmdec']/stars['pmdec_error'])**2) > 5
+
+    # Cut by min/max magnitude, if they are provided
+    if maxmag is not None:
+        keepflag = keepflag & (stars['phot_g_mean_mag'] < maxmag)
+    if minmag is not None:
+        keepflag = keepflag & (stars['phot_g_mean_mag'] > minmag)
+    
     return stars[keepflag]
 
 

@@ -66,6 +66,11 @@ import matplotlib.pyplot as plt
 from maskWidget import Ui_Form as Ui_maskWindow
 from halphaCommon import cutout_image, circle_pixels
 
+# import gaia function to get stars within region
+from get_gaia_stars import gaia_stars_in_rectangle
+
+import imutils
+
 try:
     from photutils import detect_threshold, detect_sources
     #from photutils import source_properties
@@ -134,6 +139,17 @@ def remove_central_objects(mask, sma=20, BA=1, PA=0, xc=None,yc=None):
     newmask[flag2] = 0
     ellipse_params = [xc,yc,sma,BA,phirad]
     return newmask,ellipse_params
+
+def mask_radius_for_mag(mag):
+    """ 
+    function is from legacy pipeline  
+    https://github.com/legacysurvey/legacypipe/blob/6d1a92f8462f4db9360fb1a68ef7d6c252781027/py/legacypipe/reference.py#L314-L319
+    """
+    # Returns a masking radius in degrees for a star of the given magnitude.
+    # Used for Tycho-2 and Gaia stars.
+
+    # This is in degrees, and is from Rongpu in the thread [decam-chatter 12099].
+    return 1630./3600. * 1.396**(-mag)
 
 
 class buildmask():
@@ -255,51 +271,114 @@ class buildmask():
                 self.get_gaia_stars()
             else:
                 self.maskdat += self.gaia_mask
-    def get_gaia_stars(self):
+    def get_gaia_stars(self, useastroquery=True):
         """ 
-        mask out bright gaia stars using the legacy dr9 catalog and magnitude-radius relation:  
-        https://github.com/legacysurvey/legacypipe/blob/6d1a92f8462f4db9360fb1a68ef7d6c252781027/py/legacypipe/reference.py#L314-L319
+        get gaia stars within FOV
 
         """
+
+        # check to see if gaia table already exists
+        outfile = self.imagename.replace('.fits','_gaia_stars.csv')
+        if os.path.exists(outfile):
+ 
+            self.brighstar = Table.read(outfile)
+            self.xgaia = self.brightstar['xpixel']
+            self.ygaia = self.brightstar['ypixel']
+
+        else:
+
+            if useastroquery:
+                # get gaia stars within FOV
+                brightstar = get_gaia_stars_in_rectangle(self.racenter,self.deccenter,self.dydeg,self.dxdeg)
+
+                # Check to see if any stars are returned
+                if len(brightstar) > 0:
+                    # get radius from mag-radius relation
+                    mask_radius = mask_radius_for_mag(brightstar['phot_g_mean_mag'])
+                    brightstar.add_column(mask_radius,name='radius')
+
+                    starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')        
+                    self.xgaia,self.ygaia = self.image_wcs.world_to_pixel(starcoord)
+                    brightstar.add_column(self.xgaia,name='xpixel')
+                    brightstar.add_column(self.ygaia,name='ypixel')                
+
+                    self.brightstar = brightstar
+                else:
+                    self.brightstar = None
+                    self.xgaia = None
+                    self.ygaia = None
+
+            else:
+                # read in gaia catalog
+                try:
+                    brightstar = Table.read(self.gaiapath)
+                    # Convert ra,dec to x,y        
+                    starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')        
+                    x,y = self.image_wcs.world_to_pixel(starcoord)
+
+
+
+                    #print("pscalex = ",pscalex)        
+                    #pscale = pscalex.deg * 3600 # pixel scale in arcsec
+                    flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)
+                    # add criteria for proper motion cut
+                    # oops - had < 5 instead of > 5!
+                    # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
+
+                    # changing to make this a SNR > 5 detection, rather than 5 mas min proper motion
+                    pmflag = np.sqrt(brightstar['pmra']**2*brightstar['pmra_ivar'] + brightstar['pmdec']**2*brightstar['pmdec_ivar']) > 5
+                    #pmflag = np.ones(len(flag),'bool')
+                    flag = flag & pmflag
+                    if np.sum(flag) > 0:
+                        self.brightstar = brightstar[flag]
+                        self.xgaia = x
+                        self.ygaia = y
+                        brightstar.add_column(self.xgaia,name='xpixel')
+                        brightstar.add_column(self.ygaia,name='ypixel')                
+
+                    else:
+                        self.brightstar = None
+                        self.xgaia = None
+                        self.ygaia = None
+
+
+                except FileNotFoundError:
+                    warnings.warn(f"Can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
+                    self.add_gaia_stars = False
+                    return
+
+            # write out resulting file
+
+            if self.brightstar is not None:
+                outfile = self.imagename.replace('.fits','_gaia_stars.csv')
+                self.brighstar.write(outfile,format='csv')
+            
+
+
+    def make_gaia_mask(self):
+        """
+        mask out bright gaia stars using the legacy dr9 catalog and magnitude-radius relation:  
+        https://github.com/legacysurvey/legacypipe/blob/6d1a92f8462f4db9360fb1a68ef7d6c252781027/py/legacypipe/reference.py#L314-L319
+        """
+
+        self.get_gaia_stars()
+
         # set up blank
         self.gaia_mask = np.zeros_like(self.maskdat)
-         
-        # read in gaia catalog
-        try:
-            brightstar = Table.read(self.gaiapath)
-        except FileNotFoundError:
-            warnings.warn(f"Can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
-            self.add_gaia_stars = False
-            return
-            
-        # find stars on cutout
-        starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')
-        x,y = self.image_wcs.world_to_pixel(starcoord)
-
-        # create wcs object from image header
-        pscalex,pscaley = self.image_wcs.proj_plane_pixel_scales() # appears to be degrees/pixel
-        #print("pscalex = ",pscalex)        
-        #pscale = pscalex.deg * 3600 # pixel scale in arcsec
-        flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)
-        # add criteria for proper motion cut
-        # oops - had < 5 instead of > 5!
-        # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
-
-        # changing to make this a SNR > 5 detection, rather than 5 mas min proper motion
-        pmflag = np.sqrt(brightstar['pmra']**2*brightstar['pmra_ivar'] + brightstar['pmdec']**2*brightstar['pmdec_ivar']) > 5
-        #pmflag = np.ones(len(flag),'bool')
-        flag = flag & pmflag
-        if np.sum(flag) > 0:
+        
+        if self.brightstar is not None:
             # add stars to mask according to the magnitude-radius relation
-            mag = brightstar['mag'][flag]
-            xstar = x[flag]
-            ystar = y[flag]
-            rad = brightstar['radius'][flag] # in degrees
-            # convert radius to pixels            
-            radpixels = rad/pscalex.value
-            #print(xstar,ystar,rad)
+            mag = self.brightstar['mag']
+            xstar = self.xgaia
+            ystar = self.ygaia
+            rad = self.brightstar['radius'] # in degrees
+            
+            # Convert radius to pixels            
+            radpixels = rad/self.pscalex.value
 
-            mask_value = np.max(self.maskdat) + 200 # use the same value for all gaia stars
+
+            # use the same value for all gaia stars. set this above max value in mask
+            mask_value = np.max(self.maskdat) + 100 
             print('mask value = ',mask_value)
             for i in range(len(mag)):
                 # mask stars
@@ -607,6 +686,15 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.xc = self.xmax/2.
         self.yc = self.ymax/2.
         self.image_wcs = WCS(self.imheader)
+        self.pscalex,self.pscaley = self.image_wcs.proj_plane_pixel_scales() # appears to be degrees/pixel
+        
+        # get image dimensions in deg,deg
+        self.dxdeg,self.dydeg = imutils.get_image_size_deg(self.image_name)
+
+        # Get coord of image center.  will use when getting gaia stars
+        self.racenter,self.deccenter = imutils.get_image_center_deg(self.image_name)                
+
+
         self.v1,self.v2=scoreatpercentile(self.image,[5.,99.5])
         self.adjust_mask = True
         self.figure_size = (10,5)
