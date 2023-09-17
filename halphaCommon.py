@@ -26,7 +26,7 @@ dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17} 
 def circle_pixels(xc,yc,r,ximage,yimage):
     '''
     GOAL:
-    - return pixel values that lie within a for circular aperture within radius r of position (x,y)
+    - return pixel values that lie within a circular aperture within radius r of position (x,y)
     
     INPUT:
     - enter the center xc,yc and radius of circle in pixels

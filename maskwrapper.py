@@ -287,9 +287,10 @@ class buildmask():
 
         else:
 
-            if useastroquery:
+            try:
                 # get gaia stars within FOV
-                brightstar = get_gaia_stars_in_rectangle(self.racenter,self.deccenter,self.dydeg,self.dxdeg)
+                # adding buffer to the search dimensions for bright stars that might be just off FOV
+                brightstar = get_gaia_stars_in_rectangle(self.racenter,self.deccenter,self.dydeg+.01,self.dxdeg+.01)
 
                 # Check to see if any stars are returned
                 if len(brightstar) > 0:
@@ -308,7 +309,11 @@ class buildmask():
                     self.xgaia = None
                     self.ygaia = None
 
-            else:
+            except:
+                print()
+                print('WARNING: error using astroquery to get gaia stars')
+                print()
+                      
                 # read in gaia catalog
                 try:
                     brightstar = Table.read(self.gaiapath)
@@ -316,18 +321,15 @@ class buildmask():
                     starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')        
                     x,y = self.image_wcs.world_to_pixel(starcoord)
 
+                    # add buffer to catch bright stars off FOV
+                    buffer = 0.1*self.xmax
+                    flag = (x > -buffer) & (x < self.xmax+buffer) & (y>-buffer) & (y < self.ymax+buffer)
 
-
-                    #print("pscalex = ",pscalex)        
-                    #pscale = pscalex.deg * 3600 # pixel scale in arcsec
-                    flag = (x > 0) & (x < self.xmax) & (y>0) & (y < self.ymax)
                     # add criteria for proper motion cut
-                    # oops - had < 5 instead of > 5!
                     # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
-
                     # changing to make this a SNR > 5 detection, rather than 5 mas min proper motion
                     pmflag = np.sqrt(brightstar['pmra']**2*brightstar['pmra_ivar'] + brightstar['pmdec']**2*brightstar['pmdec_ivar']) > 5
-                    #pmflag = np.ones(len(flag),'bool')
+
                     flag = flag & pmflag
                     if np.sum(flag) > 0:
                         self.brightstar = brightstar[flag]
@@ -347,8 +349,7 @@ class buildmask():
                     self.add_gaia_stars = False
                     return
 
-            # write out resulting file
-
+            # Write out resulting file for future use
             if self.brightstar is not None:
                 outfile = self.imagename.replace('.fits','_gaia_stars.csv')
                 self.brighstar.write(outfile,format='csv')
