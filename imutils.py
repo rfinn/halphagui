@@ -82,7 +82,7 @@ def get_image_center_deg(imagename):
 
     nrow_center = nrow/2
     ncol_center = ncol/2
-    pixel_coord = np.array([nrow_center,ncol_center])
+    pixel_coord = np.array([[nrow_center,ncol_center]])
 
     radec = image_wcs.wcs_pix2world(pixel_coord,1,ra_dec_order=True)
     ra,dec = radec[0]
