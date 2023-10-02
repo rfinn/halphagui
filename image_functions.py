@@ -382,6 +382,11 @@ def display_legacy_unwise(ra,dec,galname,imsize_arcsec=60,plotdir=None):
     galid = galaxy name, this will be prefix of output images
     imsize = length/width of image in arcsec
 
+    RETURN:
+    list of legacy images, include jpg as the first element of this list
+
+    list of wise image names
+
     """
 
     if plotdir is None:
@@ -460,3 +465,4 @@ def display_legacy_unwise(ra,dec,galname,imsize_arcsec=60,plotdir=None):
         plt.title(imnames[i],fontsize=14)
     plt.savefig(plotdir+galname+"cutouts.png",transparent=False)
     #plt.close()
+    return legacy_images, imagefiles
