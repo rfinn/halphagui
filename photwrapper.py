@@ -19,7 +19,7 @@ https://photutils.readthedocs.io/en/stable/segmentation.html
 from photutils import detect_threshold, detect_sources
 
 # changing to remove deprecated function source_properties
-#from photutils import source_properties
+from photutils import source_properties
 from photutils.segmentation import SourceCatalog
 
 from photutils import make_source_mask
