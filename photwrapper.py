@@ -19,7 +19,7 @@ https://photutils.readthedocs.io/en/stable/segmentation.html
 from photutils import detect_threshold, detect_sources
 
 # changing to remove deprecated function source_properties
-from photutils import source_properties
+#from photutils import source_properties
 from photutils.segmentation import SourceCatalog
 
 from photutils import make_source_mask
@@ -486,8 +486,8 @@ class ellipse():
             
                 self.threshold = detect_threshold(self.image, nsigma=snrcut)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
-            self.cat = source_properties(self.image, self.segmentation)
-            #self.cat = SourceCatalog(self.image, self.segmentation)
+            #self.cat = source_properties(self.image, self.segmentation)
+            self.cat = SourceCatalog(self.image, self.segmentation)
             if self.image2 is not None:
                 # measure halpha properties using same segmentation image
                 self.cat2 = SourceCatalog(self.image2, self.segmentation)
@@ -689,8 +689,8 @@ class ellipse():
             print()
             print("getting object position from RA and DEC")
             print()
-            xc = self.xcenter_ra
-            yc = self.ycenter_dec
+            xc = self.xcenter_ra.value
+            yc = self.ycenter_dec.value
         else:
             ydim,xdim = self.image.shape
             xc = xdim/2
