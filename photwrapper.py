@@ -447,6 +447,7 @@ class ellipse():
         # should look for that and use that as a threshold if it's available
 
         try:
+            
             skystd = self.header['SKYSTD']
             self.sky_noise = skystd
             self.sky = self.header['SKYMED']
@@ -456,13 +457,16 @@ class ellipse():
 
         # get the value for halpha
         try:
-
-            self.sky_noise2 = self.header2['SKYSTD']
-            self.sky2 = self.header['SKYMED']            
+            if self.header2 is not None:
+                self.sky_noise2 = self.header2['SKYSTD']
+                self.sky2 = self.header['SKYMED']
+            else:
+                self.sky_noise2 = None
+                self.sky2 = None
         except KeyError:
             print("WARNING: SKYSTD not found in ",self.image2_name)
             self.sky_noise2 = None
-
+            self.sky2 = None
         
         if self.mask_flag:
             if self.sky_noise is not None:
