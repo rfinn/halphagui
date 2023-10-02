@@ -464,6 +464,7 @@ class ellipse():
                 self.sky_noise2 = self.header2['SKYSTD']
                 self.sky2 = self.header['SKYMED']
             else:
+                print("WARNING: SKYSTD not found in ",self.image2_name)
                 self.sky_noise2 = np.nan
                 self.sky2 = np.nan
         except KeyError:
@@ -472,7 +473,7 @@ class ellipse():
             self.sky2 = np.nan
         
         if self.mask_flag:
-            if self.sky_noise is not None:
+            if self.sky_noise is not np.nan:
                 self.threshold = self.sky_noise
             else:
                 self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
@@ -483,7 +484,7 @@ class ellipse():
                 # measure halpha properties using same segmentation image
                 self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
         else:
-            if self.sky_noise is not None:
+            if self.sky_noise is not np.nan:
                 self.threshold = self.sky_noise
             else:
             
