@@ -456,7 +456,7 @@ class ellipse():
             self.sky = self.header['SKYMED']
         except KeyError:
             print("WARNING: SKYSTD not found in ",self.image_name)
-            self.sky_noise = None
+            self.sky_noise = np.nan
 
         # get the value for halpha
         try:
@@ -464,12 +464,12 @@ class ellipse():
                 self.sky_noise2 = self.header2['SKYSTD']
                 self.sky2 = self.header['SKYMED']
             else:
-                self.sky_noise2 = None
-                self.sky2 = None
+                self.sky_noise2 = np.nan
+                self.sky2 = np.nan
         except KeyError:
             print("WARNING: SKYSTD not found in ",self.image2_name)
-            self.sky_noise2 = None
-            self.sky2 = None
+            self.sky_noise2 = np.nan
+            self.sky2 = np.nan
         
         if self.mask_flag:
             if self.sky_noise is not None:
