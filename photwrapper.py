@@ -1034,8 +1034,13 @@ class ellipse():
         apertures = []
         for obj in cat:
             position = np.transpose((obj.xcentroid, obj.ycentroid))
-            a = obj.semimajor_axis_sigma.value * r
-            b = obj.semiminor_axis_sigma.value * r
+            try:
+                a = obj.semimajor_axis_sigma.value * r
+                b = obj.semiminor_axis_sigma.value * r
+            except AttributeError:
+                a = obj.semimajor_sigma.value * r
+                b = obj.semiminor_sigma.value * r
+                
             theta = obj.orientation.to(u.rad).value
             #print(theta)
             apertures.append(EllipticalAperture(position, a, b, theta=theta))
