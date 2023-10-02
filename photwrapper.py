@@ -302,8 +302,11 @@ class ellipse():
         self.fwhm = 3.5
     def get_noise_in_aper(self, flux, area):
         ''' calculate the noise in an area '''
-        noise_e = np.sqrt(flux*self.gain + area*self.sky_noise*self.gain)
-        noise_adu = noise_e/self.gain
+        if self.sky_noise is not None:
+            noise_e = np.sqrt(flux*self.gain + area*self.sky_noise*self.gain)
+            noise_adu = noise_e/self.gain
+        else:
+            noise_adu = np.nan
         return noise_adu
 
     def run_for_gui(self):
