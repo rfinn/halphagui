@@ -741,6 +741,26 @@ class ellipse():
             print(f"comparing xcenter {xcat:.1f} and from ra {self.xcenter_ra:.1f}")
             print(f"comparing ycenter {ycat:.1f} and from dec {self.ycenter_dec:.1f}")
             print()
+
+    def get_mask_from_segmentation(self):
+        # create a copy of the segmentation image
+        # replace the object index values with zeros        
+        segmap = self.segmentation.data == self.cat.label[self.objectIndex]
+
+        # subtract this from segmentation
+
+        mask_data = self.segmentation.data - segmap*self.cat.label[self.objectIndex]
+        # smooth 
+        segmap_float = ndi.uniform_filter(np.float64(mask_data), size=10)
+        mask = segmap_float > 0.5
+
+        self.mask_image = mask
+        self.boolmask = mask
+        self.mask_flag = True
+
+
+        # turn the segmentation image into a boolean mask
+
         
     def run_statmorph(self):
         '''
