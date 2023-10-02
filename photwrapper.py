@@ -486,8 +486,8 @@ class ellipse():
             
                 self.threshold = detect_threshold(self.image, nsigma=snrcut)
             self.segmentation = detect_sources(self.image, self.threshold, npixels=npixels)
-            #self.cat = source_properties(self.image, self.segmentation)
-            self.cat = SourceCatalog(self.image, self.segmentation)
+            self.cat = source_properties(self.image, self.segmentation)
+            #self.cat = SourceCatalog(self.image, self.segmentation)
             if self.image2 is not None:
                 # measure halpha properties using same segmentation image
                 self.cat2 = SourceCatalog(self.image2, self.segmentation)
