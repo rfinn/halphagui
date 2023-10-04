@@ -15,44 +15,10 @@ pyuic5 -x halpha.v1.ui -o halphav1.py
 python halphamain.py
 ```
 
-# Setting up a virtual environment
-Check that you are running some version of python3.
+# Installation
 
-To create a virtual environment,
-```
-cd ~/github/halphagui
-```
+see wiki - Installation for detailed instructions on how to set up your environment.
 
-Then create the environment.  We are calling it venv
-```
-python -m venv venv
-```
+https://github.com/rfinn/halphagui/wiki/1---Installation
 
-To activate the new environment
-```
-source venv/bin/activate
-```
-To install the required modules, type:
-
-```
-pip install -r requirements.txt
-```
-To deactivate the virtual environment
-```
-(venv) $ deactivate
-```
-
-# Requirements ##
-
-see wiki for more detailed instructions
-
-
-## Python Modules (need to add versions) ##
-
-
-* ginga
-* astropy
-* pyqt5
-* photutils
-* statmorph https://statmorph.readthedocs.io/en/latest/
 
