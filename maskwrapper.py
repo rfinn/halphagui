@@ -269,6 +269,7 @@ class buildmask():
         if self.add_gaia_stars:
             if self.gaia_mask is None :
                 self.get_gaia_stars()
+                self.make_gaia_mask()
             else:
                 self.maskdat += self.gaia_mask
     def get_gaia_stars(self, useastroquery=True):
@@ -288,67 +289,68 @@ class buildmask():
 
         else:
 
-            #try:
+            try:
                 # get gaia stars within FOV
                 # adding buffer to the search dimensions for bright stars that might be just off FOV
-            brightstar = gaia_stars_in_rectangle(self.racenter,self.deccenter,self.dydeg+.01,self.dxdeg+.01)
+                brightstar = gaia_stars_in_rectangle(self.racenter,self.deccenter,self.dydeg+.01,self.dxdeg+.01)
 
-            # Check to see if any stars are returned
-            if len(brightstar) > 0:
-                # get radius from mag-radius relation
-                mask_radius = mask_radius_for_mag(brightstar['phot_g_mean_mag'])
-                brightstar.add_column(mask_radius,name='radius')
+                # Check to see if any stars are returned
+                if len(brightstar) > 0:
+                    print("found gaia stars in FOV!")
+                    # get radius from mag-radius relation
+                    mask_radius = mask_radius_for_mag(brightstar['phot_g_mean_mag'])
+                    brightstar.add_column(mask_radius,name='radius')
 
-                starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')        
-                self.xgaia,self.ygaia = self.image_wcs.world_to_pixel(starcoord)
-                brightstar.add_column(self.xgaia,name='xpixel')
-                brightstar.add_column(self.ygaia,name='ypixel')                
+                    starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')        
+                    self.xgaia,self.ygaia = self.image_wcs.world_to_pixel(starcoord)
+                    brightstar.add_column(self.xgaia,name='xpixel')
+                    brightstar.add_column(self.ygaia,name='ypixel')                
 
-                self.brightstar = brightstar
-            else:
-                 self.brightstar = None
-                 self.xgaia = None
-                 self.ygaia = None
+                    self.brightstar = brightstar
+                else:
+                     self.brightstar = None
+                     self.xgaia = None
+                     self.ygaia = None
 
-            # except:
-            #     print()
-            #     print('WARNING: error using astroquery to get gaia stars')
-            #     print()
+            except:
+                print()
+                print('WARNING: error using astroquery to get gaia stars')
+                print()
                       
-            #     # read in gaia catalog
-            #     try:
-            #         brightstar = Table.read(self.gaiapath)
-            #         # Convert ra,dec to x,y        
-            #         starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')        
-            #         x,y = self.image_wcs.world_to_pixel(starcoord)
+                # read in gaia catalog
+                try:
+                    brightstar = Table.read(self.gaiapath)
+                    # Convert ra,dec to x,y        
+                    starcoord = SkyCoord(brightstar['ra'],brightstar['dec'],frame='icrs',unit='deg')        
+                    x,y = self.image_wcs.world_to_pixel(starcoord)
 
-            #         # add buffer to catch bright stars off FOV
-            #         buffer = 0.1*self.xmax
-            #         flag = (x > -buffer) & (x < self.xmax+buffer) & (y>-buffer) & (y < self.ymax+buffer)
+                    # add buffer to catch bright stars off FOV
+                    buffer = 0.1*self.xmax
+                    flag = (x > -buffer) & (x < self.xmax+buffer) & (y>-buffer) & (y < self.ymax+buffer)
 
-            #         # add criteria for proper motion cut
-            #         # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
-            #         # changing to make this a SNR > 5 detection, rather than 5 mas min proper motion
-            #         pmflag = np.sqrt(brightstar['pmra']**2*brightstar['pmra_ivar'] + brightstar['pmdec']**2*brightstar['pmdec_ivar']) > 5
+                    # add criteria for proper motion cut
+                    # Hopefully this fix should resolve cases where center of galaxy is masked out as a star...
+                    # changing to make this a SNR > 5 detection, rather than 5 mas min proper motion
+                    pmflag = np.sqrt(brightstar['pmra']**2*brightstar['pmra_ivar'] + brightstar['pmdec']**2*brightstar['pmdec_ivar']) > 5
 
-            #         flag = flag & pmflag
-            #         if np.sum(flag) > 0:
-            #             self.brightstar = brightstar[flag]
-            #             self.xgaia = x
-            #             self.ygaia = y
-            #             brightstar.add_column(self.xgaia,name='xpixel')
-            #             brightstar.add_column(self.ygaia,name='ypixel')                
+                    flag = flag & pmflag
+                    if np.sum(flag) > 0:
+                        self.brightstar = brightstar[flag]
+                        self.xgaia = x
+                        self.ygaia = y
+                        brightstar.add_column(self.xgaia,name='xpixel')
+                        brightstar.add_column(self.ygaia,name='ypixel')                
 
-            #         else:
-            #             self.brightstar = None
-            #             self.xgaia = None
-            #             self.ygaia = None
+                    else:
+                        self.brightstar = None
+                        self.xgaia = None
+                        self.ygaia = None
 
 
-            #     except FileNotFoundError:
-            #         warnings.warn(f"Can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
-            #         self.add_gaia_stars = False
-            #         return
+                except FileNotFoundError:
+                    warnings.warn(f"Can't find the catalog for gaia stars({self.gaiapath}) - running without bright star masks!")
+                    self.add_gaia_stars = False
+                    return
 
             # Write out resulting file for future use
             if self.brightstar is not None:
@@ -370,7 +372,7 @@ class buildmask():
         
         if self.brightstar is not None:
             # add stars to mask according to the magnitude-radius relation
-            mag = self.brightstar['mag']
+            mag = self.brightstar['phot_g_mean_mag']
             xstar = self.xgaia
             ystar = self.ygaia
             rad = self.brightstar['radius'] # in degrees
@@ -692,6 +694,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         
         # get image dimensions in deg,deg
         self.dxdeg,self.dydeg = imutils.get_image_size_deg(self.image_name)
+        
 
         # Get coord of image center.  will use when getting gaia stars
         self.racenter,self.deccenter = imutils.get_image_center_deg(self.image_name)                
@@ -736,8 +739,11 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             print(f"\ntime to run photutils: {round((t_2-t_1),3)} sec\n")
         #self.update_mask()
         if self.auto:
-            # grow mask 3x when running in auto mode
+            # grow mask 7x when running in auto mode
             self.grow_mask()
+            self.grow_mask()
+            self.grow_mask()
+            self.grow_mask()            
             self.grow_mask()
             self.grow_mask()
             self.grow_mask()            

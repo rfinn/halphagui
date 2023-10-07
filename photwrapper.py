@@ -693,8 +693,8 @@ class ellipse():
             print()
             print("getting object position from RA and DEC")
             print()
-            xc = self.xcenter_ra.value
-            yc = self.ycenter_dec.value
+            xc = self.xcenter_ra
+            yc = self.ycenter_dec
         else:
             ydim,xdim = self.image.shape
             xc = xdim/2

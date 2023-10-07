@@ -65,8 +65,11 @@ def get_image_size_deg(imagename):
 
     sizex = ncol*pscalex
     sizey = nrow*pscaley
-    
-    return sizex,sizey
+    #print()
+    #print("in get_image_size_deg, sizex,sizey = ",sizex,sizey)
+    #print()
+    # return the size without the unit
+    return sizex.value,sizey.value
 
 
 def get_image_center_deg(imagename):
@@ -86,6 +89,6 @@ def get_image_center_deg(imagename):
 
     radec = image_wcs.wcs_pix2world(pixel_coord,1,ra_dec_order=True)
     ra,dec = radec[0]
-    
+    #print("in get_image_center_deg, ra,dec = ",ra,dec)
     return ra,dec
 
