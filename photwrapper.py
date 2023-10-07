@@ -302,8 +302,11 @@ class ellipse():
         self.fwhm = 3.5
     def get_noise_in_aper(self, flux, area):
         ''' calculate the noise in an area '''
-        noise_e = np.sqrt(flux*self.gain + area*self.sky_noise*self.gain)
-        noise_adu = noise_e/self.gain
+        if self.sky_noise is not None:
+            noise_e = np.sqrt(flux*self.gain + area*self.sky_noise*self.gain)
+            noise_adu = noise_e/self.gain
+        else:
+            noise_adu = np.nan
         return noise_adu
 
     def run_for_gui(self):
@@ -447,25 +450,30 @@ class ellipse():
         # should look for that and use that as a threshold if it's available
 
         try:
+            
             skystd = self.header['SKYSTD']
             self.sky_noise = skystd
             self.sky = self.header['SKYMED']
         except KeyError:
             print("WARNING: SKYSTD not found in ",self.image_name)
-            self.sky_noise = None
+            self.sky_noise = np.nan
 
         # get the value for halpha
         try:
-
-            self.sky_noise2 = self.header2['SKYSTD']
-            self.sky2 = self.header['SKYMED']            
+            if self.header2 is not None:
+                self.sky_noise2 = self.header2['SKYSTD']
+                self.sky2 = self.header['SKYMED']
+            else:
+                print("WARNING: SKYSTD not found in ",self.image2_name)
+                self.sky_noise2 = np.nan
+                self.sky2 = np.nan
         except KeyError:
             print("WARNING: SKYSTD not found in ",self.image2_name)
-            self.sky_noise2 = None
-
+            self.sky_noise2 = np.nan
+            self.sky2 = np.nan
         
         if self.mask_flag:
-            if self.sky_noise is not None:
+            if self.sky_noise is not np.nan:
                 self.threshold = self.sky_noise
             else:
                 self.threshold = detect_threshold(self.image, nsigma=snrcut,mask=self.boolmask)
@@ -476,7 +484,7 @@ class ellipse():
                 # measure halpha properties using same segmentation image
                 self.cat2 = SourceCatalog(self.image2, self.segmentation, mask=self.boolmask)
         else:
-            if self.sky_noise is not None:
+            if self.sky_noise is not np.nan:
                 self.threshold = self.sky_noise
             else:
             
@@ -685,8 +693,8 @@ class ellipse():
             print()
             print("getting object position from RA and DEC")
             print()
-            xc = self.xcenter_ra
-            yc = self.ycenter_dec
+            xc = self.xcenter_ra.value
+            yc = self.ycenter_dec.value
         else:
             ydim,xdim = self.image.shape
             xc = xdim/2
@@ -733,6 +741,26 @@ class ellipse():
             print(f"comparing xcenter {xcat:.1f} and from ra {self.xcenter_ra:.1f}")
             print(f"comparing ycenter {ycat:.1f} and from dec {self.ycenter_dec:.1f}")
             print()
+
+    def get_mask_from_segmentation(self):
+        # create a copy of the segmentation image
+        # replace the object index values with zeros        
+        segmap = self.segmentation.data == self.cat.label[self.objectIndex]
+
+        # subtract this from segmentation
+
+        mask_data = self.segmentation.data - segmap*self.cat.label[self.objectIndex]
+        # smooth 
+        segmap_float = ndi.uniform_filter(np.float64(mask_data), size=10)
+        mask = segmap_float > 0.5
+
+        self.mask_image = mask
+        self.boolmask = mask
+        self.mask_flag = True
+
+
+        # turn the segmentation image into a boolean mask
+
         
     def run_statmorph(self):
         '''
@@ -1026,8 +1054,13 @@ class ellipse():
         apertures = []
         for obj in cat:
             position = np.transpose((obj.xcentroid, obj.ycentroid))
-            a = obj.semimajor_axis_sigma.value * r
-            b = obj.semiminor_axis_sigma.value * r
+            try:
+                a = obj.semimajor_axis_sigma.value * r
+                b = obj.semiminor_axis_sigma.value * r
+            except AttributeError:
+                a = obj.semimajor_sigma.value * r
+                b = obj.semiminor_sigma.value * r
+                
             theta = obj.orientation.to(u.rad).value
             #print(theta)
             apertures.append(EllipticalAperture(position, a, b, theta=theta))
