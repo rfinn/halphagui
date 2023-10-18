@@ -59,7 +59,7 @@ import time
 start_time = time.time()
 
 import matplotlib
-matplotlib.use('Qt5Agg')
+#matplotlib.use('Qt5Agg')
 
 
 # modules in halphagui
