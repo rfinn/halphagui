@@ -29,7 +29,7 @@ vmax = 50.
 UNWISE_PIXSCALE = 2.75
 LEGACY_PIXSCALE = 1
 
-def get_legacy_images(ra,dec,galid='VFID0',pixscale=1,imsize='60',band='g',makeplots=False,subfolder=None):
+def get_legacy_images(ra,dec,galid='VFID0',pixscale=1,imsize='60',band='g',makeplots=False,subfolder=None,verbose=False):
     """
     Download legacy image for a particular ra, dec
     
@@ -66,18 +66,23 @@ def get_legacy_images(ra,dec,galid='VFID0',pixscale=1,imsize='60',band='g',makep
     # check if images already exist
     # if not download images
     if not(os.path.exists(jpeg_name)):
-        print('retrieving ',jpeg_name)
+        if verbose:
+            print('retrieving ',jpeg_name)
         url='http://legacysurvey.org/viewer/jpeg-cutout?ra='+str(ra)+'&dec='+str(dec)+'&layer=dr8&size='+str(imsize)+'&pixscale='+str(pixscale)
         urlretrieve(url, jpeg_name)
     else:
-        print('previously downloaded ',jpeg_name)
+        if verbose:
+            print('previously downloaded ',jpeg_name)
     if not(os.path.exists(fits_name)):
-        print('retrieving ',fits_name)
+        if verbose:
+            print('retrieving ',fits_name)
         url='http://legacysurvey.org/viewer/cutout.fits?ra='+str(ra)+'&dec='+str(dec)+'&layer=dr8&size='+str(imsize)+'&pixscale='+str(pixscale)+'&bands='+band
-        print(url)
+        if verbose:
+            print(url)
         urlretrieve(url, fits_name)
     else:
-        print('previously downloaded ',fits_name)
+        if verbose:
+            print('previously downloaded ',fits_name)
 
     # try to read the data in
     try:
@@ -107,7 +112,7 @@ def get_legacy_images(ra,dec,galid='VFID0',pixscale=1,imsize='60',band='g',makep
     return fits_name, jpeg_name
 
 
-def get_unwise_image(ra,dec,galid='VFID0',pixscale=2.75,imsize='60',bands='1234',makeplots=False,subfolder=None):
+def get_unwise_image(ra,dec,galid='VFID0',pixscale=2.75,imsize='60',bands='1234',makeplots=False,subfolder=None,verbose=False):
     """
     Download unwise image for a particular ra, dec
     
@@ -127,8 +132,9 @@ def get_unwise_image(ra,dec,galid='VFID0',pixscale=2.75,imsize='60',bands='1234'
     else:
         image_names = glob.glob(galid+'-unwise*img-m.fits')
     if len(image_names) > 3:
-        print('unwise images already downloaded')
-        print(image_names)
+        if verbose:
+            print('unwise images already downloaded')
+            print(image_names)
         # should be only one *-img-m.fits image per band
         if len(image_names) > len(bands):
             multiframe=True
@@ -138,15 +144,18 @@ def get_unwise_image(ra,dec,galid='VFID0',pixscale=2.75,imsize='60',bands='1234'
         if not multiframe:
             return image_names,weight_names,multiframe
         else:
-            print('going to try new stacking for wise multiframe')
+            if verbose:
+                print('going to try new stacking for wise multiframe')
             downloadwise = False
     if downloadwise:
         imsize = int(imsize)
-        print('wise image size = ',imsize)
+        if verbose:
+            print('wise image size = ',imsize)
         baseurl = 'http://unwise.me/cutout_fits?version=allwise'
         imurl = baseurl +'&ra=%.5f&dec=%.5f&size=%s&bands=%s'%(ra,dec,imsize,bands)
-        print('downloading unwise images')
-        print(imurl)
+        if verbose:
+            print('downloading unwise images')
+            print(imurl)
         wisetar = wget.download(imurl)
         tartemp = tarfile.open(wisetar,mode='r:gz') #mode='r:gz'
         wnames = tartemp.getnames()
@@ -193,7 +202,8 @@ def get_unwise_image(ra,dec,galid='VFID0',pixscale=2.75,imsize='60',bands='1234'
         image_names=[]
         weight_names=[]
         for b in bands:
-            print('running swarp to combine multiple unwise images in band ',b)
+            if verbose:
+                print('running swarp to combine multiple unwise images in band ',b)
             #########################################
             ## COMBINE THE IMAGE FRAMES USING AVERAGE
             #########################################        
@@ -212,7 +222,8 @@ def get_unwise_image(ra,dec,galid='VFID0',pixscale=2.75,imsize='60',bands='1234'
             all_images = " ".join(allfiles)
             output_image = str(galid)+'-'
             s = 'swarp '+all_images+' -COMBINE_TYPE AVERAGE -WEIGHT_SUFFIX .std.fits -SUBTRACT_BACK N'
-            print(s)
+            if verbose:
+                print(s)
             os.system(s)
 
             # rename coadd.fits to the output image name
@@ -354,7 +365,7 @@ def display_unwise(ra,dec,galname,imsize_arcsec=60):
     imsize_pixels_legacy = round(imsize_arcsec/LEGACY_PIXSCALE)
     imsize_pixels_unwise = round(imsize_arcsec/UNWISE_PIXSCALE)
     
-    t = get_unwise_image(ra,dec,galid=galname,makeplots=False,imsize=str(imsize_pixels_unwise))
+    t = get_unwise_image(ra,dec,galid=galname,makeplots=False,imsize=str(imsize_pixels_unwise),verbose=verbose)
     imagefiles = t[0]
     noisefiles = t[1]
     imagefiles.sort()
@@ -371,7 +382,7 @@ def display_unwise(ra,dec,galname,imsize_arcsec=60):
         display_image(data,percent=92)
         plt.title(imnames[i],fontsize=14)    
     
-def display_legacy_unwise(ra,dec,galname,imsize_arcsec=60,plotdir=None):
+def display_legacy_unwise(ra,dec,galname,imsize_arcsec=60,plotdir=None,verbose=False):
     """
 
     download and display legacy and unwise images
@@ -417,7 +428,12 @@ def display_legacy_unwise(ra,dec,galname,imsize_arcsec=60,plotdir=None):
             getjpg = True
         else:
             getjpg = False
-        t = get_legacy_images(ra,dec,galid=galname,band=b,makeplots=False,imsize=str(imsize_pixels_legacy))
+        try:
+            t = get_legacy_images(ra,dec,galid=galname,band=b,makeplots=False,imsize=str(imsize_pixels_legacy),verbose=verbose)
+        except HTTPError:
+            print(f"WARNING: got a http error when downloading {b} image for {galname}")
+            continue
+
         if t is None:
             print(f"WARNING: GALAXY {galname} IS OUTSIDE LEGACY FOOTPRINT")
             plot_legacy = False
@@ -439,6 +455,8 @@ def display_legacy_unwise(ra,dec,galname,imsize_arcsec=60,plotdir=None):
         # plot legacy images in top row
         for i,im in enumerate(legacy_images):
             plt.subplot(2,4,i+1)
+            if not os.path.exists(im):
+                continue
             if i == 0:
                 # display jpg
                 t = Image.open(im)
