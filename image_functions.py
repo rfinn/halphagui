@@ -430,7 +430,7 @@ def display_legacy_unwise(ra,dec,galname,imsize_arcsec=60,plotdir=None,verbose=F
             getjpg = False
         try:
             t = get_legacy_images(ra,dec,galid=galname,band=b,makeplots=False,imsize=str(imsize_pixels_legacy),verbose=verbose)
-        except HTTPError:
+        except:
             print(f"WARNING: got a http error when downloading {b} image for {galname}")
             continue
 
