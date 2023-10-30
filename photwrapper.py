@@ -1154,7 +1154,7 @@ class ellipse():
                 self.flux2[i] = self.phot_table2['aperture_sum'][0]
                 self.flux2_err[i] = self.get_noise_in_aper(self.flux2[i], self.area[i])
     def draw_phot_apertures(self):
-        ''' matplotlib plotting to show apertures   '''
+        ''' matplotlib plotting to show apertures; returns plot axis   '''
         tbl1 = self.cat.to_table()
         cat = self.cat
         r=3.
@@ -1171,6 +1171,7 @@ class ellipse():
             aperture.plot(axes=ax1, color='white', lw=1.5)
             aperture.plot(axes=ax2, color='white', lw=1.5)
         #plt.show()
+        return plt.gca()
 
     def calc_sb(self):
         # calculate surface brightness in each aperture
