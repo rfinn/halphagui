@@ -1046,7 +1046,7 @@ class ellipse():
                 aperture.plot(color='white',lw=1.5)
         plt.show()
         #plt.close()
-    def show_seg_aperture(self):
+    def show_seg_aperture(self,plotname=None):
         ''' matplotlib plotting to show apertures   '''
         tbl1 = self.cat.to_table()
         cat = self.cat
@@ -1077,6 +1077,8 @@ class ellipse():
             aperture.plot(axes=ax1, color='white', lw=1.5)
             aperture.plot(axes=ax2, color='white', lw=1.5)
         plt.show()
+        if plotname is not None:
+            plt.savefig(plotname)
         #plt.close()
     def measure_phot(self):
         '''
