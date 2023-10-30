@@ -1076,7 +1076,7 @@ class ellipse():
         for aperture in apertures:
             aperture.plot(axes=ax1, color='white', lw=1.5)
             aperture.plot(axes=ax2, color='white', lw=1.5)
-        plt.show()
+        #plt.show()
         if plotname is not None:
             plt.savefig(plotname)
         #plt.close()
