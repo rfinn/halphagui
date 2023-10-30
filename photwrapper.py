@@ -1170,7 +1170,7 @@ class ellipse():
         for aperture in self.allellipses:
             aperture.plot(axes=ax1, color='white', lw=1.5)
             aperture.plot(axes=ax2, color='white', lw=1.5)
-        plt.show()
+        #plt.show()
 
     def calc_sb(self):
         # calculate surface brightness in each aperture
