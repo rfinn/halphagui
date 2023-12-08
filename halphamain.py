@@ -1491,7 +1491,7 @@ class hamodel():
             #ave = 10**(dm/2.5) # f2/f1
 
             ave = header['FRATIOZP']
-            runse = False
+            run_se = False
         except KeyError:
             self.link_files()
             current_dir = os.getcwd()
@@ -1501,7 +1501,7 @@ class hamodel():
             runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
             ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
             print(ave,std)
-            runse = True
+            run_se = True
             #plt.show()
             #os.chdir(current_dir)
         self.filter_ratio = ave
@@ -1514,7 +1514,7 @@ class hamodel():
             self.ui.filterRatioLineEdit.setText(str(self.filter_ratio))
         #if not self.auto:
         #    self.setup_ratio_slider()
-        if runse:
+        if run_se:
             self.clean_links()
 
             # the following lines remove the SE files, but we shouldn't do this
