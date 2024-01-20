@@ -117,6 +117,7 @@ from get_galaxy_size import getobjectsize
 
 # default size for cutouts, multiple of NSA PETROTH90
 cutout_scale = 14
+
 # now in terms of R25 for
 cutout_scale = 2.5
 
@@ -821,10 +822,10 @@ class create_output_table(output_table_view):
         e15 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HSUM_MAG', unit=u.mag,description='HA mag from ellipse')
         e16 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM',description='HA asymmetry from ellipse')
         e17 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_HASYM_ERR')
-        e18 = Column(np.zeros(self.ngalaxies,'d'), name='R_SKYNOISE',description='R skynoise in erg/s/cm^2/arcsec^2')
-        e19 = Column(np.zeros(self.ngalaxies,'d'), name='H_SKYNOISE',description='HA skynoise in erg/s/cm^2/arcsec^2')
-        e20 = Column(np.zeros(self.ngalaxies,'d'), name='R_SKY',description='R sky level in ADU')
-        e21 = Column(np.zeros(self.ngalaxies,'d'), name='H_SKY',description='HA sky level in ADU')
+        e18 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKYNOISE',description='R skynoise in 1E-17 erg/s/cm^2/arcsec^2')
+        e19 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKYNOISE',description='HA skynoise in 1E-17  erg/s/cm^2/arcsec^2')
+        e20 = Column(np.zeros(self.ngalaxies,'e'), name='R_SKY',description='R sky level in ADU')
+        e21 = Column(np.zeros(self.ngalaxies,'e'), name='H_SKY',description='HA sky level in ADU')
 
         # photutils radii
         e22 = Column(np.zeros(self.ngalaxies,'f'), name='ELLIP_R30',description='photutils R flux frac 30')
@@ -2203,7 +2204,7 @@ class hamodel():
                 sys.exit()
         # update sky noise
         fields = ['R_SKYNOISE','H_SKYNOISE']
-        values = [self.e.im1_skynoise,self.e.im2_skynoise]
+        values = [self.e.im1_skynoise/1.e-17,self.e.im2_skynoise/1.e-17]
         #print("before writing skynoise: ",values)
         for i,f in enumerate(fields):
             #print(values[i])

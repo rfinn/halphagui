@@ -647,6 +647,7 @@ class ellipse():
         # add sky noise to image 1 header
         
         sky_noise_erg = self.sky_noise*self.uconversion1/self.pixel_scale**2
+
         print('r sky noise = ',sky_noise_erg)
         try:
             self.header.set('PHOT_SKY','{:.2f}'.format(self.sky),'sky in ADU')
