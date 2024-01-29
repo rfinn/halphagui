@@ -70,6 +70,9 @@ import imutils
 central_wavelength = {'4':6620.52,'8':6654.19,'12':6698.53,'16':6730.72,'R':6513.5,'r':6292.28,'inthalpha':6568.,'intha6657':6657,'intr':6240} # angstrom
 dwavelength = {'4':80.48,'8':81.33,'12':82.95,'16':81.1,'R':1511.3,'r':1475.17,'inthalpha':95.,'intha6657':80,'intr':1347} # angstrom
 
+# define colors - need this for plotting line and fill_between in the same color
+mycolors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
 
 def display_image(image,percent=99.9,lowrange=False,mask=None,sigclip=True):
     lowrange=False
@@ -215,6 +218,8 @@ class ellipse():
     * psf           - used by statmorph (not sure if this is the image or the image name)
     * psf_ha        - used by statmorph
 
+
+
     '''
     def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None,objra=None,objdec=None):
         '''  inputs described above '''
@@ -227,7 +232,8 @@ class ellipse():
 
         self.objra = objra
         self.objdec = objdec
-        
+
+        self.pixel_scale = imutils.get_pixel_scale(self.header)        
         # check to see if obj position is passed in - need to do this for off-center objects
         if (objra is not None): # unmask central elliptical region around object
             # get wcs from mask image
@@ -309,6 +315,73 @@ class ellipse():
             noise_adu = np.nan
         return noise_adu
 
+    def run_two_image_phot(self,write1=False):
+        ''' 
+        batch all of the functions that we run for the gui, including:
+
+        self.detect_objects()
+        self.find_central_object()
+        self.get_ellipse_guess()
+        self.measure_phot()
+        self.calc_sb()
+        self.convert_units()
+        self.get_image2_gini()
+        self.get_asymmetry()
+        self.write_phot_tables()
+        self.write_phot_fits_tables()
+        self.get_sky_noise()
+        '''
+
+        print("detect objects")
+        self.detect_objects()
+        print("find central")        
+        self.find_central_object() 
+        print("find ellipse guess")               
+        self.get_ellipse_guess()
+        print("measure phot")                
+        self.measure_phot()
+        #print("get M20")                
+        #self.get_all_M20()
+        print("get frac masked pixels")                
+        self.get_all_frac_masked_pixels()
+        print("calc sb")         
+        self.calc_sb()
+        #print("convert units")                
+        #self.convert_units()
+        #print("get asym")        
+        ##self.get_image2_gini()
+        #try:
+        #    self.get_asymmetry()
+        #except:
+        #    print("WARNING: problem measuring asymmetry")
+        #    self.asym = -99
+        #    self.asym_err = -99
+        #    self.asym2 = -99
+        #    self.asym2_err = -99
+        
+        #print("running statmorph - please be patient...")
+        #print()
+        ##self.run_statmorph()
+        ##self.statmorph_flag = True
+        #try:    
+        #    self.run_statmorph()
+        #    self.statmorph_flag = True
+        #except:
+        #    self.statmorph_flag = False            
+        #    print("WARNING: problem running statmorph")
+        print("writing phot fits tables")
+        #self.write_phot_tables()
+        self.write_phot_fits_table2_simple()
+        #self.get_sky_noise()
+
+        print()
+        print("finished with photutils")
+        print()
+        #if self.use_mpl:
+        #    self.draw_phot_results_mpl()
+        #else:
+        #    self.draw_phot_results()
+    
     def run_for_gui(self):
         ''' 
         batch all of the functions that we run for the gui, including:
@@ -1289,7 +1362,7 @@ class ellipse():
         '''
         
         # radius enclosed flux
-        outfile = open(self.image_name.split('.fits')[0]+'-phot.dat','w')#used to be _phot.dat, but changing it to .dat so that it can be read into code for ellipse profiles
+        outfile = open(self.image_name.split('.fits')[0]+'_phot.dat','w')#used to be _phot.dat, but changing it to .dat so that it can be read into code for ellipse profiles
 
         #outfile.write('# X_IMAGE Y_IMAGE ELLIPTICITY THETA_J2000 \n')
         #outfile.write('# %.2f %.2f %.2f %.2f \n'%(self.xcenter,self.ycenter,self.eps,self.theta))
@@ -1340,9 +1413,9 @@ class ellipse():
         ''' write out photometry for image and image2 in fits format '''
 
         if prefix is None:
-             outfile = self.image_name.split('.fits')[0]+'-phot.fits'
+             outfile = self.image_name.split('.fits')[0]+'_phot.fits'
         else:
-             outfile = self.image_name.split('.fits')[0]+'-'+prefix+'-phot.fits'
+             outfile = self.image_name.split('.fits')[0]+'-'+prefix+'_phot.fits'
         print('photometry outfile = ',outfile)
 
         data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
@@ -1384,9 +1457,9 @@ class ellipse():
             # write out photometry for h-alpha
             # radius enclosed flux
             if prefix is None:
-                outfile = self.image2_name.split('.fits')[0]+'-phot.fits'
+                outfile = self.image2_name.split('.fits')[0]+'_phot.fits'
             else:
-                outfile = self.image2_name.split('.fits')[0]+'-'+prefix+'-phot.fits'
+                outfile = self.image2_name.split('.fits')[0]+'-'+prefix+'_phot.fits'
     
             data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
                 self.flux2,self.flux2_err,\
@@ -1427,7 +1500,73 @@ class ellipse():
             t = Table(columns)
             t.write(outfile, format='fits', overwrite=True)
 
-            
+
+    def write_phot_fits_table1_simple(self, prefix=None):
+        ''' write out photometry for image and image2 in fits format '''
+
+        if prefix is None:
+             outfile = self.image_name.split('.fits')[0]+'_phot.fits'
+        else:
+             outfile = self.image_name.split('.fits')[0]+'-'+prefix+'_phot.fits'
+        print('photometry outfile = ',outfile)
+
+        data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
+             self.flux1,self.flux1_err,\
+             self.sb1, self.sb1_err, \
+             self.sb1_snr]
+             #self.flux1_erg, self.flux1_err_erg,\
+             #self.mag1, self.mag1_err, \
+             #self.sb1_erg_sqarcsec,self.sb1_erg_sqarcsec_err, \
+             #self.sb1_mag_sqarcsec,self.sb1_mag_sqarcsec_err]
+
+        names = ['sma_arcsec','sma_pix','flux','flux_err',\
+                 'sb', 'sb_err', \
+                 'sb_snr', ]
+
+        units = [u.arcsec,u.pixel,u.adu/u.s,u.adu/u.s, \
+                 u.adu/u.s/u.pixel**2, u.adu/u.s/u.pixel**2, '']
+
+
+        #self.sky_noise,self.sky_noise_erg]
+        #'sky_noise_ADU_sqpix','sky_noise_erg_sqarcsec']
+        #u.adu/u.s/u.pixel**2,u.erg/u.s/u.cm**2/u.arcsec**2]        
+        columns = []
+        for i in range(len(data)):
+            columns.append(Column(data[i],name=names[i],unit=units[i]))
+        
+        t = Table(columns)
+        t.write(outfile, format='fits', overwrite=True)
+    def write_phot_fits_table2_simple(self, prefix=None):
+        """ write out phot for second image only - don't want to overwrite R phot """
+        if prefix is None:
+             outfile = self.image_name.split('.fits')[0]+'_phot.fits'
+        else:
+             outfile = self.image_name.split('.fits')[0]+'-'+prefix+'_phot.fits'
+        
+        if self.image2_flag:
+            # write out photometry for h-alpha
+            # radius enclosed flux
+            if prefix is None:
+                outfile = self.image2_name.split('.fits')[0]+'_phot.fits'
+            else:
+                outfile = self.image2_name.split('.fits')[0]+'-'+prefix+'_phot.fits'
+    
+            data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
+                self.flux2,self.flux2_err,\
+                self.sb2, self.sb2_err, \
+                self.sb2_snr]
+            names = ['sma_arcsec','sma_pix','flux','flux_err',\
+                'sb', 'sb_err', \
+                'sb_snr']
+            units = [u.arcsec,u.pixel,u.adu/u.s,u.adu/u.s, \
+                 u.adu/u.s/u.pixel**2, u.adu/u.s/u.pixel**2, '']
+            columns = []
+            for i in range(len(data)):
+                columns.append(Column(data[i],name=names[i],unit=units[i]))
+            self.tab2_simple = Table(columns)
+            self.tab2_simple.write(outfile, format='fits', overwrite=True)
+
+
     def draw_phot_results(self):
         ''' DRAW RESULTING FIT ON R-BAND CUTOUT, for gui '''
         markcolor='cyan'
@@ -1487,7 +1626,64 @@ class ellipse():
             plt.gca().set_yscale('log')
         #plt.show()
         plt.savefig(self.image_name.split('.fits')[0]+'-enclosed-flux.png')
+    def plot_fancy_profiles(self):
+        # plot enclosed flux        
+        fig = plt.figure(figsize=(10,4))
+        plt.subplots_adjust(left=.15,bottom=.1,right=.95,top=.95,wspace=.3)
 
+        labels = ['R','Halphax100']
+        alphas = [1,.4,.6,.4]
+        x = self.apertures_a*self.pixel_scale
+        fluxes = [self.flux1_erg,self.flux2_erg]
+        flux_errs = [self.flux1_err_erg,self.flux2_err_erg]
+        plt.subplot(1,2,1)
+        for i,t in enumerate(fluxes):
+            y0 = fluxes[i]            
+            y1 = y0+flux_errs[i]
+            y2 = y0-flux_errs[i]
+
+            if (i == 1) + (i == 3):
+                y0=y0*100
+                y1 = y1*100
+                y2 = y2*100
+            plt.fill_between(x,y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
+            # also plot line because you can't see the result when the error is small
+            # this should fix issue #18 in Virgo github
+            plt.plot(x,y0,'-',lw=2,color=mycolors[i])
+        plt.xlabel('SMA (arcsec)',fontsize=16)
+        plt.ylabel('Flux (erg/s/cm^2/Hz)',fontsize=16)
+        plt.gca().set_yscale('log')
+        plt.gca().set_xscale('log')
+        plt.legend(loc='lower right')
+
+        plt.subplot(1,2,2)
+
+        fluxes = [self.sb1_erg_sqarcsec,self.sb2_erg_sqarcsec]
+        flux_errs = [self.sb1_erg_sqarcsec_err,self.sb2_erg_sqarcsec_err]
+        for i,t in enumerate(fluxes):
+            y0 = fluxes[i]            
+            y1 = y0+flux_errs[i]
+            y2 = y0-flux_errs[i]
+
+            if (i == 1) + (i == 3):
+                y0=y0*100
+                y1 = y1*100
+                y2 = y2*100
+            plt.fill_between(x,y1,y2,label=labels[i],alpha=alphas[i],color=mycolors[i])
+            # also plot line because you can't see the result when the error is small
+            # this should fix issue #18 in Virgo github
+            plt.plot(x,y0,'-',lw=2,color=mycolors[i])
+        
+        plt.xlabel('SMA (arcsec)',fontsize=16)
+        plt.ylabel('Surface Brightness',fontsize=16)
+
+        plt.gca().set_yscale('log')
+        plt.gca().set_xscale('log')        
+        plt.legend(loc='upper right')
+            
+        plt.savefig(self.image_name.split('.fits')[0]+'_enclosed_flux_fancy.png')        
+        #plt.close(fig)
+        
         
 if __name__ == '__main__':
     image = 'MKW8-18216-R.fits'
