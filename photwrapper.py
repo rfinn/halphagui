@@ -1142,7 +1142,7 @@ class ellipse():
         norm = ImageNormalize(stretch=SqrtStretch())
         plt.figure()
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 8))
-        ax1.imshow(self.image, origin='lower', cmap='Greys_r', norm=norm)
+        ax1.imshow(self.masked_image, origin='lower', cmap='Greys_r', norm=norm)
         ax1.set_title('Data')
         #cmap = segm_deblend.make_cmap(random_state=12345)
         ax2.imshow(self.segmentation.data, origin='lower')
