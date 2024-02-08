@@ -539,7 +539,8 @@ class buildmask():
         # outfile
         outfile = self.mask_image.replace('.fits','.png')
         plt.savefig(outfile)
-        plt.show()
+        
+        #plt.show()
         
 
 
