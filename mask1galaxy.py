@@ -65,7 +65,7 @@ def get_galaxy_params(VFID):
     # get sizes for galaxies - will use this to unmask central region
     # need to cut this catalog based on keepflag
     ##
-
+    from astropy.table import Table
     
     ephot = Table.read(virgotabledir+'/vf_v2_legacy_ephot.fits')
     vmain = Table.read(virgotabledir+'/vf_v2_main.fits')
