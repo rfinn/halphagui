@@ -686,7 +686,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.haimage_name = haimage
         print(self.image_name)
         print(self.haimage_name)
-        #print(sepath)
+        print(sepath)
         self.sepath = sepath
         self.gaiapath = gaiapath
         self.gaia_mask = None
