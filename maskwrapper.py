@@ -159,6 +159,8 @@ class buildmask():
         # set up symbolic links from sextractor directory to the current working directory
         sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
         for file in sextractor_files:
+            if os.path.exists(file):
+                os.remove(file)
             os.system('ln -s '+self.sepath+'/'+file+' .')
     def clean_links(self):
         # clean up symbolic links to sextractor files
