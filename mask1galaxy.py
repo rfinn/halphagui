@@ -40,14 +40,18 @@ try:
     if os.uname()[1] == 'grawp':
         # this is the directory path on grawp
         virgotabledir = "/mnt/astrophysics/rfinn/catalogs/Virgo/v2/"
+        sepath = "/home/siena.edu/rfinn/github/halphagui/astromatic/"
     elif os.uname()[1] == 'localhost': # this is what virgo VMS returns
         # this is the directory path on virgo vms
         virgotabledir = "/mnt/astrophysics/catalogs/Virgo/v2/"
+        sepath = "/home/rfinn/github/halphagui/astromatic/"        
     elif os.uname()[1] == 'virgof': # this is what virgo VMS returns
         # this is the directory path on virgo vms
         virgotabledir = "/home/rfinn/research/Virgo/tables-north/v2/"
+        sepath = "/home/rfinn/github/halphagui/astromatic/"                
     else:
         virgotabledir = None
+        sepath = None
     if virgotabledir is not None:
         if not os.path.exists(virgotabledir):
             print("found the machine name but could not find table dir")
@@ -180,7 +184,7 @@ if __name__ == '__main__':
     # get shape parameters for galaxy
     if virgotabledir is not None:
         gRA,gDEC,gRAD,gBA,gPA = get_galaxy_params(vfid)
-        cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --objra {ra} --objdec {dec} --objsma {gRAD:.1f} --objBA {gBA:.1f} --objPA {gPA:.1f} --sepath /home/siena.edu/rfinn/github/halphagui/astromatic --auto"
+        cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --objra {ra} --objdec {dec} --objsma {gRAD:.1f} --objBA {gBA:.1f} --objPA {gPA:.1f} --sepath {sepath} --auto"
     else:
         cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --auto"
     # call maskwrapper.py
