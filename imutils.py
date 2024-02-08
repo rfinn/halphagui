@@ -3,19 +3,35 @@
 from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 #import ccdproc
-from photutils import make_source_mask
+
 from astropy.io.fits import Header
 import numpy as np
 
 def subtract_median_sky(data,getstd=False,getmedian=True,subtract=True):
     ''' subtract median sky from image data '''
-    mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)
-    masked_data = np.ma.array(data,mask=mask)
-    #clipped_array = sigma_clip(masked_data,cenfunc=np.ma.mean)
+    try:
+        from photutils import make_source_mask
+        mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)
+        masked_data = np.ma.array(data,mask=mask)
+        #clipped_array = sigma_clip(masked_data,cenfunc=np.ma.mean)
 
+    except ImportError: # using a more recent version of photutils
+
+        from photutils.segmentation import SegmentationImage
+        from photutils.segmentation import detect_sources
+        from photutils.background import Background2D, MedianBackground
+
+        bkg_estimator = MedianBackground()
+
+        bkg = Background2D(imdat,(50, 50),filter_size=(3, 3), bkg_estimator=bkg_estimator)
+        threshold = 3 * bkg.background_rms
+        segment_map = detect_sources(imdat, threshold, npixels=10)
+        masked_data = np.ma.array(data,mask=mask)
     mean,median,std = sigma_clipped_stats(masked_data,sigma=3.0,cenfunc=np.ma.mean)
     if subtract:
         data -= median
+
+
     if getstd:
         return data,median,std
     

@@ -4,6 +4,7 @@
 GOAL:
 * to create a mask from the r-band image of a galaxy
 * to reproject that mask onto the WISE pixel scale
+* this was developed for Virgo project and is using that directory structure
 
 USAGE:
 
@@ -20,6 +21,10 @@ when running on grawp, the topdir is:
 
 this switch is handled automatically
 
+
+* 2024-02-08
+- not sure how this will handle galaxies within JM's group images - I don't think it does
+
 """
 import os
 import sys
@@ -27,7 +32,7 @@ import sys
 import numpy as np
 import subprocess
 
-
+overwrite = True
 
 def funpack_image(input,output,nhdu=1):
     command = 'funpack -O {} {}'.format(output,input)
@@ -98,9 +103,13 @@ if __name__ == '__main__':
 
     # check if the mask exists
     if os.path.exists(mask):
-        print(f"mask already exists for {vfid}.")
-        print("moving to the next galaxy")
-        sys.exit()
+        if overwrite:
+            pass
+            print("remaking mask")
+        else:
+            print(f"mask already exists for {vfid}.")
+            print("moving to the next galaxy")
+            sys.exit()
 
     # call maskwrapper.py
     cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --auto"

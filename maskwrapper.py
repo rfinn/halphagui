@@ -72,7 +72,7 @@ from get_gaia_stars import gaia_stars_in_rectangle
 import imutils
 
 try:
-    from photutils import detect_threshold, detect_sources
+    from photutils.segmentation import detect_threshold, detect_sources
     #from photutils import source_properties
     from photutils.segmentation import SourceCatalog    
     from photutils.segmentation import deblend_sources
@@ -195,9 +195,32 @@ class buildmask():
         
         self.catname = self.image_name.replace('.fits','.cat')
         self.segmentation = self.image_name.replace('.fits','-segmentation.fits')
-        sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation}"
-        #print(sestring)
+
+        
+        sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation} -DETECT_MINAREA {self.minarea}"
+        print(sestring)
         os.system(sestring)
+        self.maskdat = fits.getdata(self.segmentation)
+        # grow masked areas
+        bool_array = np.array(self.maskdat.shape,'bool')
+        #for i in range(len(self.xsex)):
+        # check to see if the object is not centered in the cutout
+
+        
+    def get_photutils_mask(self,galaxy_id = None):
+        # TODO make an alternate function that creates segmentation image from photutils
+        from astropy.stats import sigma_clipped_stats
+        from photutils import make_source_mask
+
+        # create mask to cut low SNR pixels based on SNR in SFR image
+        mask = make_source_mask(imdat,nsigma=self.snr,npixels=self.minarea,dilate_size=5)
+        masked_data = np.ma.array(imdat,mask=mask)
+        
+        
+        self.catname = self.image_name.replace('.fits','.cat')
+        self.segmentation = self.image_name.replace('.fits','-segmentation.fits')
+
+        
         self.maskdat = fits.getdata(self.segmentation)
         # grow masked areas
         bool_array = np.array(self.maskdat.shape,'bool')
@@ -604,7 +627,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False,minarea=10):
         self.auto = auto
         if MainWindow is None:
             self.auto = True
@@ -674,6 +697,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.threshold = threshold
         self.snr = snr
         self.snr_analysis = snr
+        self.minarea = minarea
         self.cmap = cmap
         self.xcursor_old = -99
         self.xcursor = -99
@@ -1059,7 +1083,9 @@ if __name__ == "__main__":
     parser.add_argument('--objsma',dest = 'objsma', default=None,help='SMA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objBA',dest = 'objBA', default=None,help='BA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objPA',dest = 'objPA', default=None,help='PA of elliptical region to unmask around galaxy, measure CCW from +x axis')        
-    parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')        
+    parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')
+    parser.add_argument('--sesnr',dest = 'sesnr', default=10,help='adjust the SE SNR for detection.  Default is 10.')
+    parser.add_argument('--minarea',dest = 'minarea', default=5,help='adjust the SE detection area.  Default is 10.')                
         
     args = parser.parse_args()
     if (args.objra is not None) and (args.objBA is not None):
@@ -1081,10 +1107,10 @@ if __name__ == "__main__":
             
             #print('got here 1')
             MainWindow = QtWidgets.QWidget()
-            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse = unmaskellipse)
+            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse = unmaskellipse,snr=args.sesnr,minarea=args.minarea)
         else:
             #print('got here 2')
-            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse=unmaskellipse)
+            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse=unmaskellipse,snr=args.sesnr,minarea=args.minarea)
     else:
         #print('got here 3')
         ui = maskwindow(MainWindow, logger)
