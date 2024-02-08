@@ -52,6 +52,8 @@ try:
         if not os.path.exists(virgotabledir):
             print("found the machine name but could not find table dir")
             sys.exit()
+except:
+    print("could not find machine name")
             
 def funpack_image(input,output,nhdu=1):
     command = 'funpack -O {} {}'.format(output,input)
