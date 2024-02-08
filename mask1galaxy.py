@@ -57,7 +57,7 @@ for gd in gdirs:
         sepath = gd
         break
 
-if virgotabledir in None:
+if virgotabledir is None:
     print("found the machine name but could not find table dir")
     sys.exit()
             
