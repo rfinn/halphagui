@@ -60,7 +60,7 @@ def funpack_image(input,output,nhdu=1):
     print(command)
     os.system(command)
 
-def get_gal_params(VFID):
+def get_galaxy_params(VFID):
     ##
     # get sizes for galaxies - will use this to unmask central region
     # need to cut this catalog based on keepflag
