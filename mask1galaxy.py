@@ -44,6 +44,7 @@ virgotabledir = None
 for vd in vdirs:
     if os.path.exists(vd):
         virgotabledir = vd
+        print("found ",virgotabledir)
         break
 
 gdirs = ["/home/siena.edu/rfinn/github/halphagui/astromatic/",\
@@ -55,6 +56,7 @@ sepath = None
 for gd in gdirs:
     if os.path.exists(gd):
         sepath = gd
+        print("found ",sepath)
         break
 
 if virgotabledir is None:
