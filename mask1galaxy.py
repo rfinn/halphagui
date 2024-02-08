@@ -117,17 +117,20 @@ if __name__ == '__main__':
     try:
         os.chdir(topdir)
     except FileNotFoundError: # assuming that we are running on virgo vms
+        
         topdir = '/mnt/astrophysics/muchogalfit-output/'
-        image_source_dir = '/mnt/virgofilaments-data/'        
-        os.chdir(topdir)
-    except FileNotFoundError:
-        topdir = os.getcwd()
-        os.chdir(topdir)
+        image_source_dir = '/mnt/virgofilaments-data/'
+        try:
+            os.chdir(topdir)
+        except FileNotFoundError:
+            topdir = os.getcwd()+'/'
+            os.chdir(topdir)
     # take as input the galaxy name
     galname = sys.argv[1]
 
     # move to muchogalfit-output directory
     output_dir = topdir+galname+'/'
+    print(output_dir)
     if not os.path.exists(output_dir):
         print('WARNING: {} does not exist\n Be sure to run setup_galfit.py first')
         os.chdir(topdir)
@@ -187,11 +190,20 @@ if __name__ == '__main__':
     # get shape parameters for galaxy
     if virgotabledir is not None:
         gRA,gDEC,gRAD,gBA,gPA = get_galaxy_params(vfid)
+        gPA = gPA + 90
         cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --objra {ra} --objdec {dec} --objsma {gRAD:.1f} --objBA {gBA:.1f} --objPA {gPA:.1f} --sepath {sepath} --auto"
     else:
         cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --auto"
     # call maskwrapper.py
-    #print(cmd)
+    print(cmd)
+
+    # plot mask and central ellipse
+
+    #plt.figure()
+    #data = fits.getdata(mask)
+    #plt.imshow(data)
+
+    # plot ellipse
     os.system(cmd)
 
 

@@ -61,6 +61,7 @@ from scipy.stats import scoreatpercentile
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+from matplotlib import patches
 
 #from maskGui import Ui_maskWindow
 from maskWidget import Ui_Form as Ui_maskWindow
@@ -245,6 +246,7 @@ class buildmask():
             print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
             self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
         else:
+            print("no ellipse params")
             self.ellipseparams = None
         self.update_mask()
         
@@ -510,11 +512,35 @@ class buildmask():
         # save convolved mask as new mask
         self.write_mask()
 
+    def show_mask_mpl(self):
         # plot mpl figure
         # this was for debugging purposes
-        #plt.figure()
-        #plt.imshow(self.maskdat)
-        #plt.show()
+        self.fig = plt.figure(1,figsize=self.figure_size)
+        plt.clf()
+        plt.subplots_adjust(hspace=0,wspace=0)
+        plt.subplot(1,2,1)
+        plt.imshow(self.image,cmap='gray_r',vmin=self.v1,vmax=self.v2,origin='lower')
+        plt.title('image')
+        plt.subplot(1,2,2)
+        #plt.imshow(maskdat,cmap='gray_r',origin='lower')
+        plt.imshow(self.maskdat,cmap=self.cmap,origin='lower')
+        plt.title('mask')
+        plt.gca().set_yticks(())
+        #plt.draw()
+        #plt.show(block=False)
+        xc,yc,r,BA,PA = self.ellipseparams
+
+        PAdeg = np.degrees(PA)
+        print(f"BA={BA},PA={PAdeg} deg")        
+        #print("just checking - adding ellipse drawing ",self.ellipseparams)
+        ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
+        plt.gca().add_patch(ellip)
+
+        # outfile
+        outfile = self.mask_image.replace('.fits','.png')
+        plt.savefig(outfile)
+        plt.show()
+        
 
 
 class my_cutout_image(QtCore.QObject):#QtCore.QObject):
