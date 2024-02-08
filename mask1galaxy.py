@@ -34,30 +34,32 @@ import subprocess
 
 overwrite = True
 
-try:
-    print("trying to find virgo catalogs")
-    # Set up path to the virgo catalogs
-    if os.uname()[1] == 'grawp':
-        # this is the directory path on grawp
-        virgotabledir = "/mnt/astrophysics/rfinn/catalogs/Virgo/v2/"
-        sepath = "/home/siena.edu/rfinn/github/halphagui/astromatic/"
-    elif os.uname()[1] == 'localhost': # this is what virgo VMS returns
-        # this is the directory path on virgo vms
-        virgotabledir = "/mnt/astrophysics/catalogs/Virgo/v2/"
-        sepath = "/home/rfinn/github/halphagui/astromatic/"        
-    elif os.uname()[1] == 'virgof': # this is what virgo VMS returns
-        # this is the directory path on virgo vms
-        virgotabledir = "/home/rfinn/research/Virgo/tables-north/v2/"
-        sepath = "/home/rfinn/github/halphagui/astromatic/"                
-    else:
-        virgotabledir = None
-        sepath = None
-    if virgotabledir is not None:
-        if not os.path.exists(virgotabledir):
-            print("found the machine name but could not find table dir")
-            sys.exit()
-except:
-    print("could not find machine name")
+
+print("trying to find virgo catalogs")
+vdirs = ["/mnt/astrophysics/rfinn/catalogs/Virgo/v2/",\
+         "/mnt/astrophysics/catalogs/Virgo/v2/",\
+         "/home/rfinn/research/Virgo/tables-north/v2/"]
+
+virgotabledir = None
+for vd in vdir:
+    if os.path.exists(vd):
+        virgotabledir = vd
+        break
+
+gdirs = ["/home/siena.edu/rfinn/github/halphagui/astromatic/",\
+         "/home/rfinn/github/halphagui/astromatic/",\
+         "/home/rfinn/github/halphagui/astromatic/"]
+
+
+sepath = None
+for gd in gdirs:
+    if os.path.exists(gd):
+        sepath = gd
+        break
+
+if virgotabledir in None:
+    print("found the machine name but could not find table dir")
+    sys.exit()
             
 def funpack_image(input,output,nhdu=1):
     command = 'funpack -O {} {}'.format(output,input)
