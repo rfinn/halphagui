@@ -41,7 +41,7 @@ vdirs = ["/mnt/astrophysics/rfinn/catalogs/Virgo/v2/",\
          "/home/rfinn/research/Virgo/tables-north/v2/"]
 
 virgotabledir = None
-for vd in vdir:
+for vd in vdirs:
     if os.path.exists(vd):
         virgotabledir = vd
         break
