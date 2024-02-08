@@ -162,7 +162,8 @@ class buildmask():
         for file in sextractor_files:
             if os.path.exists(file):
                 os.remove(file)
-            os.system('ln -sf '+self.sepath+'/'+file+' .')
+            #os.system('ln -sf '+self.sepath+'/'+file+' .')
+            os.copy(self.sepath+'/'+file, file)
     def clean_links(self):
         # clean up symbolic links to sextractor files
         # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
