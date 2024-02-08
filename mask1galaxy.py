@@ -129,7 +129,7 @@ if __name__ == '__main__':
             os.chdir(topdir)
     # take as input the galaxy name
     galname = sys.argv[1]
-
+    print("working on ",galname)
     # move to muchogalfit-output directory
     output_dir = topdir+galname+'/'
     print(output_dir)
