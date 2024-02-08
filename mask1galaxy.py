@@ -120,6 +120,9 @@ if __name__ == '__main__':
         topdir = '/mnt/astrophysics/muchogalfit-output/'
         image_source_dir = '/mnt/virgofilaments-data/'        
         os.chdir(topdir)
+    except FileNotFoundError:
+        topdir = os.getcwd()
+        os.chdir(topdir)
     # take as input the galaxy name
     galname = sys.argv[1]
 
