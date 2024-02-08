@@ -180,7 +180,7 @@ if __name__ == '__main__':
     # get shape parameters for galaxy
     if virgotabledir is not None:
         gRA,gDEC,gRAD,gBA,gPA = get_galaxy_params(vfid)
-        cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --objra {ra} --objdec {dec} --objsma {gRAD:.1f} --objBA {gBA:.1f} --objPA {gPA:.1f} --auto"
+        cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --objra {ra} --objdec {dec} --objsma {gRAD:.1f} --objBA {gBA:.1f} --objPA {gPA:.1f} --sepath /home/siena.edu/rfinn/github/halphagui/astromatic --auto"
     else:
         cmd = f"python {homedir}/github/halphagui/maskwrapper.py --image {image} --auto"
     # call maskwrapper.py
