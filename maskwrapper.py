@@ -252,10 +252,8 @@ class buildmask():
             self.imheader.set('ELLIP_BA',BA,comment='BA of mask ellipse')
             self.imheader.set('ELLIP_PA',np.degrees(PA),comment='PA (deg) of mask ellipse')
         else:
-            print("HEY!!!")
-            print()
-            print("No parameters for central ellipse parameters!")
-            print()
+            print("HEY!!! No parameters for central ellipse!")
+
             
         fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
         invmask = self.maskdat > 0.
