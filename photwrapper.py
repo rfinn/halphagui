@@ -332,19 +332,19 @@ class ellipse():
         self.get_sky_noise()
         '''
 
-        print("detect objects")
+        #print("detect objects")
         self.detect_objects()
-        print("find central")        
+        #print("find central")        
         self.find_central_object() 
-        print("find ellipse guess")               
+        #print("find ellipse guess")               
         self.get_ellipse_guess()
-        print("measure phot")                
+        #print("measure phot")                
         self.measure_phot()
         #print("get M20")                
         #self.get_all_M20()
-        print("get frac masked pixels")                
+        #print("get frac masked pixels")                
         self.get_all_frac_masked_pixels()
-        print("calc sb")         
+        #print("calc sb")         
         self.calc_sb()
         #print("convert units")                
         #self.convert_units()
@@ -369,14 +369,14 @@ class ellipse():
         #except:
         #    self.statmorph_flag = False            
         #    print("WARNING: problem running statmorph")
-        print("writing phot fits tables")
+        #print("writing phot fits tables")
         #self.write_phot_tables()
         self.write_phot_fits_table2_simple()
         #self.get_sky_noise()
 
-        print()
-        print("finished with photutils")
-        print()
+        #print()
+        #print("finished with photutils")
+        #print()
         #if self.use_mpl:
         #    self.draw_phot_results_mpl()
         #else:
@@ -764,9 +764,9 @@ class ellipse():
 
         # TODONE - need to be able to handle objects that are not at the center - should have option to pass in RA/DEC and then do like in maskwrapper
         if self.objra is not None:
-            print()
+            #print()
             print("getting object position from RA and DEC")
-            print()
+            #print()
             xc = self.xcenter_ra
             yc = self.ycenter_dec
         else:
@@ -811,10 +811,10 @@ class ellipse():
                 print("Hold the horses - something is not right!!!")
             
 
-            print("")            
-            print(f"comparing xcenter {xcat:.1f} and from ra {self.xcenter_ra:.1f}")
-            print(f"comparing ycenter {ycat:.1f} and from dec {self.ycenter_dec:.1f}")
-            print()
+            #print("")            
+            #print(f"comparing xcenter {xcat:.1f} and from ra {self.xcenter_ra:.1f}")
+            #print(f"comparing ycenter {ycat:.1f} and from dec {self.ycenter_dec:.1f}")
+            #print()
 
     def get_mask_from_segmentation(self):
         # create a copy of the segmentation image
@@ -1030,11 +1030,11 @@ class ellipse():
         self.ycenter = obj.ycentroid
 
 
-        if self.objra is not None:
-            print("")            
-            print(f"comparing xcenter {self.xcenter:.1f} and from ra {self.xcenter_ra:.1f}")
-            print(f"comparing ycenter {self.ycenter:.1f} and from dec {self.ycenter_dec:.1f}")
-            print()
+        #if self.objra is not None:
+        #    print("")            
+        #    print(f"comparing xcenter {self.xcenter:.1f} and from ra {self.xcenter_ra:.1f}")
+        #    print(f"comparing ycenter {self.ycenter:.1f} and from dec {self.ycenter_dec:.1f}")
+        #    print()
         self.position = (obj.xcentroid, obj.ycentroid)
         print(self.position,self.xcenter,obj.xcentroid,self.ycenter,obj.ycentroid)
         self.sma = obj.semimajor_sigma.value * r
@@ -1237,14 +1237,22 @@ class ellipse():
         apertures = []
         norm = ImageNormalize(stretch=SqrtStretch())
         plt.figure()
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 8))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 6))
+        clipped_data = sigma_clip(self.image,sigma_lower=5,sigma_upper=5)#,grow=10)
+        norm = simple_norm(clipped_data, stretch='asinh',percent=99)
+        
+        #display_image(self.image)
         ax1.imshow(self.image, origin='lower', cmap='Greys_r', norm=norm)
         ax1.set_title('Data')
         #cmap = segm_deblend.make_cmap(random_state=12345)
         ax2.imshow(self.segmentation.data, origin='lower')
         ax2.set_title('Segmentation Image')
-        for aperture in self.allellipses:
-            aperture.plot(axes=ax1, color='white', lw=1.5)
+        # plot a subset of apertures
+        nap = len(self.allellipses)
+        plotaps = np.array([0,nap//2,-1],'i')
+        for i in plotaps:
+            aperture = self.allellipses[i]
+            aperture.plot(axes=ax1, color='c', lw=1.5)
             aperture.plot(axes=ax2, color='white', lw=1.5)
         if plotname is not None:
             plt.savefig(plotname)
@@ -1551,7 +1559,7 @@ class ellipse():
             else:
                 outfile = self.image2_name.split('.fits')[0]+'-'+prefix+'_phot.fits'
     
-            data = [self.apertures_a*self.pixel_scale,self.apertures_a, \
+            data = [self.apertures_a*self.pixel_scale*3600,self.apertures_a, \
                 self.flux2,self.flux2_err,\
                 self.sb2, self.sb2_err, \
                 self.sb2_snr]

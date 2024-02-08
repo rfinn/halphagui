@@ -61,6 +61,7 @@ from scipy.stats import scoreatpercentile
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+from matplotlib import patches
 
 #from maskGui import Ui_maskWindow
 from maskWidget import Ui_Form as Ui_maskWindow
@@ -72,7 +73,7 @@ from get_gaia_stars import gaia_stars_in_rectangle
 import imutils
 
 try:
-    from photutils import detect_threshold, detect_sources
+    from photutils.segmentation import detect_threshold, detect_sources
     #from photutils import source_properties
     from photutils.segmentation import SourceCatalog    
     from photutils.segmentation import deblend_sources
@@ -159,7 +160,10 @@ class buildmask():
         # set up symbolic links from sextractor directory to the current working directory
         sextractor_files=['default.sex.HDI.mask','default.param','default.conv','default.nnw']
         for file in sextractor_files:
-            os.system('ln -s '+self.sepath+'/'+file+' .')
+            if os.path.exists(file):
+                os.remove(file)
+            #os.system('ln -sf '+self.sepath+'/'+file+' .')
+            os.copy(self.sepath+'/'+file, file)
     def clean_links(self):
         # clean up symbolic links to sextractor files
         # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
@@ -195,9 +199,32 @@ class buildmask():
         
         self.catname = self.image_name.replace('.fits','.cat')
         self.segmentation = self.image_name.replace('.fits','-segmentation.fits')
-        sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation}"
-        #print(sestring)
+
+        
+        sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation} -DETECT_MINAREA {self.minarea}"
+        print(sestring)
         os.system(sestring)
+        self.maskdat = fits.getdata(self.segmentation)
+        # grow masked areas
+        bool_array = np.array(self.maskdat.shape,'bool')
+        #for i in range(len(self.xsex)):
+        # check to see if the object is not centered in the cutout
+
+        
+    def get_photutils_mask(self,galaxy_id = None):
+        # TODO make an alternate function that creates segmentation image from photutils
+        from astropy.stats import sigma_clipped_stats
+        from photutils import make_source_mask
+
+        # create mask to cut low SNR pixels based on SNR in SFR image
+        mask = make_source_mask(imdat,nsigma=self.snr,npixels=self.minarea,dilate_size=5)
+        masked_data = np.ma.array(imdat,mask=mask)
+        
+        
+        self.catname = self.image_name.replace('.fits','.cat')
+        self.segmentation = self.image_name.replace('.fits','-segmentation.fits')
+
+        
         self.maskdat = fits.getdata(self.segmentation)
         # grow masked areas
         bool_array = np.array(self.maskdat.shape,'bool')
@@ -217,9 +244,10 @@ class buildmask():
             self.maskdat[self.maskdat == self.center_object] = 0
         if self.objsma is not None:
             # remove central objects within elliptical aperture
-            #print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
+            print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
             self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
         else:
+            print("no ellipse params")
             self.ellipseparams = None
         self.update_mask()
         
@@ -485,11 +513,37 @@ class buildmask():
         # save convolved mask as new mask
         self.write_mask()
 
+    def show_mask_mpl(self):
         # plot mpl figure
         # this was for debugging purposes
-        #plt.figure()
-        #plt.imshow(self.maskdat)
+        print("plotting mask and central ellipse")
+        self.fig = plt.figure(1,figsize=self.figure_size)
+        plt.clf()
+        plt.subplots_adjust(hspace=0,wspace=0)
+        plt.subplot(1,2,1)
+        plt.imshow(self.image,cmap='gray_r',vmin=self.v1,vmax=self.v2,origin='lower')
+        plt.title('image')
+        plt.subplot(1,2,2)
+        #plt.imshow(maskdat,cmap='gray_r',origin='lower')
+        plt.imshow(self.maskdat,cmap=self.cmap,origin='lower')
+        plt.title('mask')
+        plt.gca().set_yticks(())
+        #plt.draw()
+        #plt.show(block=False)
+        xc,yc,r,BA,PA = self.ellipseparams
+
+        PAdeg = np.degrees(PA)
+        print(f"BA={BA},PA={PAdeg} deg")        
+        #print("just checking - adding ellipse drawing ",self.ellipseparams)
+        ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
+        plt.gca().add_patch(ellip)
+
+        # outfile
+        outfile = self.mask_image.replace('.fits','.png')
+        plt.savefig(outfile)
+        
         #plt.show()
+        
 
 
 class my_cutout_image(QtCore.QObject):#QtCore.QObject):
@@ -602,7 +656,11 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False,minarea=10,ngrow=7):
+        """
+
+        ngrow : number of times to run grow when running in auto mode
+        """
         self.auto = auto
         if MainWindow is None:
             self.auto = True
@@ -663,7 +721,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.haimage_name = haimage
         print(self.image_name)
         print(self.haimage_name)
-        #print(sepath)
+        print(sepath)
         self.sepath = sepath
         self.gaiapath = gaiapath
         self.gaia_mask = None
@@ -672,6 +730,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.threshold = threshold
         self.snr = snr
         self.snr_analysis = snr
+        self.minarea = minarea
         self.cmap = cmap
         self.xcursor_old = -99
         self.xcursor = -99
@@ -727,7 +786,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.remove_center_object()
             #self.remove_central_objects(xc=self.xpixels,yc=self.ypixels)
             t_1 = timeit.default_timer()
-            print("HELLO!!!")
+            #print("HELLO!!!")
             print(f"\ntime to run se: {round((t_1-t_0),3)} sec\n")
         if runphot:
             self.usephot = True
@@ -737,15 +796,10 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             print(f"\ntime to run photutils: {round((t_2-t_1),3)} sec\n")
         #self.update_mask()
         if self.auto:
-            # grow mask 7x when running in auto mode
-            self.grow_mask()
-            self.grow_mask()
-            self.grow_mask()
-            self.grow_mask()            
-            self.grow_mask()
-            self.grow_mask()
-            self.grow_mask()            
-        
+            for i in range(ngrow):
+                # grow mask 7x when running in auto mode
+                self.grow_mask()
+        self.show_mask_mpl()
         if not self.auto:
             self.display_cutouts()
             self.connect_buttons()
@@ -1056,8 +1110,11 @@ if __name__ == "__main__":
     parser.add_argument('--objdec',dest = 'objdec', default=None,help='DEC of target galaxy')
     parser.add_argument('--objsma',dest = 'objsma', default=None,help='SMA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objBA',dest = 'objBA', default=None,help='BA of elliptical region to unmask around galaxy.')
-    parser.add_argument('--objPA',dest = 'objPA', default=None,help='PA of elliptical region to unmask around galaxy, measure CCW from +x axis')        
-    parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')        
+    parser.add_argument('--objPA',dest = 'objPA', default=None,help='PA of elliptical region to unmask around galaxy, measure CCW from +x axis')
+    parser.add_argument('--ngrow',dest = 'ngrow', default=7,help='number of times to run grow the masked regions in auto mode.  default is 7, which is reasonable for an optical image.  try 1 or 2 if running on WISE images.')            
+    parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')
+    parser.add_argument('--sesnr',dest = 'sesnr', default=10,help='adjust the SE SNR for detection.  Default is 10.')
+    parser.add_argument('--minarea',dest = 'minarea', default=5,help='adjust the SE detection area.  Default is 10.')                
         
     args = parser.parse_args()
     if (args.objra is not None) and (args.objBA is not None):
@@ -1079,10 +1136,10 @@ if __name__ == "__main__":
             
             #print('got here 1')
             MainWindow = QtWidgets.QWidget()
-            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse = unmaskellipse)
+            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse = unmaskellipse,snr=args.sesnr,minarea=args.minarea)
         else:
             #print('got here 2')
-            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse=unmaskellipse)
+            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse=unmaskellipse,snr=args.sesnr,minarea=args.minarea,ngrow=args.ngrow)
     else:
         #print('got here 3')
         ui = maskwindow(MainWindow, logger)
