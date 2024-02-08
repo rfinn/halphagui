@@ -200,7 +200,7 @@ if __name__ == '__main__':
     print(cmd)
 
     # plot mask and central ellipse
-
+    
     #plt.figure()
     #data = fits.getdata(mask)
     #plt.imshow(data)

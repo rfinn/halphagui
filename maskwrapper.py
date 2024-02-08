@@ -515,6 +515,7 @@ class buildmask():
     def show_mask_mpl(self):
         # plot mpl figure
         # this was for debugging purposes
+        print("plotting mask and central ellipse")
         self.fig = plt.figure(1,figsize=self.figure_size)
         plt.clf()
         plt.subplots_adjust(hspace=0,wspace=0)
@@ -784,7 +785,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.remove_center_object()
             #self.remove_central_objects(xc=self.xpixels,yc=self.ypixels)
             t_1 = timeit.default_timer()
-            print("HELLO!!!")
+            #print("HELLO!!!")
             print(f"\ntime to run se: {round((t_1-t_0),3)} sec\n")
         if runphot:
             self.usephot = True
@@ -797,7 +798,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             for i in range(ngrow):
                 # grow mask 7x when running in auto mode
                 self.grow_mask()
-            self.show_mask_mpl()
+        self.show_mask_mpl()
         if not self.auto:
             self.display_cutouts()
             self.connect_buttons()
