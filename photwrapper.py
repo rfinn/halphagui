@@ -1214,9 +1214,12 @@ class ellipse():
             self.allellipses.append(ap)
 
             if self.mask_flag:
-                self.phot_table1 = aperture_photometry(self.image, ap, mask=self.boolmask)
+                # check for nans, and add them to the mask
+                nan_mask = self.image == np.nan
+                combined_mask =  self.boolmask | nan_mask
+                self.phot_table1 = aperture_photometry(self.image, ap, mask=combined_mask)
                 if self.image2_flag:
-                    self.phot_table2 = aperture_photometry(self.image2, ap, mask=self.boolmask)
+                    self.phot_table2 = aperture_photometry(self.image2, ap, mask=combined_mask)
             else:
                 # subpixel is the method used by Source Extractor
                 self.phot_table1 = aperture_photometry(self.image, ap, method = 'subpixel', subpixels=5)
