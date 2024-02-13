@@ -1337,6 +1337,7 @@ class hamodel():
         #print(self.filter_correction)
         self.table['FILT_COR'] = self.filter_correction
 
+        #TODO - add this to the NB image header!!!
 
         
     def get_gal_list(self): # MVC - model

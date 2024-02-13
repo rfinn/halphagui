@@ -23,6 +23,13 @@ REQUIRED MODULES:
    matplotlib
    scipy
 
+USAGE:
+
+* if running on wise images, try:
+
+python ~/github/halphagui/maskwrapper.py --image AGC006015-unwise-1640p454-w1-img-m.fits --ngrow 1 --sesnr 2 --minarea 5 --auto
+
+
 NOTES:
 - rewrote using a class
 
@@ -162,8 +169,8 @@ class buildmask():
         for file in sextractor_files:
             if os.path.exists(file):
                 os.remove(file)
-            #os.system('ln -sf '+self.sepath+'/'+file+' .')
-            os.copy(self.sepath+'/'+file, file)
+            os.system('ln -sf '+self.sepath+'/'+file+' .')
+            #os.copy(self.sepath+'/'+file, file)
     def clean_links(self):
         # clean up symbolic links to sextractor files
         # sextractor_files=['default.sex.sdss','default.param','default.conv','default.nnw']
@@ -796,10 +803,13 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             print(f"\ntime to run photutils: {round((t_2-t_1),3)} sec\n")
         #self.update_mask()
         if self.auto:
-            for i in range(ngrow):
+            for i in range(int(ngrow)):
                 # grow mask 7x when running in auto mode
                 self.grow_mask()
-        self.show_mask_mpl()
+        try:
+            self.show_mask_mpl()
+        except TypeError:
+            print("WARNING: could not display mask")
         if not self.auto:
             self.display_cutouts()
             self.connect_buttons()
@@ -1111,7 +1121,8 @@ if __name__ == "__main__":
     parser.add_argument('--objsma',dest = 'objsma', default=None,help='SMA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objBA',dest = 'objBA', default=None,help='BA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objPA',dest = 'objPA', default=None,help='PA of elliptical region to unmask around galaxy, measure CCW from +x axis')
-    parser.add_argument('--ngrow',dest = 'ngrow', default=7,help='number of times to run grow the masked regions in auto mode.  default is 7, which is reasonable for an optical image.  try 1 or 2 if running on WISE images.')            
+    parser.add_argument('--ngrow',dest = 'ngrow', default=7,help='number of times to run grow the masked regions in auto mode.  default is 7, which is reasonable for an optical image.  try 1 if running on WISE images.')
+    parser.add_argument('--wise',dest = 'wise', default=False,action='store_true',help='set this if running on WISE images so program uses a different config file for source extractor.')                
     parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')
     parser.add_argument('--sesnr',dest = 'sesnr', default=10,help='adjust the SE SNR for detection.  Default is 10.')
     parser.add_argument('--minarea',dest = 'minarea', default=5,help='adjust the SE detection area.  Default is 10.')                
