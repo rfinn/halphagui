@@ -209,7 +209,7 @@ class buildmask():
 
         
         sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation} -DETECT_MINAREA {self.minarea}"
-        print(sestring)
+        #print(sestring)
         os.system(sestring)
         self.maskdat = fits.getdata(self.segmentation)
         # grow masked areas
@@ -316,7 +316,7 @@ class buildmask():
         if os.path.exists(outfile):
  
             self.brightstar = Table.read(outfile)
-            print(self.brightstar.colnames)
+            #print(self.brightstar.colnames)
             self.xgaia = self.brightstar['xpixel']
             self.ygaia = self.brightstar['ypixel']
 
