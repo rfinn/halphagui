@@ -1122,7 +1122,6 @@ if __name__ == "__main__":
     parser.add_argument('--objBA',dest = 'objBA', default=None,help='BA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objPA',dest = 'objPA', default=None,help='PA of elliptical region to unmask around galaxy, measure CCW from +x axis')
     parser.add_argument('--ngrow',dest = 'ngrow', default=7,help='number of times to run grow the masked regions in auto mode.  default is 7, which is reasonable for an optical image.  try 1 if running on WISE images.')
-    parser.add_argument('--wise',dest = 'wise', default=False,action='store_true',help='set this if running on WISE images so program uses a different config file for source extractor.')                
     parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')
     parser.add_argument('--sesnr',dest = 'sesnr', default=10,help='adjust the SE SNR for detection.  Default is 10.')
     parser.add_argument('--minarea',dest = 'minarea', default=5,help='adjust the SE detection area.  Default is 10.')                
