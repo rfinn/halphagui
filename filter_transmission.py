@@ -149,5 +149,15 @@ class filter_trace():
             plt.savefig('galaxies_in_filter.png')
         return correction
 
+    def get_response(self):
+        """
+        TODO : write this function
+        integrate the filter to get the filter response
+        
+        integral of R(lambda) dlamba
 
+        return integral
+        """
+        
+        pass
 
