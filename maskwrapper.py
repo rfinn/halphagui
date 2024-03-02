@@ -555,7 +555,9 @@ class buildmask():
         #plt.draw()
         #plt.show(block=False)
         try:
+            print("objsma = ",self.objsma)
             if hasattr(self.objsma, "__len__"):
+                print("working with multiple galaxies")
                 # add ellipse for each galaxy if there is more than one
                 for e in self.ellipseparams:
                     xc,yc,r,BA,PA = e
