@@ -239,21 +239,23 @@ class buildmask():
         # check to see if the object is not centered in the cutout
     def remove_center_object(self):
         """ this removes the object in the center of the mask, which presumably is the galaxy """
-
         # need to replace this with a function that will remove any objects within the specificed central ellipse
+        if self.remove_center_object_flag:
+            if self.off_center_flag:
+                print('setting center object to objid ',self.galaxy_id)
+                self.center_object = self.galaxy_id
+            else:
+                self.center_object = self.read_se_cat()
+            if self.center_object is not np.nan:
+                self.maskdat[self.maskdat == self.center_object] = 0
 
-        if self.off_center_flag:
-            print('setting center object to objid ',self.galaxy_id)
-            self.center_object = self.galaxy_id
-        else:
-            self.center_object = self.read_se_cat()
-        if self.center_object is not np.nan:
-            self.maskdat[self.maskdat == self.center_object] = 0
+
         if self.objsma is not None:
             if hasattr(self.objsma, "__len__"):
                 # loop over objects in fov
                 for i in range(len(self.objsma)):
-                    self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels[i], \
+                    print(f"sma={self.objsma_pixels[i]},BA={self.objBA[i]}, PA={self.objPA[i]},xc={self.xpixel[i]},yc={self.ypixel[i]}")
+                    self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels[i],\
                                                                              BA=self.objBA[i], PA=self.objPA[i], \
                                                                              xc=self.xpixel[i],yc=self.ypixel[i])
                 
@@ -261,8 +263,11 @@ class buildmask():
             else:
                 # remove central objects within elliptical aperture
                 print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
-                self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
+                self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, \
+                                                                         BA=self.objBA, PA=self.objPA, \
+                                                                         xc=self.xpixel,yc=self.ypixel)
         else:
+            
             print("no ellipse params")
             self.ellipseparams = None
         self.update_mask()
@@ -758,6 +763,8 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.mask_image=t[0]+'-mask.fits'
         self.mask_inv_image=t[0]+'-inv-mask.fits'
         #print('saving mask image as: ',self.mask_image)
+
+        self.remove_center_object_flag = True
         
         # read in image and define center coords
         self.image, self.imheader = fits.getdata(self.image_name,header = True)
