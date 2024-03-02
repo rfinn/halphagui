@@ -537,14 +537,16 @@ class buildmask():
         plt.gca().set_yticks(())
         #plt.draw()
         #plt.show(block=False)
-        xc,yc,r,BA,PA = self.ellipseparams
+        try:
+            xc,yc,r,BA,PA = self.ellipseparams
 
-        PAdeg = np.degrees(PA)
-        print(f"BA={BA},PA={PAdeg} deg")        
-        #print("just checking - adding ellipse drawing ",self.ellipseparams)
-        ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
-        plt.gca().add_patch(ellip)
-
+            PAdeg = np.degrees(PA)
+            print(f"BA={BA},PA={PAdeg} deg")        
+            #print("just checking - adding ellipse drawing ",self.ellipseparams)
+            ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
+            plt.gca().add_patch(ellip)
+        except:
+            print("problem plotting ellipse with mask")
         # outfile
         outfile = self.mask_image.replace('.fits','.png')
         plt.savefig(outfile)
