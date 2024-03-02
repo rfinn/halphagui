@@ -553,7 +553,7 @@ class buildmask():
         plt.title('image')
         plt.subplot(1,2,2)
         #plt.imshow(maskdat,cmap='gray_r',origin='lower')
-        plt.imshow(self.maskdat,cmap=self.cmap,origin='lower')
+        plt.imshow(self.maskdat,cmap=self.cmap,origin='lower',vmin=np.min(self.maskdat),vmax=np.max(self.maskdat))
         plt.title('mask')
         plt.gca().set_yticks(())
         #plt.draw()
