@@ -145,6 +145,7 @@ def remove_central_objects(mask, sma=20, BA=1, PA=0, xc=None,yc=None):
     flag2 = p1+p2 < 1
     newmask = np.copy(mask)
     newmask[flag2] = 0
+    # we could also get all the unique values associated with flag2, and then remove them
     ellipse_params = [xc,yc,sma,BA,phirad]
     return newmask,ellipse_params
 
