@@ -203,11 +203,11 @@ class buildmask():
         # TODO make an alternate function that creates segmentation image from photutils
         # this is already done in ell
         print('using a deblending threshold = ',self.threshold)
-        
+        print("image = ",self.image_name)
         self.catname = self.image_name.replace('.fits','.cat')
         self.segmentation = self.image_name.replace('.fits','-segmentation.fits')
 
-        
+        print("segmentation image = ",self.segmentation)
         sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation} -DETECT_MINAREA {self.minarea}"
         #print(sestring)
         os.system(sestring)
