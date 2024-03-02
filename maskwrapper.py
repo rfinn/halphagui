@@ -250,9 +250,18 @@ class buildmask():
         if self.center_object is not np.nan:
             self.maskdat[self.maskdat == self.center_object] = 0
         if self.objsma is not None:
-            # remove central objects within elliptical aperture
-            print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
-            self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
+            if hasattr(self.objsma, "__len__"):
+                # loop over objects in fov
+                for i in range(len(self.objsma)):
+                    self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels[i], \
+                                                                             BA=self.objBA[i], PA=self.objPA[i], \
+                                                                             xc=self.xpixel[i],yc=self.ypixel[i])
+                
+                pass
+            else:
+                # remove central objects within elliptical aperture
+                print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
+                self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, BA=self.objBA, PA=self.objPA, xc=self.xpixel,yc=self.ypixel)
         else:
             print("no ellipse params")
             self.ellipseparams = None
