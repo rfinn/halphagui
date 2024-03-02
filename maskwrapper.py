@@ -554,8 +554,9 @@ class buildmask():
         plt.gca().set_yticks(())
         #plt.draw()
         #plt.show(block=False)
+        print("objsma = ",self.objsma)        
         try:
-            print("objsma = ",self.objsma)
+            
             if hasattr(self.objsma, "__len__"):
                 print("working with multiple galaxies")
                 # add ellipse for each galaxy if there is more than one
