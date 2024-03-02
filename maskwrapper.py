@@ -297,7 +297,10 @@ class buildmask():
             #print("Writing central ellipse parameters to header")
             #print(self.ellipseparams)
             #print()
-            xc,yc,r,BA,PA = self.ellipseparams
+            if hasattr(self.objsma,"__len__"):
+                xc,yc,r,BA,PA = self.ellipseparams[i]
+            else:
+                xc,yc,r,BA,PA = self.ellipseparams
             self.imheader.set('ELLIP_XC',float(xc),comment='XC of mask ellipse')
             self.imheader.set('ELLIP_YC',float(yc),comment='YC of mask ellipse')
             self.imheader.set('ELLIP_A',r,comment='SMA of mask ellipse')
@@ -554,7 +557,7 @@ class buildmask():
         plt.gca().set_yticks(())
         #plt.draw()
         #plt.show(block=False)
-        print("objsma = ",self.objsma)        
+        print("in show_mask_mpl: objsma = ",self.objsma)        
         try:
             
             if hasattr(self.objsma, "__len__"):
