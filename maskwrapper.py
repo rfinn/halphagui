@@ -298,7 +298,7 @@ class buildmask():
             #print(self.ellipseparams)
             #print()
             if hasattr(self.objsma,"__len__"):
-                xc,yc,r,BA,PA = self.ellipseparams[i]
+                xc,yc,r,BA,PA = self.ellipseparams[0]
             else:
                 xc,yc,r,BA,PA = self.ellipseparams
             self.imheader.set('ELLIP_XC',float(xc),comment='XC of mask ellipse')
