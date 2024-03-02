@@ -663,7 +663,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False,minarea=10,ngrow=7):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False,minarea=10,ngrow=3):
         """
 
         ngrow : number of times to run grow when running in auto mode
@@ -1121,7 +1121,7 @@ if __name__ == "__main__":
     parser.add_argument('--objsma',dest = 'objsma', default=None,help='SMA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objBA',dest = 'objBA', default=None,help='BA of elliptical region to unmask around galaxy.')
     parser.add_argument('--objPA',dest = 'objPA', default=None,help='PA of elliptical region to unmask around galaxy, measure CCW from +x axis')
-    parser.add_argument('--ngrow',dest = 'ngrow', default=7,help='number of times to run grow the masked regions in auto mode.  default is 7, which is reasonable for an optical image.  try 1 if running on WISE images.')
+    parser.add_argument('--ngrow',dest = 'ngrow', default=3,help='number of times to run grow the masked regions in auto mode.  default is 7, which is reasonable for an optical image.  try 1 if running on WISE images.')
     parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')
     parser.add_argument('--sesnr',dest = 'sesnr', default=10,help='adjust the SE SNR for detection.  Default is 10.')
     parser.add_argument('--minarea',dest = 'minarea', default=5,help='adjust the SE detection area.  Default is 10.')                
