@@ -253,11 +253,14 @@ class buildmask():
         if self.objsma is not None:
             if hasattr(self.objsma, "__len__"):
                 # loop over objects in fov
+                self.ellipseparams = []                
                 for i in range(len(self.objsma)):
+
                     print(f"sma={self.objsma_pixels[i]},BA={self.objBA[i]}, PA={self.objPA[i]},xc={self.xpixel[i]},yc={self.ypixel[i]}")
-                    self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels[i],\
+                    self.maskdat,eparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels[i],\
                                                                              BA=self.objBA[i], PA=self.objPA[i], \
                                                                              xc=self.xpixel[i],yc=self.ypixel[i])
+                    self.ellipseparams.append(eparams)
                 
                 pass
             else:
@@ -552,13 +555,23 @@ class buildmask():
         #plt.draw()
         #plt.show(block=False)
         try:
-            xc,yc,r,BA,PA = self.ellipseparams
+            if hasattr(self.objsma, "__len__"):
+                # add ellipse for each galaxy if there is more than one
+                for e in self.ellipseparams:
+                    xc,yc,r,BA,PA = e
+                    PAdeg = np.degrees(PA)
+                    #print(f"BA={BA},PA={PAdeg} deg")        
+                    #print("just checking - adding ellipse drawing ",self.ellipseparams)
+                    ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
+                    plt.gca().add_patch(ellip)
+            else:
+                xc,yc,r,BA,PA = self.ellipseparams
+                PAdeg = np.degrees(PA)
+                #print(f"BA={BA},PA={PAdeg} deg")        
+                #print("just checking - adding ellipse drawing ",self.ellipseparams)
+                ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
+                plt.gca().add_patch(ellip)
 
-            PAdeg = np.degrees(PA)
-            print(f"BA={BA},PA={PAdeg} deg")        
-            #print("just checking - adding ellipse drawing ",self.ellipseparams)
-            ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
-            plt.gca().add_patch(ellip)
         except:
             print("problem plotting ellipse with mask")
         # outfile
