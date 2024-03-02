@@ -256,7 +256,7 @@ class buildmask():
                 self.ellipseparams = []                
                 for i in range(len(self.objsma)):
 
-                    print(f"sma={self.objsma_pixels[i]},BA={self.objBA[i]}, PA={self.objPA[i]},xc={self.xpixel[i]},yc={self.ypixel[i]}")
+                    #print(f"sma={self.objsma_pixels[i]},BA={self.objBA[i]}, PA={self.objPA[i]},xc={self.xpixel[i]},yc={self.ypixel[i]}")
                     self.maskdat,eparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels[i],\
                                                                              BA=self.objBA[i], PA=self.objPA[i], \
                                                                              xc=self.xpixel[i],yc=self.ypixel[i])
@@ -307,7 +307,7 @@ class buildmask():
             self.imheader.set('ELLIP_BA',BA,comment='BA of mask ellipse')
             self.imheader.set('ELLIP_PA',np.degrees(PA),comment='PA (deg) of mask ellipse')
         else:
-            print("HEY!!! No parameters for central ellipse!")
+            print("HEY!!! writing mask, but no parameters for central ellipse!")
 
             
         fits.writeto(self.mask_image,self.maskdat,header = self.imheader,overwrite=True)
@@ -557,11 +557,11 @@ class buildmask():
         plt.gca().set_yticks(())
         #plt.draw()
         #plt.show(block=False)
-        print("in show_mask_mpl: objsma = ",self.objsma)        
+        #print("in show_mask_mpl: objsma = ",self.objsma)        
         try:
             
             if hasattr(self.objsma, "__len__"):
-                print("working with multiple galaxies")
+                #print("working with multiple galaxies")
                 # add ellipse for each galaxy if there is more than one
                 for e in self.ellipseparams:
                     xc,yc,r,BA,PA = e
