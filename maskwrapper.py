@@ -569,7 +569,7 @@ class buildmask():
                     PAdeg = np.degrees(PA)
                     #print(f"BA={BA},PA={PAdeg} deg")        
                     #print("just checking - adding ellipse drawing ",self.ellipseparams)
-                    ellip = patches.Ellipse((xc,yc),r,r*BA,angle=PAdeg,alpha=.2)
+                    ellip = patches.Ellipse((xc,yc),2*r,2*r*BA,angle=PAdeg,alpha=.2)
                     plt.gca().add_patch(ellip)
             else:
                 xc,yc,r,BA,PA = self.ellipseparams
