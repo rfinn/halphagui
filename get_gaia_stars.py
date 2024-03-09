@@ -28,6 +28,7 @@ def gaia_stars_in_rectangle(ra, dec, height, width, minmag=None, maxmag=18, pmsn
         explanation of columns can be found here:
         https://gea.esac.esa.int/archive/documentation/GDR3/Gaia_archive/chap_datamodel/sec_dm_main_source_catalogue/ssec_dm_gaia_source.html
 
+    TODO: check what to use for maxmag
     """
     # Define the target coordinates
     target_coord = SkyCoord(ra=ra, dec=dec, unit=(u.degree, u.degree), frame='icrs')
