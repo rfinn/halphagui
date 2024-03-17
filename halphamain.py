@@ -2172,7 +2172,7 @@ class hamodel():
             ra = self.defcat.cat['RA'][self.igal]
             dec = self.defcat.cat['DEC'][self.igal]            
             self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name,objra=ra,objdec=dec )
-        self.e.run_for_gui()
+        self.e.run_for_gui(runStatmorphFlag=False)
         self.e.plot_profiles()
         #os.chdir(current_dir)
 
@@ -3214,18 +3214,28 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # subtract the sky, using the mask image, and resave cutouts
         
         # run galfit
-        try:
-            self.run_galfit(ncomp=1,ha=False)
-        except:
-            print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
+
+        # try skipping galfit for Messier 109, VFID1167...
+        if self.igal == 1167:
+            # skip galfit, galaxy is just too darn big and parameters are ridiculous
+            print("skipping galfit b/c output is nonsense...")
+        else:
+            
+            try:
+                self.run_galfit(ncomp=1,ha=False)
+            except:
+                print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
+
+            # don't need this - the geometry is so similar
+            try:
+                self.galfit_ellip_phot()
+            except:
+                print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
 
         # run galfit ellip phot
         # use try in case fit fails
-        #self.galfit_ellip_phot()        
-        try:
-            self.galfit_ellip_phot()
-        except:
-            print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
+        #self.galfit_ellip_phot()
+
         
         # run phot util ellip phot
         # use try in case fit fails

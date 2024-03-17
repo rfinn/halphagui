@@ -382,7 +382,7 @@ class ellipse():
         #else:
         #    self.draw_phot_results()
     
-    def run_for_gui(self):
+    def run_for_gui(self,runStatmorphFlag=True):
         ''' 
         batch all of the functions that we run for the gui, including:
 
@@ -429,13 +429,14 @@ class ellipse():
         print()
         #self.run_statmorph()
         #self.statmorph_flag = True
-        try:
+        if runStatmorphFlag:
+            try:
             
-            self.run_statmorph()
-            self.statmorph_flag = True
-        except:
-            self.statmorph_flag = False            
-            print("WARNING: problem running statmorph")
+                self.run_statmorph()
+                self.statmorph_flag = True
+            except:
+                self.statmorph_flag = False            
+                print("WARNING: problem running statmorph")
         print("writing tables")
         self.write_phot_tables()
         self.write_phot_fits_tables()
