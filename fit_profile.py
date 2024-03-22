@@ -33,6 +33,7 @@ UPDATES:
 import numpy as np
 from matplotlib import pyplot as plt
 from astropy.io import fits
+from astropy import wcs
 import argparse
 from scipy import interpolate
 import scipy.optimize
@@ -141,6 +142,8 @@ class profile():
         #self.rootname,t = image_name.split('.fit')
         
         self.image_data, self.image_header = fits.getdata(self.image_name, header=True)
+        self.pixelscale = wcs.utils.proj_plane_pixel_scales(wcs.WCS(self.image_header))*3600.
+        
         self.xdim,self.ydim = self.image_data.shape
     
         self.read_fits_phot_file()
