@@ -55,9 +55,14 @@ def gaia_stars_in_rectangle(ra, dec, height, width, minmag=None, maxmag=18, pmsn
 
 
     # Extract relevant columns (you can customize this)
+    print(result.colnames)
     selected_columns = ['source_id', 'ra', 'dec', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'pmra', 'pmdec', 'pmra_error', 'pmdec_error']
-    
-    stars = result[selected_columns]
+
+    try:
+        stars = result[selected_columns]
+    except KeyError:
+        selected_columns = ['SOURCE_ID', 'ra', 'dec', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag', 'pmra', 'pmdec', 'pmra_error', 'pmdec_error']
+        stars = result[selected_columns]
 
     # Require SNR > 5 in proper motion
     keepflag = np.sqrt((stars['pmra']/stars['pmra_error'])**2 + (stars['pmdec']/stars['pmdec_error'])**2) > 5

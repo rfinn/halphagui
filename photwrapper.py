@@ -221,7 +221,7 @@ class ellipse():
 
 
     '''
-    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None,objra=None,objdec=None):
+    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None,objra=None,objdec=None,fixcenter=False):
         '''  inputs described above '''
 
         self.image, self.header = fits.getdata(image, header=True)
@@ -232,7 +232,8 @@ class ellipse():
 
         self.objra = objra
         self.objdec = objdec
-
+        self.fixcenter = fixcenter
+        
         self.pixel_scale = imutils.get_pixel_scale(self.header)        
         # check to see if obj position is passed in - need to do this for off-center objects
         if (objra is not None): # unmask central elliptical region around object
@@ -1027,8 +1028,10 @@ class ellipse():
         obj = self.cat[self.objectIndex]
         #self.xcenter = obj.xcentroid.value
         #self.ycenter = obj.ycentroid.value
-        self.xcenter = obj.xcentroid
-        self.ycenter = obj.ycentroid
+
+        if not self.fixcenter:
+            self.xcenter = obj.xcentroid
+            self.ycenter = obj.ycentroid
 
 
         #if self.objra is not None:
@@ -1036,7 +1039,7 @@ class ellipse():
         #    print(f"comparing xcenter {self.xcenter:.1f} and from ra {self.xcenter_ra:.1f}")
         #    print(f"comparing ycenter {self.ycenter:.1f} and from dec {self.ycenter_dec:.1f}")
         #    print()
-        self.position = (obj.xcentroid, obj.ycentroid)
+        self.position = (self.xcenter, self.ycenter)
         print(self.position,self.xcenter,obj.xcentroid,self.ycenter,obj.ycentroid)
         self.sma = obj.semimajor_sigma.value * r
         self.start_size = self.sma
@@ -1193,8 +1196,10 @@ class ellipse():
 
         index = np.arange(80)
         apertures = (index+1)*.5*self.fwhm*(1+(index+1)*.1)
+        #apertures = (index+1)*self.fwhm*(1+(index+1)*.1)
         # cut off apertures at edge of image
         self.apertures_a = apertures[apertures < rmax]
+        print(f"\nNumber of apertures = {len(index)}\n")
         #print('number of apertures = ',len(self.apertures_a))
         #self.apertures_a = np.linspace(3,rmax,40)
         self.apertures_b = (1.-self.eps)*self.apertures_a

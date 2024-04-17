@@ -199,7 +199,7 @@ class buildmask():
             objnumb = objNumber[0] # not sure why above line returns a list
         return objnumb
 
-    def runse(self,galaxy_id = None):
+    def runse(self,galaxy_id = None,weightim=None,weight_threshold=1):
         # TODO update this to implement running SE with two diff thresholds
         # TODO make an alternate function that creates segmentation image from photutils
         # this is already done in ell
@@ -210,6 +210,8 @@ class buildmask():
 
         print("segmentation image = ",self.segmentation)
         sestring = f"sex {self.image_name} -c {self.config} -CATALOG_NAME {self.catname} -CATALOG_TYPE FITS_1.0 -DEBLEND_MINCONT {self.threshold} -DETECT_THRESH {self.snr} -ANALYSIS_THRESH {self.snr_analysis} -CHECKIMAGE_NAME {self.segmentation} -DETECT_MINAREA {self.minarea}"
+        if weightim is not None:
+            sestring += r" -WEIGHT_TYPE MAP_WEIGHT -WEIGHT_IMAGE {weightim} -WEIGHT_THRESH {weight_threshold}"
         print(sestring)
         os.system(sestring)
         self.maskdat = fits.getdata(self.segmentation)
@@ -342,7 +344,7 @@ class buildmask():
             self.ygaia = self.brightstar['ypixel']
 
         else:
-
+            brightstar = gaia_stars_in_rectangle(self.racenter,self.deccenter,self.dydeg+.01,self.dxdeg+.01)
             try:
                 # get gaia stars within FOV
                 # adding buffer to the search dimensions for bright stars that might be just off FOV
@@ -699,7 +701,7 @@ class my_cutout_image(QtCore.QObject):#QtCore.QObject):
         
 class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
     mask_saved = QtCore.pyqtSignal(str)
-    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False,minarea=10,ngrow=3):
+    def __init__(self, MainWindow, logger, image=None, haimage=None, sepath=None, gaiapath=None, config=None, threshold=0.005,snr=10,cmap='gist_heat_r',objparams=None,auto=False,unmaskellipse=False,minarea=10,ngrow=3,weightim=None,weight_threshold=None):
         """
 
         ngrow : number of times to run grow when running in auto mode
@@ -746,7 +748,9 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.pixel_scale = wcs.pixel_scale_matrix[1][1]
             self.objsma_pixels = self.objsma/(self.pixel_scale*3600)
             
-            
+
+        self.weightim = weightim
+        self.weight_threshold = weight_threshold
         ###  The lines below are for testing purposes
         ###  and should be removed before release.
         #if image is None:
@@ -827,7 +831,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         if self.runse_flag:
             self.link_files()
             t_0 = timeit.default_timer()        
-            self.runse()
+            self.runse(weightim=self.weightim,weight_threshold=self.weight_threshold)
             self.remove_center_object()
             #self.remove_central_objects(xc=self.xpixels,yc=self.ypixels)
             t_1 = timeit.default_timer()
@@ -1066,7 +1070,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         try:
             self.threshold = float(t)
             if self.runse_flag:
-                self.runse()
+                self.runse(weightim=self.weightim,weight_threshold=self.weight_threshold)
             else:
                 self.run_photutil()
 
@@ -1103,7 +1107,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         self.off_center_flag = True
         self.galaxy_id = int(t)
         if self.runse_flag:
-            self.runse()
+            self.runse(weightim=self.weightim,weight_threshold=self.weight_threshold)
         else:
             self.run_photil()
     def quit_program(self):
@@ -1124,7 +1128,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
 
     def edit_mask(self):
         if self.runse_flag:
-            self.runse()
+            self.runse(weightim=self.weightim,weight_threshold=self.weight_threshold)
         else:
             self.run_photutil()
         while self.adjust_mask:    
@@ -1162,7 +1166,9 @@ if __name__ == "__main__":
     parser.add_argument('--ngrow',dest = 'ngrow', default=3,help='number of times to run grow the masked regions in auto mode.  default is 7, which is reasonable for an optical image.  try 1 if running on WISE images.')
     parser.add_argument('--auto',dest = 'auto', default=False,action='store_true',help='set this to run the masking software automatically.  the default is false, meaning that the gui window will open for interactive use.')
     parser.add_argument('--sesnr',dest = 'sesnr', default=10,help='adjust the SE SNR for detection.  Default is 10.')
-    parser.add_argument('--minarea',dest = 'minarea', default=5,help='adjust the SE detection area.  Default is 10.')                
+    parser.add_argument('--minarea',dest = 'minarea', default=5,help='adjust the SE detection area.  Default is 10.')
+    parser.add_argument('--weightim',dest = 'weightim', default=None,help='weight image to feed into source extractor.  You can use this to ignore large regions of the image by creating a mask with good regions = 1 and bad regions = 0.  then set weight_thresh to 1.')
+    parser.add_argument('--weight_thresh',dest = 'weight_thresh', default=1,help='source extractor weight_thresh.  pixels in the weight images with values less than this threshold will be ignored.  Default is 1.')                        
         
     args = parser.parse_args()
     if (args.objra is not None) and (args.objBA is not None):
@@ -1184,10 +1190,10 @@ if __name__ == "__main__":
             
             #print('got here 1')
             MainWindow = QtWidgets.QWidget()
-            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse = unmaskellipse,snr=args.sesnr,minarea=args.minarea)
+            ui = maskwindow(MainWindow, logger,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse = unmaskellipse,snr=args.sesnr,minarea=args.minarea,weightim=args.weightim,weight_threshold=args.weight_thresh)
         else:
             #print('got here 2')
-            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse=unmaskellipse,snr=args.sesnr,minarea=args.minarea,ngrow=args.ngrow)
+            ui = maskwindow(None, None,image=args.image,haimage=args.haimage,sepath=args.sepath,gaiapath=args.gaiapath,config=args.config,auto=args.auto,objparams=objparams,unmaskellipse=unmaskellipse,snr=args.sesnr,minarea=args.minarea,ngrow=args.ngrow,weightim=args.weightim,weight_threshold=args.weight_thresh)
     else:
         #print('got here 3')
         ui = maskwindow(MainWindow, logger)
