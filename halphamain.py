@@ -1274,10 +1274,15 @@ class hamodel():
         # NOW USING SB25, so going to decrease scale factor to 2
         scale = 2*1.9
 
+
+
         
         # this is the total length in one dimension
         # the scale factor includes an extra factor of 2 to convert radius to diameter
-        self.cutout_sizes = self.radius_arcsec*scale/self.pixelscale
+        self.cutout_sizes = self.radius_arcsec*scale/self.pixelscale # in pixels
+
+
+        
         
         #start_time = time.perf_counter()        
         #print('getting object sizes from segmentation image')
@@ -1292,28 +1297,49 @@ class hamodel():
               
         # convert to arcsec
         self.cutout_sizes_arcsec = self.cutout_sizes*self.pixelscale*u.arcsec
+
+
+        #######################################################
+        # OK, so here is the thing...
+        # we really should decrease the cutout size as the
+        # image gets bigger.  We don't need arcminutes around
+        # big galaxies to get a proper sky sample.
+        #######################################################    
+
+        smallflag = self.cutout_sizes_arcsec < self.global_min_cutout_size# make the smallest cutout size equal to 60
+
+        self.cutout_sizes_arcsec[smallflag] = self.global_min_cutout_size
+        self.cutout_sizes[smallflag] = self.global_min_cutout_size.value/self.pixelscale
+        
+
+        # this step is described in the notebook cutout-sizing in havirgo/notebooks
+        bigflag = self.radius_arcsec > 240.
+        self.cutout_sizes_arcsec[bigflag] = self.cutout_sizes_arcsec[bigflag] - (2.5/60)*(self.radius_arcsec - 240.)
+        self.cutout_sizes[bigflag] = self.cutout_sizes_arcsec[bigflag].value/self.pixelscale
+        
         #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)
         # check to see if any are outside the allowed range
 
 
-        ##
-        # SKIPPING MIN/MAX RESET - would rather correct values in source catalogs
-        ##
-        for i,s in enumerate(self.cutout_sizes_arcsec):
-            # the cutouts for the biggest galaxies are getting cut short,
-            # so commenting this part out
+        
+        # ##
+        # # SKIPPING MIN/MAX RESET - would rather correct values in source catalogs
+        # ##
+        # for i,s in enumerate(self.cutout_sizes_arcsec):
+        #     # the cutouts for the biggest galaxies are getting cut short,
+        #     # so commenting this part out
             
-            #if s > self.global_max_cutout_size:
-            #    self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
-            #    self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
+        #     #if s > self.global_max_cutout_size:
+        #     #    self.cutout_sizes_arcsec[i] = self.global_max_cutout_size
+        #     #    self.cutout_sizes[i] = self.global_max_cutout_size.value/self.pixelscale
             
-            if s < self.global_min_cutout_size:
-                self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
-                self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale
+        #     if s < self.global_min_cutout_size:
+        #         self.cutout_sizes_arcsec[i] = self.global_min_cutout_size
+        #         self.cutout_sizes[i] = self.global_min_cutout_size.value/self.pixelscale
                 
-        #print('after comparing with max/min size limits:')
-        #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
-        # set up the output table that will store results from various fits
+        # #print('after comparing with max/min size limits:')
+        # #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
+        # # set up the output table that will store results from various fits
         self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
 
 

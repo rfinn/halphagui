@@ -88,9 +88,18 @@ else:
     a = glob.glob(args.coadd_dir+'VF*INT*-r-shifted.fits')
     b = glob.glob(args.coadd_dir+'VF*HDI*-r.fits')
     c = glob.glob(args.coadd_dir+'VF*HDI*-R.fits')
-    d = glob.glob(args.coadd_dir+'VF*BOK*-r.fits')
+    #######################################################
+    # updating to use the shifted r-band images
+    #######################################################    
+    d = glob.glob(args.coadd_dir+'VF*BOK*-r-shifted.fits')
     e = glob.glob(args.coadd_dir+'VF*MOS*-R.fits')         
     flist1 = a + b + c + d + e
+
+    #######################################################
+    # for now, just want to rerun on the BOK images after
+    # aligning the r to the halpha
+    #######################################################    
+    flist1 = d
     flist1.sort()
 print("number of r-band images = ",len(flist1))
 
