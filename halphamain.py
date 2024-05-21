@@ -1314,7 +1314,7 @@ class hamodel():
 
         # this step is described in the notebook cutout-sizing in havirgo/notebooks
         bigflag = self.radius_arcsec > 240.
-        self.cutout_sizes_arcsec[bigflag] = self.cutout_sizes_arcsec[bigflag] - (2.5/60)*(self.radius_arcsec - 240.)
+        self.cutout_sizes_arcsec[bigflag] = self.cutout_sizes_arcsec[bigflag] - (2.5/60)*(self.radius_arcsec - 240.)*u.arcsec
         self.cutout_sizes[bigflag] = self.cutout_sizes_arcsec[bigflag].value/self.pixelscale
         
         #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)
