@@ -77,11 +77,12 @@ if args.oneimage is not None:
         teststring = '/data-pool/Halpha/coadds/all-virgo-coadds/VF-118.182+20.982-INT-20190205-p001-r-shifted.fits'
         print('test string = ',os.path.exists(teststring))
         print(f"Could not find {args.oneimage} - please check the r-band coadd name you provided")
+        
         sys.exit()
         
     # redefine the list to include the one image only
     flist1 = [args.oneimage]
-    
+
 else:
     # updating for new naming convention and for the setup on draco
     # get list of r-band coadded images
@@ -98,9 +99,9 @@ else:
     #######################################################
     # for now, just want to rerun on the BOK images after
     # aligning the r to the halpha
-    #######################################################    
-    flist1 = d
-    flist1.sort()
+    #######################################################
+    
+flist1.sort()
 print("number of r-band images = ",len(flist1))
 
 

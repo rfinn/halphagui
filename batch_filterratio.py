@@ -217,7 +217,7 @@ if __name__ == '__main__':
     # Halpha or Ha6657
 
     # BOK
-    # r.fits
+    # r-shifted.fits
     # Ha4
 
     # HDI
@@ -227,10 +227,12 @@ if __name__ == '__main__':
     # will need to add more for mosaic images
 
     # telescope/instrument names
-    inames = ["INT","BOK","HDI"]
+
+    # why no MOS here?
+    inames = ["INT","BOK","HDI","MOS"]
     #inames = ["BOK","HDI"]
     #inames = ["HDI"]
-    inames = ["BOK"]
+    #inames = ["BOK"]
     #inames = ["INT","HDI"]
     if args.oneimage is not None:
         # make sure that the image exists
@@ -257,11 +259,14 @@ if __name__ == '__main__':
                 #print("match string = ",'VF-*'+f+'*r-shifted.fits')
                 rimages = glob.glob('VF-*'+f+'*r-shifted.fits')
             elif f == 'BOK':
-                rimages = glob.glob('VF-*'+f+'*r.fits')
+                rimages = glob.glob('VF-*'+f+'*r-shifted.fits')
             elif f == 'HDI':
                 rimages1 = glob.glob('VF-*'+f+'*r.fits')
                 rimages2 = glob.glob('VF-*'+f+'*R.fits')
                 rimages = rimages1 + rimages2
+            elif f == 'MOS':
+                rimages = glob.glob('VF-*'+f+'*R.fits')
+
             print(f"found {len(rimages)} rband images for {f}")
 
             # sort the file list
