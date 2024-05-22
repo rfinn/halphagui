@@ -92,6 +92,7 @@ def getoneratio(rimage,instrument,plotdir):
     elif f == 'BOK':
         # should end in Ha4.fits
         testname = rimage.replace('-r.fits','-Ha4.fits')
+        testname = rimage.replace('-r-shifted.fits','-Ha4.fits')
         if os.path.exists(testname):
             himage = testname
         # check for images that were taken on different dates
