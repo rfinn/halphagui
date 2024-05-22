@@ -103,6 +103,7 @@ def getoneratio(rimage,instrument,plotdir):
         else:
             print()
             print('Warning: no halpha image found for ',rimage)
+            print("looking for ",testname)
             print('moving to the next image...')
             return
     elif f == 'HDI':
