@@ -2331,6 +2331,7 @@ class hamodel():
                 print("problem writing table element",colname,values[i])
         self.write_fits_table()            
         if self.e.statmorph_flag:
+            print("running statmorph")
             self.write_statmorph()
             self.write_fits_table()
         #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
@@ -3212,7 +3213,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # just making cutouts and getting galaxies in FOV
 
         # need to get a list of RA, DEC, SMA, BA, PA to feed into masking routine
-        
+
+        print("starting processing of each galaxy ",len(self.gximage))
         for i in range(len(self.gximage)):
         #for i in [2]: # for testing
             self.igal = i
