@@ -1693,6 +1693,9 @@ class hamodel():
         # radial profiles
         # save latest of mask
         if self.virgo:
+            if self.verbose:
+                print("\n in get_cutouts, getting NEDname\n")
+            
             nedname = self.NEDname[self.igal].replace(" ","")
             nedname = nedname.replace("[","")
             nedname = nedname.replace("]","")
@@ -1710,6 +1713,9 @@ class hamodel():
 
         
         ## create the output directory to store the cutouts and figures
+        if self.verbose:
+            print("\n in get_cutouts, creating output directory\n")
+        
         self.cutoutdir = 'cutouts/'+cprefix+'/'
         if not os.path.exists('cutouts'):
             os.mkdir('cutouts')
@@ -1723,6 +1729,9 @@ class hamodel():
 
 
         position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
+
+        if self.verbose:
+            print("\n in get_cutouts, calling Cutout2D\n")
         
         try:
             ###########################################################
@@ -1743,6 +1752,8 @@ class hamodel():
         t = self.cutout_name_r.split('.fit')
         self.mask_image_name=t[0]+'-mask.fits'
 
+        if self.verbose:
+            print("\n in get_cutouts, writing cutouts\n")
 
         self.write_cutouts()
 
@@ -1767,6 +1778,8 @@ class hamodel():
             print('make sure you have selected a galaxy and saved the cutout')
             return
 
+        if self.verbose:
+            print("\n in write_cutouts, calling Cutout2D\n")
 
         # add other image parameters to table        
         self.table['RZP'][self.igal] = self.r_header['PHOTZP']
@@ -1777,6 +1790,10 @@ class hamodel():
         newfile = fits.PrimaryHDU()
         newfile.data = self.r[ymin:ymax,xmin:xmax]
         # add sky subtraction here
+
+        if self.verbose:
+            print("\n in write_cutouts, writing header\n")
+
         
         newfile.header = self.r_header
         newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
@@ -1796,6 +1813,10 @@ class hamodel():
         # subtract the sky, but we need the mask - no we don't!
         skysub_data,rmed,rstd = imutils.subtract_median_sky(newfile.data,getstd=True)
         newfile.data -= rmed
+        if self.verbose:
+            print("\n in write_cutouts, add sky stats to header\n")
+
+        
         newfile.header.set('SKYMED',rmed)
         newfile.header.set('SKYSTD',rstd)        
 
@@ -1811,6 +1832,11 @@ class hamodel():
 
         
         #print('saving r-band cutout')
+
+        if self.verbose:
+            print("\n in write_cutouts, saving cutout\n")
+
+        
         fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
 
         # saving Ha CS Cutout as fits image
