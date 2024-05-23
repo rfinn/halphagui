@@ -3213,7 +3213,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # just making cutouts and getting galaxies in FOV
 
         # need to get a list of RA, DEC, SMA, BA, PA to feed into masking routine
-
+        
         print("starting processing of each galaxy ",len(self.gximage))
         for i in range(len(self.gximage)):
         #for i in [2]: # for testing
@@ -3221,6 +3221,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             # get cutouts
             self.auto_gal()
             self.write_fits_table()
+            print(f"##########################\nFinished galaxy {i}/{len(self.gximage)}")
         
     def auto_gal(self):
         # run the analysis on an individual galaxy
