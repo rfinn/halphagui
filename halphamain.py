@@ -3091,6 +3091,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.nebula = args.nebula        
         self.laptop = args.laptop
         self.virgo = args.virgo
+        self.verbose = args.verbose
         # this is the oversampling that I use when creating the PSF images
         self.oversampling = 2        
         if sepath == None:
@@ -3213,20 +3214,25 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # just making cutouts and getting galaxies in FOV
 
         # need to get a list of RA, DEC, SMA, BA, PA to feed into masking routine
-        
-        print("starting processing of each galaxy ",len(self.gximage))
+        if self.verbose:
+            print("starting processing of each galaxy ",len(self.gximage))
         for i in range(len(self.gximage)):
         #for i in [2]: # for testing
             self.igal = i
             # get cutouts
             self.auto_gal()
             self.write_fits_table()
-            print(f"##########################\nFinished galaxy {i}/{len(self.gximage)}")
+            if self.verbose:
+                print(f"##########################\nFinished galaxy {i}/{len(self.gximage)}")
         
     def auto_gal(self):
         # run the analysis on an individual galaxy
+        if self.verbose:
+            print("in auto_gal \n")
         self.bad_galaxy = False
         # create cutout
+        if self.verbose:
+            print("\ngetting galaxy cutouts\n")
         self.get_galaxy_cutout()
 
         if self.bad_galaxy:
@@ -3235,6 +3241,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             return
         # create mask
         self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+
+        if self.verbose:
+            print("initiating maskwindow\n")
 
         self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
                               sepath='~/github/halphagui/astromatic/',auto=self.auto,\
@@ -3575,6 +3584,7 @@ if __name__ == "__main__":
     parser.add_argument('--pointing',dest = 'pointing', default=None,help='Pointing number that you want to load.  ONLY FOR VIRGO DATA, and only if you are buildling the image name in pieces.')
     
     parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
+    parser.add_argument('--verbose',dest = 'verbose', action='store_true',default=False,help='set this for extra print statements')    
         
     args = parser.parse_args()
     

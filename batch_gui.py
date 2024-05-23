@@ -30,6 +30,7 @@ parser.add_argument('--psfdir',dest = 'psfdir', default='/data-pool/Halpha/psf-i
 #parser.add_argument('--getgalsonly',dest = 'psfdir', default='/home/rfinn/data/reduced/psf-images/', help = "directory containing PSF images.  Default is /home/rfinn/data/reduced/psf-images/, which is for laptop.  When running on virgo vms, set to /mnt/qnap_home/rfinn/Halpha/reduced/psf-images/")
 parser.add_argument('--oneimage',dest = 'oneimage', default=None, help = "use this to run on one image only.  Specify the full path to the r-band image. ")
 parser.add_argument('--testing',dest = 'testing', default=False,action='store_true', help = "use this to run on the first image only for testing purposes. ")
+parser.add_argument('--verbose',dest = 'verbose', action='store_true',default=False,help='set this for extra print statements')    
 args = parser.parse_args()
 
 
@@ -149,7 +150,7 @@ for rimage in flist1: # loop through list
         
     prefix = os.path.basename(rootname).replace("-r-shifted.fits","").replace("-r.fits","").replace("-R.fits","")
 
-    command_string = 'python  ~/github/halphagui/halphamain.py --virgo --rimage {} --haimage {} --filter {} --psfdir {} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {} --auto'.format(rimage,haimage,hfilter,args.psfdir,prefix)
+    command_string = f'python  ~/github/halphagui/halphamain.py --virgo --rimage {rimage} --haimage {haimage} --filter {hfilter} --psfdir {args.psfdir} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {prefix} --verbose {args.verbose} --auto'
 
     try:
         print('running : ',command_string)
