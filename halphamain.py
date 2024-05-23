@@ -1816,9 +1816,19 @@ class hamodel():
         if self.verbose:
             print("\n in write_cutouts, add sky stats to header\n")
 
-        
-        newfile.header.set('SKYMED',rmed)
-        newfile.header.set('SKYSTD',rstd)        
+        try:
+            newfile.header.set('SKYMED',rmed)
+        except ValueError:
+            print("error writing SKYMED ",rmed)
+            print("setting header value to zero")            
+            newfile.header.set('SKYMED',0)
+        try:
+            newfile.header.set('SKYSTD',rstd)
+        except ValueError:
+            print("error writing SKYSTD ",rstd)
+            print("setting header value to zero")
+            newfile.header.set('SKYSTD',0)
+            
 
         # need to add a case to handle when sky std is zero.  This happens when object is in wacky region of INT.
         if rstd == 0:
