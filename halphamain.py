@@ -1812,7 +1812,9 @@ class hamodel():
 
         # subtract the sky, but we need the mask - no we don't!
         skysub_data,rmed,rstd = imutils.subtract_median_sky(newfile.data,getstd=True)
-        newfile.data -= rmed
+
+        if rmed is not np.nan:
+            newfile.data -= rmed
         if self.verbose:
             print("\n in write_cutouts, add sky stats to header\n")
 
@@ -1864,9 +1866,23 @@ class hamodel():
         # subtract sky from CS Halpha image
         skysub_hdata,hmed,hstd = imutils.subtract_median_sky(newfile1.data,getstd=True)
 
-        newfile1.data -= hmed
-        newfile1.header.set('SKYMED',hmed)
-        newfile1.header.set('SKYSTD',hstd)
+        if hmed is not np.nan:
+            newfile1.data -= hmed
+            
+
+        try:
+            newfile1.header.set('SKYMED',hmed)
+        except ValueError:
+            print("error writing SKYMED ",hmed)
+            print("setting header value to zero")            
+            newfile1.header.set('SKYMED',0)
+        try:
+            newfile1.header.set('SKYSTD',hstd)
+        except ValueError:
+            print("error writing SKYSTD ",hstd)
+            print("setting header value to zero")
+            newfile1.header.set('SKYSTD',0)
+        
 
         # print sky stats
         print(f"subtracted {rmed:.3f} ADU from r-band cutout",rstd)
