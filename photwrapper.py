@@ -426,13 +426,13 @@ class ellipse():
             self.asym_err = -99
             self.asym2 = -99
             self.asym2_err = -99
-        print("running statmorph - please be patient...")
-        print()
         #self.run_statmorph()
         #self.statmorph_flag = True
         if runStatmorphFlag:
             try:
-            
+                print("running statmorph - please be patient...")
+                print()
+
                 self.run_statmorph()
                 self.statmorph_flag = True
             except:

@@ -2262,6 +2262,9 @@ class hamodel():
             dec = self.defcat.cat['DEC'][self.igal]            
             self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name,objra=ra,objdec=dec )
         self.e.run_for_gui(runStatmorphFlag=False)
+
+        if self.verbose:
+            print("calling plot_profiles\n")
         self.e.plot_profiles()
         #os.chdir(current_dir)
 
@@ -2415,9 +2418,14 @@ class hamodel():
         # convert theta to degrees, and subtract 90 to get angle relative to y axis
         #self.e.theta = np.degrees(self.e.theta) - 90
         # fit profiles
+
+        if args.verbose:
+            print("in photutils_ellip_phot, fitting profiles")
         self.fit_profiles()
         # save results
         self.write_profile_fits()
+
+        
         if not self.auto:
             self.draw_ellipse_results(color='magenta')
     
