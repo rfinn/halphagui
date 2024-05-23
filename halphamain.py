@@ -3286,7 +3286,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             self.auto_gal()
             self.write_fits_table()
             if self.verbose:
-                print(f"##########################\nFinished galaxy {i}/{len(self.gximage)}")
+                print(f"##########################\nFinished galaxy {i+1}/{len(self.gximage)}")
         
     def auto_gal(self):
         # run the analysis on an individual galaxy
