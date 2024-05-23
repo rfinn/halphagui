@@ -1605,9 +1605,14 @@ class hamodel():
         # to prevent accidentally writing over data
         # add date and pointing
 
+        if self.verbose:
+            print("\n in get_cutouts, accessing halpha header\n")
         header = self.ha_header
 
         # date is stored in epoch for HDI data
+
+        if self.verbose:
+            print("\n in get_cutouts, getting date\n")
 
         try:
             # store time 
@@ -1625,6 +1630,9 @@ class hamodel():
         dateobs = t.iso.split()[0].replace('-','')
 
         # get instrument
+        if self.verbose:
+            print("\n in get_cutouts, getting instrument\n")
+        
         try:
             instrument = self.ha_header['INSTRUME']
             if instrument.find('hdi') > -1:
@@ -1634,6 +1642,9 @@ class hamodel():
         except KeyError:
             instrument='INT'
 
+        if self.verbose:
+            print("\n in get_cutouts, getting object\n")
+            
         # read in object
         o = header['OBJECT']
         if instrument == '90prime':
@@ -3235,6 +3246,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             print("\ngetting galaxy cutouts\n")
         self.get_galaxy_cutout()
 
+        if self.verbose:
+            print("\nfinished cutouts\n")
+        
         if self.bad_galaxy:
             print("\nzero std in sky - this is not real, so skipping galaxy ",self.cutout_name_r)
             print()
