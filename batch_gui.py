@@ -150,7 +150,10 @@ for rimage in flist1: # loop through list
         
     prefix = os.path.basename(rootname).replace("-r-shifted.fits","").replace("-r.fits","").replace("-R.fits","")
 
-    command_string = f'python  ~/github/halphagui/halphamain.py --virgo --rimage {rimage} --haimage {haimage} --filter {hfilter} --psfdir {args.psfdir} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {prefix} --verbose {args.verbose} --auto'
+    if args.verbose:
+        command_string = f'python  ~/github/halphagui/halphamain.py --virgo --rimage {rimage} --haimage {haimage} --filter {hfilter} --psfdir {args.psfdir} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {prefix} --verbose --auto'
+    else:
+        command_string = f'python  ~/github/halphagui/halphamain.py --virgo --rimage {rimage} --haimage {haimage} --filter {hfilter} --psfdir {args.psfdir} --tabledir /home/rfinn/research/Virgo/tables-north/v2/ --prefix {prefix} --auto'
 
     try:
         print('running : ',command_string)
