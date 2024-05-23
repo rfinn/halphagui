@@ -2061,7 +2061,7 @@ class hamodel():
                 #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
                 print('GALFIT psf image = ',psf)
                 if self.auto:
-                    self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
+                    self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=self.gradius[self.igal],mag=10, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
                 else:
                     self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)                
             elif (ncomp == 1) & (asym == 1):
@@ -2266,7 +2266,12 @@ class hamodel():
         if self.verbose:
             print("calling plot_profiles\n")
         self.e.plot_profiles()
+        if self.verbose:
+            print("finished plot_profiles\n")
+        
         #os.chdir(current_dir)
+        if self.verbose:
+            print("saving data\n")
 
         ### SAVE DATA TO TABLE
         fields = ['BADGAL','XCENTROID','YCENTROID','EPS','THETA','GINI','HGINI',\
@@ -2309,6 +2314,8 @@ class hamodel():
             #print(values[i])
             self.table[f][self.igal] = values[i]
 
+
+        # what are we doing here?
         wcs = WCS(self.cutout_name_r)
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
         
