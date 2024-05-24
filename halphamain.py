@@ -2314,7 +2314,7 @@ class hamodel():
             #print(values[i])
             self.table[f][self.igal] = values[i]
 
-
+        
         # what are we doing here?
         wcs = WCS(self.cutout_name_r)
         ra,dec = wcs.wcs_pix2world(self.e.xcenter,self.e.ycenter,0)
@@ -2402,6 +2402,10 @@ class hamodel():
                 sys.exit()
             except:
                 print("problem writing table element",colname,values[i])
+
+        if self.verbose:
+            print("writing fits table\n")
+                
         self.write_fits_table()            
         if self.e.statmorph_flag:
             print("running statmorph")
