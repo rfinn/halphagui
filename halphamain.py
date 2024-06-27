@@ -1572,7 +1572,7 @@ class hamodel():
             self.coadd.fitsimage.set_autocut_params('zscale')
             self.coadd.fitsimage.set_data(self.halpha_cs)
         
-    def get_galaxy_cutout(self): # MVC - mix of model and view?
+    def get_galaxy_cutout(self): 
 
         # scale cutout size according to NSA Re
         #size = cutout_scale*self.gradius[self.igal]
@@ -2400,8 +2400,8 @@ class hamodel():
                 print("sorry for the shit show...")
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
-            except:
-                print("problem writing table element",colname,values[i])
+            #except:
+            #    print("problem writing table element",colname,values[i])
 
         if self.verbose:
             print("writing fits table\n")
@@ -2587,7 +2587,7 @@ class hamodel():
         # SFR conversion from Kennicutt and Evans (2012)
         # log (dM/dt/Msun/yr) = log(Lx) - logCx
         logCx = 41.27
-        print(len(self.hafit.total_flux),len(self.gzdist))
+        #print(len(self.hafit.total_flux),len(self.gzdist))
         L = self.hafit.total_flux*(4.*np.pi*cosmo.luminosity_distance(self.gzdist[self.igal]).cgs.value**2)
         #print(L)
         detect_flag = L > 0
@@ -3106,7 +3106,7 @@ class hacontroller():
             print("using ellipe parameters to unmask central region - woo hoo!")
             print()
             objparams = self.objparams
-            print("\t ",self.objparams)
+            #print("\t ",self.objparams)
         except AttributeError:
             print()
             print("problem getting objparams for masking routing")

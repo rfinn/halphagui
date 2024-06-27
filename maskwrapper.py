@@ -814,7 +814,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         # set up array to store the user-created object masks
 
         self.usr_mask = np.zeros_like(self.image)
-        print(self.image.shape, self.usr_mask.shape)
+        #print(self.image.shape, self.usr_mask.shape)
         # set off center flag as false by default
         self.off_center_flag = False
 
