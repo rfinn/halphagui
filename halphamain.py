@@ -2377,14 +2377,27 @@ class hamodel():
             print()
             print("done calculating fluxfrac_radius")
         # calculate fractional radii, but these are circular, and in pixels
-        
+
+        if self.verbose:
+            print()
+            print("adding extra properties to e.cat")
+            print()
         self.e.cat.add_extra_property('PHOT_R30',r30)
         self.e.cat.add_extra_property('PHOT_R50',r50)
         self.e.cat.add_extra_property('PHOT_R90',r90)
 
+        if self.verbose:
+            print("Calculating fluxfrac_radius for cat2")
+        
         r30 = self.e.cat2.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
         r50 = self.e.cat2.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
         r90 = self.e.cat2.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
+
+        if self.verbose:
+            print()
+            print("adding extra properties to e.cat2")
+            print()
+        
 
         self.e.cat2.add_extra_property('PHOT_R30',r30)
         self.e.cat2.add_extra_property('PHOT_R50',r50)
