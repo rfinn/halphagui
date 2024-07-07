@@ -1790,7 +1790,7 @@ class hamodel():
         newfile = fits.PrimaryHDU()
         # specify cutout from the region returned with Cutout2D,
         # which is saved with self.cutoutR
-        print("\nCutout region: ":ymin,ymax,xmin,xmax)
+        print("\nCutout region: ",ymin,ymax,xmin,xmax)
         newfile.data = self.r[ymin:ymax,xmin:xmax]
         # add sky subtraction here
 
