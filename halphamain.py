@@ -2454,6 +2454,10 @@ class hamodel():
                 print("sorry for the shit show...")
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
+            except AttributeError:
+                print("TypeError: ",colname, values[i])
+                print("sorry for the shit show...")
+                self.table[colname][self.igal]=float('%.4e'%(values[i]))                
             #except:
             #    print("problem writing table element",colname,values[i])
 
