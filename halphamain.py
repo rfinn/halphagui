@@ -2255,6 +2255,10 @@ class hamodel():
 
         ### FIT ELLIPSE
         #
+        if self.verbose:
+            print()
+            print("running photutils_ellip_phot")
+            print()
         if self.auto:
             ra = self.objparams[0]
             dec = self.objparams[1]            
@@ -2385,7 +2389,9 @@ class hamodel():
         self.e.cat2.add_extra_property('PHOT_R30',r30)
         self.e.cat2.add_extra_property('PHOT_R50',r50)
         self.e.cat2.add_extra_property('PHOT_R90',r90)
-        
+
+        if self.verbose:
+            print("writing radii to main table")
         # write these out to the main table
         fields = ['R30','R50','R90',\
                   'HR30','HR50','HR90']
@@ -2415,17 +2421,22 @@ class hamodel():
 
         if self.verbose:
             print("writing fits table\n")
-                
-        self.write_fits_table()            
+        self.write_fits_table()
+        
         if self.e.statmorph_flag:
+            print()
             print("running statmorph")
             self.write_statmorph()
+            if self.verbose:
+                print("writing fits table after running statmorph")
             self.write_fits_table()
         #c1 = Column(data=np.array(r30[self.e.objectIndex]),name='PHOTR30',unit='arcsec',description='photutils fluxfrac_radius')
         #c2 = Column(data=np.array(r50[self.e.objectIndex]),name='PHOTR50',unit='arcsec',description='photutils fluxfrac_radius')
         #c3 = Column(data=r90[self.e.objectIndex],name='PHOTR90',unit='arcsec',description='photutils fluxfrac_radius')
         #qtable.add_columns([c1,c2,c3])
 
+        if self.verbose:
+            print("setting up photutil_tab.fits")
         qtable = self.e.cat[self.e.objectIndex].to_table(colnames)
         
         phot_table_name = self.cutout_name_r.replace('.fits','-photutil_tab.fits')
