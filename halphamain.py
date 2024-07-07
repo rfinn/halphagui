@@ -2365,30 +2365,10 @@ class hamodel():
                     'ycentroid']
 
 
-
-        if self.verbose:
-            print("Calculating fluxfrac_radius")
-        # calculate fractional radii, but these are circular, and in pixels
-        r30 = self.e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
-        r50 = self.e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
-        r90 = self.e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
-
-        if self.verbose:
-            print()
-            print("done calculating fluxfrac_radius")
-        # calculate fractional radii, but these are circular, and in pixels
-
-        if self.verbose:
-            print()
-            print("adding extra properties to e.cat")
-            print()
-        self.e.cat.add_extra_property('PHOT_R30',r30)
-        self.e.cat.add_extra_property('PHOT_R50',r50)
-        self.e.cat.add_extra_property('PHOT_R90',r90)
-
+        # this is hanging when trying to calculate for cat2 - not sure why
         if self.verbose:
             print("Calculating fluxfrac_radius 30 for cat2")
-        
+            
         r30 = self.e.cat2.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
         if self.verbose:
             print("Calculating fluxfrac_radius 50 for cat2")
@@ -2422,6 +2402,28 @@ class hamodel():
         self.e.cat2.add_extra_property('PHOT_R90',r90)
 
         if self.verbose:
+            print("Calculating fluxfrac_radius")
+        # calculate fractional radii, but these are circular, and in pixels
+        r30 = self.e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
+        r50 = self.e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
+        r90 = self.e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
+
+        if self.verbose:
+            print()
+            print("done calculating fluxfrac_radius")
+        # calculate fractional radii, but these are circular, and in pixels
+
+        if self.verbose:
+            print()
+            print("adding extra properties to e.cat")
+            print()
+        self.e.cat.add_extra_property('PHOT_R30',r30)
+        self.e.cat.add_extra_property('PHOT_R50',r50)
+        self.e.cat.add_extra_property('PHOT_R90',r90)
+
+
+
+        if self.verbose:
             print("writing radii to main table")
         # write these out to the main table
         fields = ['R30','R50','R90',\
@@ -2433,6 +2435,10 @@ class hamodel():
                   self.e.cat2.PHOT_R30[self.e.objectIndex].value,\
                   self.e.cat2.PHOT_R50[self.e.objectIndex].value,\
                   self.e.cat2.PHOT_R90[self.e.objectIndex].value]
+        values = [self.e.cat.PHOT_R30[self.e.objectIndex].value,\
+                  self.e.cat.PHOT_R50[self.e.objectIndex].value,\
+                  self.e.cat.PHOT_R90[self.e.objectIndex].value,\
+                  0,0,0]
         for i,f in enumerate(fields):
             colname = 'ELLIP_'+f
             #print(colname,values[i])
