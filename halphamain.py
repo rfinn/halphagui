@@ -2362,11 +2362,18 @@ class hamodel():
 
 
 
+        if self.verbose:
+            print("Calculating fluxfrac_radius")
         # calculate fractional radii, but these are circular, and in pixels
         r30 = self.e.cat.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
         r50 = self.e.cat.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
         r90 = self.e.cat.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
 
+        if self.verbose:
+            print()
+            print("done calculating fluxfrac_radius")
+        # calculate fractional radii, but these are circular, and in pixels
+        
         self.e.cat.add_extra_property('PHOT_R30',r30)
         self.e.cat.add_extra_property('PHOT_R50',r50)
         self.e.cat.add_extra_property('PHOT_R90',r90)
@@ -3306,6 +3313,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             self.igal = i
             # get cutouts
             self.auto_gal()
+            if self.verbose:
+                print("writing fits table after running auto_gal")
             self.write_fits_table()
             if self.verbose:
                 print(f"##########################\nFinished galaxy {i+1}/{len(self.gximage)}")
@@ -3353,10 +3362,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
                 print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
 
             # don't need this - the geometry is so similar
+            self.galfit_ellip_phot()            
             try:
+                if self.verbose:
+                    print("running galfit_ellip_phot ")
                 self.galfit_ellip_phot()
             except:
+                print("##################################")
                 print('WARNING: problem running galfit ellip phot',self.cutout_name_r)
+                print("##################################")                
 
         # run galfit ellip phot
         # use try in case fit fails
