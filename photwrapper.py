@@ -437,6 +437,17 @@ class ellipse():
             except:
                 self.statmorph_flag = False            
                 print("WARNING: problem running statmorph")
+            if self.image2 is not None:
+                try:
+                    print("running statmorph on image 2- please be patient...")
+                    print()
+                    self.run_statmorph_image2()
+                    self.statmorph_flag2 = True
+                except:
+                    self.statmorph_flag2 = False            
+                    print("WARNING: problem running statmorph on image 2")
+
+            
         print("writing tables")
         self.write_phot_tables()
         self.write_phot_fits_tables()
@@ -860,6 +871,8 @@ class ellipse():
             mask = None
         #plt.figure()
         #plt.imshow(segmap, origin='lower', cmap='gray')
+
+        # run statmorph on r-band image
         if self.psf is None:
             source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
         else:
@@ -869,6 +882,14 @@ class ellipse():
         fig = make_figure(self.morph)
         figname = self.image_name.split('.fits')[0]
         fig.savefig(figname+'statmorph-r.pdf')
+        self.segmap = segmap
+    def run_statmorph_image2(self):
+
+        if self.mask_image is not None:
+            mask = self.mask_image > 0
+        else:
+            mask = None
+        
         if self.psf_ha is None:
             source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain)
         else:

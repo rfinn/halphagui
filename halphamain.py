@@ -2547,37 +2547,38 @@ class hamodel():
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
 
-        ## Add Halpha values
-        values = [self.e.morph2.xc_centroid,\
-                  self.e.morph2.yc_centroid,\
-                  self.e.morph2.rpetro_circ*self.pixelscale,\
-                  self.e.morph2.rpetro_ellip*self.pixelscale,\
-                  self.e.morph2.rhalf_ellip*self.pixelscale,\
-                  self.e.morph2.r20*self.pixelscale,\
-                  self.e.morph2.r80*self.pixelscale,\
-                  self.e.morph2.gini,\
-                  self.e.morph2.m20,\
-                  self.e.morph2.gini_m20_bulge,\
-                  self.e.morph2.gini_m20_merger,\
-                  self.e.morph2.concentration,
-                  self.e.morph2.asymmetry,
-                  self.e.morph2.smoothness,\
-                  self.e.morph2.flag]
-                  
-        for i,f in enumerate(fields):
-            colname = 'SMORPH_H'+f
-            #print(colname)
-            try:
-                self.table[colname][self.igal]=float('%.4e'%(values[i]))
-            except KeyError:
-                print("KeyError: ",colname)
-                print("\ntable column names: \n",self.table.colnames)
-                sys.exit()
-            except TypeError:
-                print("TypeError: ",colname, values[i])
-                print("sorry for the shit show...")
-                print("\ntable column names: \n",self.table.colnames)
-                sys.exit()
+        if self.e.statmorph_flag2:
+            ## Add Halpha values
+            values = [self.e.morph2.xc_centroid,\
+                      self.e.morph2.yc_centroid,\
+                      self.e.morph2.rpetro_circ*self.pixelscale,\
+                      self.e.morph2.rpetro_ellip*self.pixelscale,\
+                      self.e.morph2.rhalf_ellip*self.pixelscale,\
+                      self.e.morph2.r20*self.pixelscale,\
+                      self.e.morph2.r80*self.pixelscale,\
+                      self.e.morph2.gini,\
+                      self.e.morph2.m20,\
+                      self.e.morph2.gini_m20_bulge,\
+                      self.e.morph2.gini_m20_merger,\
+                      self.e.morph2.concentration,
+                      self.e.morph2.asymmetry,
+                      self.e.morph2.smoothness,\
+                      self.e.morph2.flag]
+
+            for i,f in enumerate(fields):
+                colname = 'SMORPH_H'+f
+                #print(colname)
+                try:
+                    self.table[colname][self.igal]=float('%.4e'%(values[i]))
+                except KeyError:
+                    print("KeyError: ",colname)
+                    print("\ntable column names: \n",self.table.colnames)
+                    sys.exit()
+                except TypeError:
+                    print("TypeError: ",colname, values[i])
+                    print("sorry for the shit show...")
+                    print("\ntable column names: \n",self.table.colnames)
+                    sys.exit()
 
         
     def fit_profiles(self,prefix=None):
