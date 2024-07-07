@@ -2268,7 +2268,7 @@ class hamodel():
             ra = self.defcat.cat['RA'][self.igal]
             dec = self.defcat.cat['DEC'][self.igal]            
             self.e = ellipse(self.cutout_name_r, image2=self.cutout_name_ha, mask = self.mask_image_name, image_frame = self.rcutout,image2_filter='16', filter_ratio=self.filter_ratio, psf=self.psf_image_name,psf_ha=self.psf_haimage_name,objra=ra,objdec=dec )
-        self.e.run_for_gui(runStatmorphFlag=False)
+        self.e.run_for_gui(runStatmorphFlag=True)
 
         if self.verbose:
             print("calling plot_profiles\n")
@@ -2430,12 +2430,12 @@ class hamodel():
         fields = ['R30','R50','R90',\
                   'HR30','HR50','HR90']
         
-        values = [self.e.cat.PHOT_R30[self.e.objectIndex].value,\
-                  self.e.cat.PHOT_R50[self.e.objectIndex].value,\
-                  self.e.cat.PHOT_R90[self.e.objectIndex].value,\
-                  self.e.cat2.PHOT_R30[self.e.objectIndex].value,\
-                  self.e.cat2.PHOT_R50[self.e.objectIndex].value,\
-                  self.e.cat2.PHOT_R90[self.e.objectIndex].value]
+        #values = [self.e.cat.PHOT_R30[self.e.objectIndex].value,\
+        #          self.e.cat.PHOT_R50[self.e.objectIndex].value,\
+        #          self.e.cat.PHOT_R90[self.e.objectIndex].value,\
+        #          self.e.cat2.PHOT_R30[self.e.objectIndex].value,\
+        #          self.e.cat2.PHOT_R50[self.e.objectIndex].value,\
+        #          self.e.cat2.PHOT_R90[self.e.objectIndex].value]
         values = [self.e.cat.PHOT_R30[self.e.objectIndex].value,\
                   self.e.cat.PHOT_R50[self.e.objectIndex].value,\
                   self.e.cat.PHOT_R90[self.e.objectIndex].value,\
