@@ -1788,6 +1788,9 @@ class hamodel():
         self.table['PIXSCALE'][self.igal] = self.pixelscale
         
         newfile = fits.PrimaryHDU()
+        # specify cutout from the region returned with Cutout2D,
+        # which is saved with self.cutoutR
+        print("\nCutout region: ":ymin,ymax,xmin,xmax)
         newfile.data = self.r[ymin:ymax,xmin:xmax]
         # add sky subtraction here
 
@@ -3278,7 +3281,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # subtract images
         # this will look for CS-ZP.fits image
         # if not found, it will subtract images according to the ZP ratio of r and halpha images
-        self.subtract_images() # checks out ok
+        self.subtract_images(overwrite=True) # checks out ok
         
         # measure psf
         # function will check if psf image already exists
@@ -3363,14 +3366,15 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         # run phot util ellip phot
         # use try in case fit fails
         #self.photutils_ellip_phot()
-        try:
-            self.photutils_ellip_phot()
-        except:
-            print('\nWARNING: problem running photutils ellip phot\n',self.cutout_name_r)
+
+        # RF - debugging on 07/07/2024 - not getting size measurements in output file
+        # taking command out of try/except
+        self.photutils_ellip_phot()
         #try:
         #    self.photutils_ellip_phot()
         #except:
-        #    print('WARNING: problem running photutils ellip phot')
+        #    print('\nWARNING: problem running photutils ellip phot\n',self.cutout_name_r)
+        
             
       
     def setup_testing(self):
