@@ -2395,12 +2395,24 @@ class hamodel():
 
         if self.verbose:
             print()
-            print("adding extra properties to e.cat2")
+            print("adding r30 to e.cat2")
             print()
         
 
         self.e.cat2.add_extra_property('PHOT_R30',r30)
+
+        if self.verbose:
+            print()
+            print("adding r50 to e.cat2")
+            print()
+        
         self.e.cat2.add_extra_property('PHOT_R50',r50)
+
+        if self.verbose:
+            print()
+            print("adding r90 to e.cat2")
+            print()
+        
         self.e.cat2.add_extra_property('PHOT_R90',r90)
 
         if self.verbose:
