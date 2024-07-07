@@ -2532,11 +2532,11 @@ class hamodel():
         #image_dir = os.path.dirname(self.rcoadd_fname)
         #os.chdir(image_dir)
         if prefix is None:
-            rphot_table = self.cutout_name_r.split('.fits')[0]+'-phot.fits'
-            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-phot.fits'
+            rphot_table = self.cutout_name_r.split('.fits')[0]+'_phot.fits'
+            haphot_table = self.cutout_name_ha.split('.fits')[0]+'_phot.fits'
         else:
-            rphot_table = self.cutout_name_r.split('.fits')[0]+'-'+prefix+'-phot.fits'
-            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-'+prefix+'-phot.fits'
+            rphot_table = self.cutout_name_r.split('.fits')[0]+'-'+prefix+'_phot.fits'
+            haphot_table = self.cutout_name_ha.split('.fits')[0]+'-'+prefix+'_phot.fits'
 
         self.rfit = rprofile(self.cutout_name_r, rphot_table, label='R')
         self.rfit.becky_measurements()
