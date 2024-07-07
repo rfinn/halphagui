@@ -2387,10 +2387,16 @@ class hamodel():
         self.e.cat.add_extra_property('PHOT_R90',r90)
 
         if self.verbose:
-            print("Calculating fluxfrac_radius for cat2")
+            print("Calculating fluxfrac_radius 30 for cat2")
         
         r30 = self.e.cat2.fluxfrac_radius(0.3)*self.pixelscale*u.arcsec/u.pixel
+        if self.verbose:
+            print("Calculating fluxfrac_radius 50 for cat2")
+        
         r50 = self.e.cat2.fluxfrac_radius(0.5)*self.pixelscale*u.arcsec/u.pixel
+        if self.verbose:
+            print("Calculating fluxfrac_radius 90 for cat2")
+        
         r90 = self.e.cat2.fluxfrac_radius(0.9)*self.pixelscale*u.arcsec/u.pixel
 
         if self.verbose:
