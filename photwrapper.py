@@ -211,6 +211,7 @@ class ellipse():
     * image_frame   - image frame for plotting inside a gui; like if this is called from halphamain
     * use_mpl       - use mpl for testing purposes, before integrating with pyqt gui
     * napertures    - number of apertures for measuring photmetry in. default is 20.
+    * apertures     - list of apetures to use, instead of generating them automatically
     * image2_filter - this is used to calculate the flux levels in the second filter.  
                       this should be one of standard halpha filters in our dictionary 
                       ('4','inthalpha','intha6657').
@@ -221,7 +222,7 @@ class ellipse():
 
 
     '''
-    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,image2_filter=None, filter_ratio=None,psf=None,psf_ha=None,objra=None,objdec=None,fixcenter=False):
+    def __init__(self, image, image2 = None, mask = None, image_frame=None, use_mpl=False, napertures=20,apertures, image2_filter=None, filter_ratio=None,psf=None,psf_ha=None,objra=None,objdec=None,fixcenter=False):
         '''  inputs described above '''
 
         self.image, self.header = fits.getdata(image, header=True)
@@ -438,15 +439,15 @@ class ellipse():
                 self.statmorph_flag = False            
                 print("WARNING: problem running statmorph")
             if self.image2 is not None:
-                self.run_statmorph_image2()
-                #try:
-                #    print("running statmorph on image 2- please be patient...")
-                #    print()
-                #    self.run_statmorph_image2()
-                #    self.statmorph_flag2 = True
-                #except:
-                #    self.statmorph_flag2 = False            
-                #    print("WARNING: problem running statmorph on image 2")
+                #self.run_statmorph_image2()
+                try:
+                    print("running statmorph on image 2- please be patient...")
+                    print()
+                    self.run_statmorph_image2()
+                    self.statmorph_flag2 = True
+                except:
+                    self.statmorph_flag2 = False            
+                    print("WARNING: problem running statmorph on image 2")
 
             
         print("writing tables")
@@ -1216,6 +1217,7 @@ class ellipse():
         
         '''
 
+        # TODO - update apertures to make use of input apertures
         index = np.arange(80)
         apertures = (index+1)*.5*self.fwhm*(1+(index+1)*.1)
         #apertures = (index+1)*self.fwhm*(1+(index+1)*.1)
