@@ -898,6 +898,7 @@ class ellipse():
         self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2[0]
         fig2 = make_figure(self.morph2)
+        figname = self.image_name.split('.fits')[0]        
         fig2.savefig(figname+'statmorph-ha.pdf')
     def get_image2_gini(self, snrcut=1.5):
         ''' 
