@@ -864,7 +864,7 @@ class ellipse():
         segmap = self.segmentation.data == self.cat.label[self.objectIndex]
         segmap_float = ndi.uniform_filter(np.float64(segmap), size=10)
         segmap = segmap_float > 0.5
-
+        self.segmap = segmap
 
         if self.mask_image is not None:
             mask = self.mask_image > 0
@@ -892,9 +892,9 @@ class ellipse():
             mask = None
         
         if self.psf_ha is None:
-            source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain)
+            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
         else:
-            source_morphs2 = statmorph.source_morphology(self.image2, segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
+            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
         self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2[0]
         fig2 = make_figure(self.morph2)
