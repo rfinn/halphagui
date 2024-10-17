@@ -430,29 +430,29 @@ class ellipse():
         #self.run_statmorph()
         #self.statmorph_flag = True
         if runStatmorphFlag:
-            print("running statmorph - please be patient...")
-            self.run_statmorph()
-            self.statmorph_flag = True
+            #print("running statmorph - please be patient...")
+            #self.run_statmorph()
+            #self.statmorph_flag = True
             
-            #try:
-            #    print("running statmorph - please be patient...")
-            #    print()
-            #    self.run_statmorph()
-            #    self.statmorph_flag = True
-            #except:
-            #    self.statmorph_flag = False            
-            #    print("WARNING: problem running statmorph")
+            try:
+                print("running statmorph - please be patient...")
+                print()
+                self.run_statmorph()
+                self.statmorph_flag = True
+            except:
+                self.statmorph_flag = False            
+                print("WARNING: problem running statmorph")
             if self.image2 is not None:
-                self.run_statmorph_image2()
-                self.statmorph_flag2 = True                
-                #try:
-                #    print("running statmorph on image 2- please be patient...")
-                #    print()
-                #    self.run_statmorph_image2()
-                #    self.statmorph_flag2 = True
-                #except:
-                #    self.statmorph_flag2 = False            
-                #    print("WARNING: problem running statmorph on image 2")
+                #self.run_statmorph_image2()
+                #self.statmorph_flag2 = True                
+                try:
+                    print("running statmorph on image 2- please be patient...")
+                    print()
+                    self.run_statmorph_image2()
+                    self.statmorph_flag2 = True
+                except:
+                    self.statmorph_flag2 = False            
+                    print("WARNING: problem running statmorph on image 2")
 
             
         print("writing tables")
