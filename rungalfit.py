@@ -19,36 +19,49 @@ def parse_galfit_results(galfit_outimage,asymflag=0,ncomp=1):
         header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','1_F1','1_F1PA','CHI2NU']
     else:
         header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','CHI2NU']
-    if ncomp == 2:
-        header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_XC','2_YC','2_MAG','2_RE','2_N','2_AR','2_PA','3_SKY','CHI2NU']
+    if ncomp > 1:
+        # TODO - update to accomodate variable ncomp,
+        # do something like:
+        # s=['a','b','c']
+        # out = []
+        # for j in range(1,ncomp+1):
+        #   out += [f'{x}_{j}' for x in s]
+        header_keywords = []
+        fields = ['XC','YC','MAG','RE','N','AR','PA']
+        
     fit_parameters=[]
     working_dir=os.getcwd()+'/'
     image_header = fits.getheader(galfit_outimage,2)
-    for hkey in header_keywords:
-        s=str(image_header[hkey])
-        #print hkey
-        if s.find('[') > -1:
-            s=s.replace('[','')
-            s=s.replace(']','')
-            t=s.split('+/-')
-            values=(float(t[0]),0.)# fit and error
-        else:
-            t=s.split('+/-')
-            try:
-                values=(float(t[0]),float(t[1]))# fit and error
-            except ValueError:
-                # look for * in the string, which indicates numerical problem
-                if t[0].find('*') > -1:
-                    numerical_error_flag=1
-                    t[0]=t[0].replace('*','')
-                    t[1]=t[1].replace('*','')
+    for i in range(ncomp):
+        header_keywords=[f'{i}_{f}' for f in fields]
+        
+        for hkey in header_keywords:
+            s=str(image_header[hkey])
+            #print hkey
+            if s.find('[') > -1:
+                s=s.replace('[','')
+                s=s.replace(']','')
+                t=s.split('+/-')
+                values=(float(t[0]),0.)# fit and error
+            else:
+                t=s.split('+/-')
+                try:
                     values=(float(t[0]),float(t[1]))# fit and error
-            except IndexError: # for CHI2NU
-                chi2nu=float(t[0])
-                continue
-        fit_parameters.append(values)
-    fit_parameters.append(numerical_error_flag)
-    fit_parameters.append(chi2nu)
+                except ValueError:
+                    # look for * in the string, which indicates numerical problem
+                    if t[0].find('*') > -1:
+                        numerical_error_flag=1
+                        t[0]=t[0].replace('*','')
+                        t[1]=t[1].replace('*','')
+                        values=(float(t[0]),float(t[1]))# fit and error
+                except IndexError: # for CHI2NU
+                    chi2nu=float(t[0])
+                    continue
+            fit_parameters.append(values)
+        # need to track numerical error flag for each galaxy
+        fit_parameters.append(numerical_error_flag)
+    fit_parameters.append(image_header[f'{ncomp+1}_SKY'])
+    fit_parameters.append(image_header['CHI2NU'])
     return fit_parameters
 
 
