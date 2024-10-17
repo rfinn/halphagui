@@ -430,6 +430,7 @@ class ellipse():
         #self.run_statmorph()
         #self.statmorph_flag = True
         if runStatmorphFlag:
+            print("running statmorph - please be patient...")
             self.run_statmorph()
             self.statmorph_flag = True
             
