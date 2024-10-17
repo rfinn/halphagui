@@ -430,14 +430,17 @@ class ellipse():
         #self.run_statmorph()
         #self.statmorph_flag = True
         if runStatmorphFlag:
-            try:
-                print("running statmorph - please be patient...")
-                print()
-                self.run_statmorph()
-                self.statmorph_flag = True
-            except:
-                self.statmorph_flag = False            
-                print("WARNING: problem running statmorph")
+            self.run_statmorph()
+            self.statmorph_flag = True
+            
+            #try:
+            #    print("running statmorph - please be patient...")
+            #    print()
+            #    self.run_statmorph()
+            #    self.statmorph_flag = True
+            #except:
+            #    self.statmorph_flag = False            
+            #    print("WARNING: problem running statmorph")
             if self.image2 is not None:
                 self.run_statmorph_image2()
                 self.statmorph_flag2 = True                
