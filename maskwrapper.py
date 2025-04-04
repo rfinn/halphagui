@@ -180,6 +180,7 @@ class buildmask():
             os.system('unlink '+file)
 
     def read_se_cat(self):
+        print("reading in SE catalog")
         sexout=fits.getdata(self.catname)
         self.se_number = sexout['NUMBER']
         self.xsex = sexout['XWIN_IMAGE']
