@@ -181,9 +181,14 @@ class buildmask():
 
     def read_se_cat(self):
         sexout=fits.getdata(self.catname)
-        self.xsex=sexout['XWIN_IMAGE']
-        self.ysex=sexout['YWIN_IMAGE']
+        self.se_number = sexout['NUMBER']
+        self.xsex = sexout['XWIN_IMAGE']
+        self.ysex = sexout['YWIN_IMAGE']
         self.fwhm = sexout['FWHM_IMAGE']
+        self.A_IMAGE = sexout['A_IMAGE']
+        self.B_IMAGE = sexout['B_IMAGE']
+        self.BA = 1./sexout['ELONGATION']
+        self.THETA_IMAGE = sexout['THETA_IMAGE']        
         # also keep the ellipse params
         
         dist=np.sqrt((self.yc-self.ysex)**2+(self.xc-self.xsex)**2)
