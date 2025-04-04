@@ -184,6 +184,8 @@ class buildmask():
         self.xsex=sexout['XWIN_IMAGE']
         self.ysex=sexout['YWIN_IMAGE']
         self.fwhm = sexout['FWHM_IMAGE']
+        # also keep the ellipse params
+        
         dist=np.sqrt((self.yc-self.ysex)**2+(self.xc-self.xsex)**2)
         #   find object ID
 

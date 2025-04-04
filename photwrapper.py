@@ -124,7 +124,6 @@ def get_M20(catalog,objectIndex):
     xc,yc = catalog.cutout_centroid[objectIndex]
 
     # can't make sense of moments that photutils includes in the catalog, so recalculating here
-
     ymax,xmax = catalog.data_ma[objectIndex].shape
 
     # create a meshgrid to represent pixels in segmentation
