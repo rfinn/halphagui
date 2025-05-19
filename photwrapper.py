@@ -46,6 +46,7 @@ from astropy.visualization import simple_norm
 
 import scipy.ndimage as ndi
 import statmorph
+
 from statmorph.utils.image_diagnostics import make_figure
 
 
@@ -194,6 +195,24 @@ def get_fraction_masked_pixels(catalog,objectIndex):
 # estimate ellipse parameters from source properties
 
 # run 
+
+class myStatmorph(statmorph.SourceMorphology):
+
+    """
+    add on to statmorph 
+
+    * changed to use the same segmentation map for the gini coefficient calculation 
+      as it does for the other morph calculations
+
+    """
+    
+    @lazyproperty
+    def _segmap_gini(self):
+        '''overwriting function so that it uses the reg segmap'''
+        #self._image[self._slice_stamp]        
+        segmap = np.array(self._segmap.data== 1,'i')
+        return segmap[self._slice_stamp]
+    
 
 class ellipse():
     '''
@@ -880,9 +899,12 @@ class ellipse():
 
         # run statmorph on r-band image
         if self.psf is None:
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
+            
+            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
+            source_morphs = myStatmorph.myStatmorph(self.image, segmap, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
+            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
+            source_morphs = myStatmorph.myStatmorph(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs = source_morphs
         self.morph = source_morphs[0]
         fig = make_figure(self.morph)
@@ -897,9 +919,11 @@ class ellipse():
             mask = None
         
         if self.psf_ha is None:
-            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
+            #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
+            source_morphs2 = myStatmorph.myStatmorph(self.image2, self.segmap, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
-            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
+            #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
+            source_morphs2 = myStatmorph.myStatmorph(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2[0]
         fig2 = make_figure(self.morph2)
