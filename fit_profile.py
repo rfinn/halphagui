@@ -337,9 +337,9 @@ class profile():
             # taking the max of the two errors reported in the phot.dat table
             #self.iso_mag[i,1] = np.max([magerr[a], magerr[b]])
 
-        print()
-        print("debugging in fit_profile, iso magnitudes are: ",self.iso_mag)
-        print()
+        #print()
+        #print("debugging in fit_profile, iso magnitudes are: ",self.iso_mag)
+        #print()
         
     def get_fluxradii(self):
         # measure the radii that enclose 25, 50 and 75% of total flux
