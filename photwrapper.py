@@ -196,7 +196,8 @@ def get_fraction_masked_pixels(catalog,objectIndex):
 
 # run 
 
-class myStatmorph(statmorph.SourceMorphology):
+#class myStatmorph(statmorph.SourceMorphology):
+class myStatmorph(statmorph.source_morphology):
 
     """
     add on to statmorph 
