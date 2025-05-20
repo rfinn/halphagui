@@ -109,7 +109,11 @@ lmax={'4':6669., '8':6703.,'12':6747., '16':6779.,'INT197':6615.5, 'INT227':6697
 
 # Force a specific toolkit on mac
 macos_ver = platform.mac_ver()[0]
-matplotlib.use('Qt5Agg')
+try:
+    matplotlib.use('Qt5Agg')
+except ImportError:
+    print("WARNING! could not load Qt5Agg")
+    
 import matplotlib.pyplot as plt
 
 ### code to measure galaxy sizes from photutils segmentation image
