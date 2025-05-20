@@ -902,7 +902,7 @@ class ellipse():
         # run statmorph on r-band image
         if self.psf is None:
             
-            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
             source_morphs = myStatmorph(self.image, segmap, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
             #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
