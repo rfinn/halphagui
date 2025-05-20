@@ -393,7 +393,14 @@ class profile():
             m1 = mag[a]
             m2 = mag[b]
             self.iso_mag[i,0] = 2.5*np.log10(2) - 2.5*np.log10(10.**(-1*m1/2.5) + 10**(-1*m2/2.5))
-            self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,1] - m1), abs(self.iso_mag[i,1] - m2)]) 
+            #self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,1] - m1), abs(self.iso_mag[i,1] - m2)])
+
+            self.iso_mag[i,1] = np.max([magerr[a], magerr[b]])
+
+        print()
+        print("debugging in fit_profile, iso magnitudes are: ",self.iso_mag)
+        print()
+            
         #print('finished getting isophot mags')
     def get_petro(self):
         # going to work with flux in ADU so we can calculate mag from ZP that is in image header
