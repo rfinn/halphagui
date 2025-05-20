@@ -42,7 +42,7 @@ from astropy.visualization.mpl_normalize import ImageNormalize
 
 from astropy.stats import sigma_clip, SigmaClip,sigma_clipped_stats
 from astropy.visualization import simple_norm
-
+from astropy.utils import lazyproperty
 
 import scipy.ndimage as ndi
 import statmorph
