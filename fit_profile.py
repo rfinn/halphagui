@@ -329,9 +329,13 @@ class profile():
             self.iso_radii[i,1] = np.abs((rad[a]-rad[b])/2)
             m1 = mag[a]
             m2 = mag[b]
+            # TODO - revisit this - why is there a log10(2) term here?
             self.iso_mag[i,0] = 2.5*np.log10(2) - 2.5*np.log10(10.**(-1*m1/2.5) + 10**(-1*m2/2.5))
+            
             # TODO - the mag error is wrong - it is returning the same value as the magnitude
-            self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,0] - m1), abs(self.iso_mag[i,0] - m2)])
+            #self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,0] - m1), abs(self.iso_mag[i,0] - m2)])
+            # taking the max of the two errors reported in the phot.dat table
+            self.iso_mag[i,1] = np.max([magerr[a], magerr[b]])
 
         print()
         print("debugging in fit_profile, iso magnitudes are: ",self.iso_mag)
