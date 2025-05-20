@@ -903,10 +903,10 @@ class ellipse():
         if self.psf is None:
             
             #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
-            source_morphs = myStatmorph.myStatmorph(self.image, segmap, gain=self.gain,mask=mask, cutout_extent=1.5)
+            source_morphs = myStatmorph(self.image, segmap, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
             #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
-            source_morphs = myStatmorph.myStatmorph(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
+            source_morphs = myStatmorph(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs = source_morphs
         self.morph = source_morphs[0]
         fig = make_figure(self.morph)
@@ -922,10 +922,10 @@ class ellipse():
         
         if self.psf_ha is None:
             #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
-            source_morphs2 = myStatmorph.myStatmorph(self.image2, self.segmap, gain=self.gain,mask=mask, cutout_extent=1.5)
+            source_morphs2 = myStatmorph(self.image2, self.segmap, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
             #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
-            source_morphs2 = myStatmorph.myStatmorph(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
+            source_morphs2 = myStatmorph(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2[0]
         fig2 = make_figure(self.morph2)
