@@ -901,7 +901,8 @@ class ellipse():
         #plt.imshow(segmap, origin='lower', cmap='gray')
 
         # run statmorph on r-band image
-        label = self.image_name[0:9]        
+        label = self.image_name[0:9]
+        label = 1
         if self.psf is None:
             
             #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
@@ -923,7 +924,8 @@ class ellipse():
             mask = self.mask_image > 0
         else:
             mask = None
-        label = self.image_name[0:9]        
+        label = self.image_name[0:9]
+        label = 1
         if self.psf_ha is None:
             #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
             source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
