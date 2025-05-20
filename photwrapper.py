@@ -450,8 +450,8 @@ class ellipse():
         #self.statmorph_flag = True
         if runStatmorphFlag:
             #print("running statmorph - please be patient...")
-            self.run_statmorph()
-            self.statmorph_flag = True
+            #self.run_statmorph()
+            #self.statmorph_flag = True
 
             
             
@@ -464,8 +464,8 @@ class ellipse():
                 self.statmorph_flag = False            
                 print("WARNING: problem running statmorph")
             if self.image2 is not None:
-                self.run_statmorph_image2()
-                self.statmorph_flag2 = True                
+                #self.run_statmorph_image2()
+                #self.statmorph_flag2 = True                
                 try:
                     print("running statmorph on image 2- please be patient...")
                     print()

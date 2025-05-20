@@ -294,7 +294,9 @@ class profile():
         raderr = None
         mag = self.tab.mag
         magerr = self.tab.mag_err
-
+        print()
+        print("debugging in fit_profile, magnitudes are: ",mag)
+        print()
         # isophotal radius where sb = 24 mag/arcsec^2, for example
         # need to flip arrays because sb is decreasing, and np.interp does not work with this
         #self.iso_radii[:,0] = np.interp(self.isophotes,sb, rad)
@@ -328,6 +330,7 @@ class profile():
             m1 = mag[a]
             m2 = mag[b]
             self.iso_mag[i,0] = 2.5*np.log10(2) - 2.5*np.log10(10.**(-1*m1/2.5) + 10**(-1*m2/2.5))
+            # TODO - the mag error is wrong - it is returning the same value as the magnitude
             self.iso_mag[i,1] = np.max([abs(self.iso_mag[i,1] - m1), abs(self.iso_mag[i,1] - m2)]) 
     def get_fluxradii(self):
         # measure the radii that enclose 25, 50 and 75% of total flux
