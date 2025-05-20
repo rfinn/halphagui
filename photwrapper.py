@@ -913,7 +913,7 @@ class ellipse():
             #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
             source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs = source_morphs
-        self.morph = source_morphs[0]
+        self.morph = source_morphs
         fig = make_figure(self.morph)
         figname = self.image_name.split('.fits')[0]
         fig.savefig(figname+'statmorph-r.pdf')
@@ -933,7 +933,7 @@ class ellipse():
             #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
             source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs2 = source_morphs2            
-        self.morph2 = source_morphs2[0]
+        self.morph2 = source_morphs2
         fig2 = make_figure(self.morph2)
         figname = self.image_name.split('.fits')[0]        
         fig2.savefig(figname+'statmorph-ha.pdf')
