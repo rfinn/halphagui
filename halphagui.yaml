@@ -1,4 +1,4 @@
-name: virgo
+name: uat
 channels:
   - conda-forge
   - defaults
