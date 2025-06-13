@@ -15,20 +15,30 @@ https://photutils.readthedocs.io/en/stable/segmentation.html
 - defining elliptical apertures for sources
 
 '''
-
-from photutils import detect_threshold, detect_sources
+try:
+    from photutils import detect_threshold, detect_sources
+except:
+    from photutils.segmentation import detect_threshold, detect_sources
 
 # changing to remove deprecated function source_properties
 #from photutils import source_properties
 from photutils.segmentation import SourceCatalog
 
-from photutils import make_source_mask
-from photutils import Background2D, MedianBackground
-from photutils import EllipticalAperture
-from photutils.utils import calc_total_error
+try:
+    from photutils import Background2D, MedianBackground
+except ImportError:
+    from photutils.background import Background2D, MedianBackground
 
+try:
+    from photutils import EllipticalAperture
+    from photutils import aperture_photometry    
+except ImportError:
+    from photutils.aperture import EllipticalAperture
+    from photutils.aperture import aperture_photometry
+    
+from photutils.utils import calc_total_error
 from photutils.isophote import EllipseGeometry, Ellipse
-from photutils import aperture_photometry
+
 from photutils.morphology import gini
 
 from astropy.convolution import Gaussian2DKernel
@@ -633,8 +643,12 @@ class ellipse():
 
 
         # make an object mask, expanding the area using a circular footprint
-        #mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)        
-        mask = make_source_mask(self.image,1.5,10,dilate_size=11)
+        #mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)
+        try:
+            from photutils import make_source_mask
+            mask = make_source_mask(self.image,1.5,10,dilate_size=11)
+        except ImportError:
+            mask = segmentation.make_source_mask(self.image,1.5,10,dilate_size=11)
         #plt.figure()
         #plt.imshow(mask,origin="lower")
         mean, median, std = sigma_clipped_stats(self.image, sigma=3.0, mask=mask)
