@@ -17,7 +17,7 @@ https://photutils.readthedocs.io/en/stable/segmentation.html
 '''
 try:
     from photutils import detect_threshold, detect_sources
-except:
+except ImportError:
     from photutils.segmentation import detect_threshold, detect_sources
 
 # changing to remove deprecated function source_properties

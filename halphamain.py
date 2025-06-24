@@ -57,9 +57,13 @@ from astropy.time import Time
 
 # packages for ellipse fitting routine
 # https://photutils.readthedocs.io/en/stable/isophote.html
-from photutils.isophote import EllipseGeometry
-from photutils.isophote import Ellipse
-from photutils import EllipticalAperture
+#from photutils.isophote import EllipseGeometry
+#from photutils.isophote import Ellipse
+
+
+#from photutils import EllipticalAperture
+
+
 
 import matplotlib
 from matplotlib import pyplot as plt

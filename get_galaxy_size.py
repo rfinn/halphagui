@@ -15,10 +15,14 @@ PROCEDURE:
 # 
 
 '''
+try:
+    from photutils import detect_threshold, detect_sources
+except ImportError:
+    from photutils.segmentation import detect_threshold, detect_sources
 
-from photutils import detect_threshold
-from photutils import detect_sources
-from photutils import source_properties
+#from photutils import source_properties
+from photutils.segmentation import SourceCatalog
+
 from astropy.visualization import simple_norm
 from astropy.io import fits
 import numpy as np
@@ -45,7 +49,8 @@ def getsegmentation(image):
     # skipping deblending for now
     
     # create catalog
-    cat = source_properties(data, segm)
+    #cat = source_properties(data, segm)
+    self.cat = SourceCatalog(data, segm)
     tbl = cat.to_table()    
     return segm.data, tbl
 

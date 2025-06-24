@@ -31,11 +31,17 @@ import os
 import sys
 import numpy as np
 
-from photutils import EPSFBuilder
+try:
+    from photutils import EPSFBuilder
+except ImportError:
+    from photutils.psf import EPSFBuilder
 from photutils.psf import extract_stars
 from photutils.psf import IntegratedGaussianPRF
-from photutils import centroid_com, centroid_1dg, centroid_2dg
 
+try:
+    from photutils import centroid_com, centroid_1dg, centroid_2dg
+except ImportError:
+    from photutils.centroids import centroid_com, centroid_1dg, centroid_2dg
 from astropy.nddata import NDData
 from astropy.table import Table
 from astropy.io import fits
