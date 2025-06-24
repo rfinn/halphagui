@@ -919,13 +919,13 @@ class ellipse():
         label = 1
         if self.psf is None:
             
-            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
-            #print("ran original statmorph ok")
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
+            print("ran original statmorph ok")
             #print()
-            source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
+            #source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
-            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
-            source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
+            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
+            #source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs = source_morphs
         self.morph = source_morphs
         fig = make_figure(self.morph)
@@ -941,11 +941,11 @@ class ellipse():
         label = self.image_name[0:9]
         label = 1
         if self.psf_ha is None:
-            #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
-            source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
+            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
+            #source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
-            #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
-            source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
+            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
+            #source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2
         fig2 = make_figure(self.morph2)
@@ -1225,8 +1225,13 @@ class ellipse():
         ax2.imshow(self.segmentation.data, origin='lower')
         ax2.set_title('Segmentation Image')
         for aperture in apertures:
-            aperture.plot(axes=ax1, color='white', lw=1.5)
-            aperture.plot(axes=ax2, color='white', lw=1.5)
+            try:
+                aperture.plot(axes=ax1, color='white', lw=1.5)
+                aperture.plot(axes=ax2, color='white', lw=1.5)
+            except ValueError: # photutils version 2.2.0
+                aperture.plot(ax=ax1, color='white', lw=1.5)
+                aperture.plot(ax=ax2, color='white', lw=1.5)
+                
         #plt.show()
         if plotname is not None:
             plt.savefig(plotname)
@@ -1335,8 +1340,13 @@ class ellipse():
         plotaps = np.array([0,nap//2,-1],'i')
         for i in plotaps:
             aperture = self.allellipses[i]
-            aperture.plot(axes=ax1, color='c', lw=1.5)
-            aperture.plot(axes=ax2, color='white', lw=1.5)
+            try:
+                aperture.plot(axes=ax1, color='c', lw=1.5)
+                aperture.plot(axes=ax2, color='white', lw=1.5)
+            except ValueError: # photutils version 2.2.0
+                aperture.plot(ax=ax1, color='c', lw=1.5)
+                aperture.plot(ax=ax2, color='white', lw=1.5)
+            
         if plotname is not None:
             plt.savefig(plotname)
 
@@ -1725,8 +1735,13 @@ class ellipse():
         labels = ['R','Halphax100']
         alphas = [1,.4,.6,.4]
         x = self.apertures_a*self.pixel_scale
-        fluxes = [self.flux1_erg,self.flux2_erg]
-        flux_errs = [self.flux1_err_erg,self.flux2_err_erg]
+        if self.image2_flag:
+            fluxes = [self.flux1_erg,self.flux2_erg]
+            flux_errs = [self.flux1_err_erg,self.flux2_err_erg]
+        else:
+            fluxes = [self.flux1_erg]#,self.flux2_erg]
+            flux_errs = [self.flux1_err_erg]#,self.flux2_err_erg]
+
         plt.subplot(1,2,1)
         for i,t in enumerate(fluxes):
             y0 = fluxes[i]            
