@@ -1430,7 +1430,7 @@ class hamodel():
             #print(offimage)
         # cut down NSA catalog to keep information only for galaxies within FOV
         #print('number of galaxies in FOV = ',sum(keepflag))
-        if (np.sum(keepflag) == 0) || (keepflag is None):
+        if (np.sum(keepflag) == 0) | (keepflag is None):
             print('WARNING: no NSA galaxies in FOV')
             print('\t make sure you have selected the right filter!')
             return
