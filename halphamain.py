@@ -1387,11 +1387,18 @@ class hamodel():
 
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax)
+        #try:
+        #    keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
+        #except AttributeError:
         try:
-            keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
-        except AttributeError:
+            self.cat
+        except NameError:
             print('Warning: no catalog defined.')
             print('Make sure you set the path to the NSA/Virgo parent catalog')
+            return
+
+
+        
         try:
             print(f'min and max redshift = {self.zmin:.3f}, {self.zmax:.3f}')
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
@@ -3625,8 +3632,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         
 class galaxy_catalog():
     def __init__(self,catalog,nsa=False,agc=False,virgo=False,sizecat=None):
-        self.cat = fits.getdata(catalog)
-        self.cat = Table(self.cat)
+        self.cat = Table.read(catalog)
+        #self.cat = Table(self.cat)
         self.catalog_name = catalog
         self.agcflag = agc
         self.nsaflag = nsa
@@ -3641,9 +3648,15 @@ class galaxy_catalog():
         # make sure the catalog has RA and DEC
         # columns that are named RA and DEC
         try:
-            t = self.cat.RA
+            t = self.cat['RA']
         except AttributeError:
             print('defining new catalogs')
+            self.cat.rename_column('radeg','RA')
+            self.cat.rename_column('decdeg','DEC')            
+
+        except KeyError:
+            print('defining new catalogs')
+            print(self.cat.colnames)
             self.cat.rename_column('radeg','RA')
             self.cat.rename_column('decdeg','DEC')            
             
@@ -3651,6 +3664,9 @@ class galaxy_catalog():
 
         
         print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
+        #print(f"self.nsa flag is {self.nsa}")
+
+        
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
@@ -3664,8 +3680,9 @@ class galaxy_catalog():
 
 
         print(f"min/max px of catalog galaxies = {np.min(px)} - {np.max(px)}")
-        print(f"min/max py of catalog galaxies = {np.min(py)} - {np.max(py)}")        
-        #print("resulting coords from world2pix = ",px[0:10],py[0:10])
+        print(f"min/max py of catalog galaxies = {np.min(py)} - {np.max(py)}")
+        print()
+        print("resulting coords from world2pix = ",px[0:10],py[0:10])
         print("")
         #print('in galaxies_in_fov: px={},py={}'.format(px,py))
         colflag = (px < ncol) & (px >0)
