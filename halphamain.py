@@ -3649,7 +3649,8 @@ class galaxy_catalog():
             
     def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=False,virgoflag=False):
 
-        #print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
+        
+        print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
@@ -3661,9 +3662,21 @@ class galaxy_catalog():
         
         px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
 
-        print("resulting coords from world2pix = ",px[0:10],py[0:10])
+
+        print(f"min/max px of catalog galaxies = {np.min(px)} - {np.max(px)}")
+        print(f"min/max py of catalog galaxies = {np.min(py)} - {np.max(py)}")        
+        #print("resulting coords from world2pix = ",px[0:10],py[0:10])
+        print("")
         #print('in galaxies_in_fov: px={},py={}'.format(px,py))
+        colflag = (px < ncol) & (px >0)
+
+        rowflag = (py < nrow) & (py > 0)
+        print(f"number of galaxies within range of columns = {np.sum(colflag)}")
+        print(f"number of galaxies within range of rows = {np.sum(rowflag)}")        
+        
         keepflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
+
+        
 
         # check number of galaxies in fov
         if keepflag is None:
