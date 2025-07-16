@@ -3653,12 +3653,22 @@ class galaxy_catalog():
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
+        else:
+            print("")
+            print(f"size of input image = ({nrow},{ncol})")
 
         # use function from havirgo web common
         
         px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
+
+        print("resulting coords from world2pix = ",px[0:10],py[0:10])
         #print('in galaxies_in_fov: px={},py={}'.format(px,py))
         keepflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
+
+        # check number of galaxies in fov
+        if keepflag is None:
+            print("WARNING: found no galaxies in FOV")
+            return
         #print('number of galaxies on image, before z cut = ',sum(onimageflag))
         
         # should also check the weight image and remove galaxies with weight=0
