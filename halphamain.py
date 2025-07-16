@@ -1395,6 +1395,10 @@ class hamodel():
         try:
             print(f'min and max redshift = {self.zmin:.3f}, {self.zmax:.3f}')
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
+            try:
+                print('number of galaxies in FOV = ',np.sum(keepflag))
+            except TypeError:
+                print("WARNING: trouble counting galaxies in FOV - make sure you have the filter correct.")
             
         except AttributeError:
             print('problem finding galaxies.')
@@ -1402,7 +1406,7 @@ class hamodel():
             return False
         
         #print('keepflag = ',keepflag)
-        print('number of galaxies in FOV = ',sum(keepflag))
+            
         # check weight image to make sure the galaxy actually has data
         # reject galaxies who have zero in the weight image
         px,py = self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
