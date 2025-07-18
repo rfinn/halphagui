@@ -299,7 +299,9 @@ class image_panel(QtCore.QObject):#(QtGui.QMainWindow,
         
     def load_file(self, filepath):
         image = load_data(filepath, logger=self.logger)
-        self.image_wcs = WCS(filepath)
+        # RAF - updating for new WCS call
+        header = fits.getheader(filepath)
+        self.image_wcs = WCS(header)
         self.fitsimage.set_image(image)
         #t = fits.getdata(image)
         #v1 = np.scoreatpercentile(image,1)
@@ -1168,7 +1170,9 @@ class hamodel():
             self.rweight_flag = True
         else:
             self.rweight_flag = False
-        self.coadd_wcs= WCS(self.rcoadd_fname)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
+        # RAF - updating how WCS is constructed
+        header = fits.getheader(self.rcoadd_fname)
+        self.coadd_wcs= WCS(header)#OF R IMAGE, SO THAT HA MATCHES WCS OF R, SO THEY'RE THE SAME
     def read_hacoadd(self): # model
         #print(self.hacoadd_fname)
         self.ha, self.ha_header = fits.getdata(self.hacoadd_fname, header=True)
@@ -1376,13 +1380,15 @@ class hamodel():
         
     def get_gal_list(self): # MVC - model
         
-        #
+        """
         # get list of NSA galaxies on image viewer
         #
         # for reference:
         # self.r, header_r = fits.getdata(self.rcoadd_fname,header=True)
         # self.ha, header_ha = fits.getdata(self.hacoadd_fname, header=True)
         #
+        """
+        
         n2,n1 = self.r.data.shape #should be same for Ha too, maybe? IDK
 
         #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,zmin=self.zmin,zmax=self.zmax,virgoflag=self.virgo)
@@ -1391,14 +1397,16 @@ class hamodel():
         #    keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
         #except AttributeError:
         try:
-            self.cat
+            self.defcat
         except NameError:
             print('Warning: no catalog defined.')
             print('Make sure you set the path to the NSA/Virgo parent catalog')
             return
 
 
-        
+        keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
+        print("finished running galaxies_in_fov")
+        print()
         try:
             print(f'min and max redshift = {self.zmin:.3f}, {self.zmax:.3f}')
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
@@ -1417,17 +1425,24 @@ class hamodel():
         # check weight image to make sure the galaxy actually has data
         # reject galaxies who have zero in the weight image
         px,py = self.coadd_wcs.wcs_world2pix(self.defcat.cat['RA'],self.defcat.cat['DEC'],0)
+        px = np.nan_to_num(px, nan=-99)
+        py = np.nan_to_num(py, nan=-99)
+
         self.xpixel = px
         self.ypixel = py
+        
         if self.rweight_flag and self.haweight_flag:
             rweight = fits.getdata(self.rweight)
             haweight = fits.getdata(self.haweight)
+            
             # multiply weights
             # result will equal zero if exposure is zero in either image
             weight = rweight * haweight
+            
             # check location of pixels to make sure weight is not zero
             # this will have the length = # of galaxies that have keepflag True
             offimage = (weight[np.array(py[keepflag],'i'),np.array(px[keepflag],'i')] == 0)
+            
             # store another array that has the indices in original keepflag array
             # where keepflag = True
             # need to take [0] element because np.where is weird
@@ -3304,15 +3319,18 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
                 self.setup_nebula()
             elif self.testing:
                 self.setup_testing()
-        elif (args.rimage is not None and self.auto):
-            pass
         else:
-            # load Halpha
+
+            
             # load rband image
-            self.load_hacoadd()
             self.load_rcoadd()
-            print('running build_psf')
-            self.build_psf()
+            
+            if args.haimage is not None:
+                # load Halpha
+                self.load_hacoadd()
+            
+            #print('running build_psf')
+            #self.build_psf()
 
 
             
@@ -3675,9 +3693,14 @@ class galaxy_catalog():
             print(f"size of input image = ({nrow},{ncol})")
 
         # use function from havirgo web common
+        coords = SkyCoord(ra=self.cat['RA'],dec=self.cat['DEC'],unit='deg') 
+        keepflag = wcs.footprint_contains(coords)
+        print(f"number of galaxies based on keepflag  = {np.sum(keepflag)}")       
         
-        px,py =wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
+        px,py = wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
 
+        nanflag = np.isnan(px) | np.isnan(py)
+        print("number of nans in transformed coordinates = ",np.sum(nanflag))
 
         print(f"min/max px of catalog galaxies = {np.min(px)} - {np.max(px)}")
         print(f"min/max py of catalog galaxies = {np.min(py)} - {np.max(py)}")
@@ -3690,15 +3713,32 @@ class galaxy_catalog():
         rowflag = (py < nrow) & (py > 0)
         print(f"number of galaxies within range of columns = {np.sum(colflag)}")
         print(f"number of galaxies within range of rows = {np.sum(rowflag)}")        
-        
-        keepflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
 
+        print(f"number of galaxies within range of rows/columns  = {np.sum(rowflag & colflag)}")
+        
+        #keepflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
+
+        #keepflag = rowflag & colflag 
         
 
         # check number of galaxies in fov
         if keepflag is None:
             print("WARNING: found no galaxies in FOV")
             return
+        else:
+            print(f"found {np.sum(keepflag)} after RA/DEC cuts")
+            print()
+
+
+        # WCS returns nans for objects that are too far from the central coordinate
+        # so these are also objects that will NOT be within the image FOV
+
+        
+        # replace keepflag of 
+        #nanflag = np.isnan(self.cat['RA']) | np.isnan(self.cat['DEC'])
+        #print("number of nans in RA/DEC coordinates = ",np.sum(nanflag))
+
+                     
         #print('number of galaxies on image, before z cut = ',sum(onimageflag))
         
         # should also check the weight image and remove galaxies with weight=0
@@ -3717,12 +3757,12 @@ class galaxy_catalog():
                     print()
                     whdu = fits.open(weightimage)
                     # just check center position?
-                    int_px = np.array(px,'i')
-                    int_py = np.array(py,'i')        
-                    centerpixvals = whdu[0].data[int_py[keepflag],int_px[keepflag]]
+                    int_px = np.array(px[~nanflag],'i')
+                    int_py = np.array(py[~nanflag],'i')        
+                    centerpixvals = whdu[0].data[int_py[keepflag[~nanflag]],int_px[keepflag[~nanflag]]]
                     # weight image will have value > 0 if there is data there
                     weightflag = centerpixvals > 0
-                    keepflag[keepflag] = keepflag[keepflag] & weightflag
+                    keepflag[keepflag & ~nanflag] = keepflag[keepflag & ~nanflag] & weightflag
 
         try:
             if agcflag:
@@ -3740,8 +3780,8 @@ class galaxy_catalog():
             print('make sure you selected the halpha filter')
             return None
 
-        #print('number of galaxies on image, after z cut = ',sum(zFlag & onimageflag))
-        return (zFlag & keepflag)
+        print('number of galaxies on image, after z cut = ',np.sum(zFlag & keepflag))
+        return (zFlag & keepflag & ~nanflag)
 
     def cull_catalog(self, keepflag,prefix):
         self.cat = self.cat[keepflag]
