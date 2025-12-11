@@ -3649,6 +3649,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
 
         
 class galaxy_catalog():
+    agcflag: bool
+
     def __init__(self,catalog,nsa=False,agc=False,virgo=False,sizecat=None):
         self.cat = Table.read(catalog)
         #self.cat = Table(self.cat)
@@ -3663,8 +3665,20 @@ class galaxy_catalog():
         else:
             self.sizecat = None
     def check_ra_colname(self):
-        # make sure the catalog has RA and DEC
-        # columns that are named RA and DEC
+        """
+        GOAL:
+        make sure the catalog has RA and DEC
+        columns that are named RA and DEC
+        
+        this is set up to rename the AGC fields radeg/decdeg to the more standard RA/DEC
+
+        PARAMS:
+        * self
+
+        METHOD:
+        * will edit the column names of self.cat (the galaxy catalog)
+
+        """
         try:
             t = self.cat['RA']
         except AttributeError:
@@ -3679,9 +3693,23 @@ class galaxy_catalog():
             self.cat.rename_column('decdeg','DEC')            
             
     def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=False,virgoflag=False):
+        """
+        GOAL: get galaxies in FOV
 
+        PROCEDURE:
+        * transforms catalog coords to image coords using wcs
+
+        PARAMS:
+        * wcs - of image
         
-        print('in galaxies in fov, nrow,ncol = ',nrow,ncol)
+        OPTIONAL PARAMS:
+        * nrow
+        * ncol
+        * zmin - apply redshift cut to galaxies, e.g. that fall within halpha filter window
+        * zmax - apply redshift cut to galaxies, e.g. that fall within halpha filter window
+        
+        """
+        #print('in galaxies in fov, nrow,ncol = ',nrow,ncol) # debug
         #print(f"self.nsa flag is {self.nsa}")
 
         
@@ -3692,34 +3720,54 @@ class galaxy_catalog():
             print("")
             print(f"size of input image = ({nrow},{ncol})")
 
-        # use function from havirgo web common
+        ###########################################################################
+        # use astropy.WCS.wcs.footprint_contains to get galaxies w/in FOV of image
+        ###########################################################################        
+        # 
+        # this can replace the method below, where I transform all the coordinates
+        # to pixels.  However, astropy now returns nans for objects that are far
+        # from the field center, and this is causing errors downstream.
+        # So footprint_contains should be more robust.
+        #
         coords = SkyCoord(ra=self.cat['RA'],dec=self.cat['DEC'],unit='deg') 
         keepflag = wcs.footprint_contains(coords)
         print(f"number of galaxies based on keepflag  = {np.sum(keepflag)}")       
-        
+
+
+        ###########################################################################
+        # old approach using wcs_world2pix and comparing with image dimensions
+        ###########################################################################
         px,py = wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
 
-        nanflag = np.isnan(px) | np.isnan(py)
-        print("number of nans in transformed coordinates = ",np.sum(nanflag))
+        # nanflag = np.isnan(px) | np.isnan(py)
+        # print("number of nans in transformed coordinates = ",np.sum(nanflag))
 
-        print(f"min/max px of catalog galaxies = {np.min(px)} - {np.max(px)}")
-        print(f"min/max py of catalog galaxies = {np.min(py)} - {np.max(py)}")
-        print()
-        print("resulting coords from world2pix = ",px[0:10],py[0:10])
-        print("")
-        #print('in galaxies_in_fov: px={},py={}'.format(px,py))
-        colflag = (px < ncol) & (px >0)
+        # print(f"min/max px of catalog galaxies = {np.min(px)} - {np.max(px)}")
+        # print(f"min/max py of catalog galaxies = {np.min(py)} - {np.max(py)}")
+        # print()
+        # print("resulting coords from world2pix = ",px[0:10],py[0:10])
+        # print("")
+        # #print('in galaxies_in_fov: px={},py={}'.format(px,py))
+        # colflag = (px < ncol) & (px >0)
 
-        rowflag = (py < nrow) & (py > 0)
-        print(f"number of galaxies within range of columns = {np.sum(colflag)}")
-        print(f"number of galaxies within range of rows = {np.sum(rowflag)}")        
+        # rowflag = (py < nrow) & (py > 0)
+        # print(f"number of galaxies within range of columns = {np.sum(colflag)}")
+        # print(f"number of galaxies within range of rows = {np.sum(rowflag)}")        
 
-        print(f"number of galaxies within range of rows/columns  = {np.sum(rowflag & colflag)}")
+        # print(f"number of galaxies within range of rows/columns  = {np.sum(rowflag & colflag)}")
         
         #keepflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
 
         #keepflag = rowflag & colflag 
         
+
+        # WCS returns nans for objects that are too far from the central coordinate
+        # so these are also objects that will NOT be within the image FOV
+
+        
+        # replace keepflag of 
+        #nanflag = np.isnan(self.cat['RA']) | np.isnan(self.cat['DEC'])
+        #print("number of nans in RA/DEC coordinates = ",np.sum(nanflag))
 
         # check number of galaxies in fov
         if keepflag is None:
@@ -3730,17 +3778,12 @@ class galaxy_catalog():
             print()
 
 
-        # WCS returns nans for objects that are too far from the central coordinate
-        # so these are also objects that will NOT be within the image FOV
-
-        
-        # replace keepflag of 
-        #nanflag = np.isnan(self.cat['RA']) | np.isnan(self.cat['DEC'])
-        #print("number of nans in RA/DEC coordinates = ",np.sum(nanflag))
-
                      
-        #print('number of galaxies on image, before z cut = ',sum(onimageflag))
-        
+
+        ###########################################################################
+        # check weight image to make sure galaxy is in good part of image
+        ###########################################################################
+            
         # should also check the weight image and remove galaxies with weight=0
         # this won't take care of images with partial exposures, but we can deal with that later...
         # TODO - how to handle images with partial exposures, meaning only part of galaxy is in FOV?
@@ -3757,14 +3800,17 @@ class galaxy_catalog():
                     print()
                     whdu = fits.open(weightimage)
                     # just check center position?
-                    int_px = np.array(px[~nanflag],'i')
-                    int_py = np.array(py[~nanflag],'i')        
-                    centerpixvals = whdu[0].data[int_py[keepflag[~nanflag]],int_px[keepflag[~nanflag]]]
+                    int_px = np.array(px[keepflag],'i')
+                    int_py = np.array(py[keepflag],'i')        
+                    centerpixvals = whdu[0].data[int_py[keepflag],int_px[keepflag]]
                     # weight image will have value > 0 if there is data there
                     weightflag = centerpixvals > 0
-                    keepflag[keepflag & ~nanflag] = keepflag[keepflag & ~nanflag] & weightflag
+                    keepflag[keepflag] = keepflag[keepflag] & weightflag
 
-        try:
+        ###########################################################################
+        # get redshift cut
+        ###########################################################################
+        try: # should really edit the catalogs to have the same redshift/vel column name
             if agcflag:
                 zFlag1 = (self.cat.vopt/3.e5 > zmin) & (self.cat.vopt/3.e5 < zmax)
                 zFlag2 = (self.cat.v21/3.e5 > zmin) & (self.cat.v21/3.e5 < zmax)
