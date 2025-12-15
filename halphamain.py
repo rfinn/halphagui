@@ -146,7 +146,25 @@ def get_params_from_name(image_name):
         dateobs = t[4]
         pointing = t[5]
     else:
+        print("ruh roh - trouble with get_params_from_name for image ",image_name, len(t))
+        #print(image_name)
+        #print(t)
+    return telescope,dateobs,pointing
+
+def get_params_from_name_uat(image_name):
+    t = os.path.basename(image_name).split('-')
+    #print(t)
+    if len(t) == 6:
+        telescope = t[2]
+        dateobs = t[3]
+        pointing = t[4]
+    elif len(t) == 7: # meant to catch negative declinations
+        telescope = t[3]
+        dateobs = t[4]
+        pointing = t[5]
+    else:
         print("ruh roh - trouble getting info from ",image_name, len(t))
+        print(image_name)
         print(t)
     return telescope,dateobs,pointing
 
@@ -459,12 +477,11 @@ class create_output_table(output_table_view):
     """
     output table that stores all of the measured values for each galaxy in FOV
     """
-    def initialize_results_table(self, prefix=None,virgo=False,nogui=False):
+    def initialize_results_table(self, prefix=None,virgo=False,uat=False,nogui=False):
+        #print("in initialize_results_table, value of uat = ", uat)
+        #print("in initialize_results_table, value of virgo = ", virgo)        
         self.nogui = nogui
-        if virgo:
-            self.create_table_virgo()
-        else:
-            self.create_table()
+        
         '''
         Data to store:
         - NSAID
@@ -511,9 +528,23 @@ class create_output_table(output_table_view):
         ## check for existing table
         ##
         ## load if it exists
+
+        # why is this block at the beginning???
+        #if virgo:
+        #    self.create_table_virgo()
+        #elif uat:
+        #    print("just to check, I am running create_table_uat")
+        #    self.create_table_uat()
+        #else:
+        #    self.create_table()
+
+
+        
         if os.path.exists(self.output_table):
             if virgo:
                 self.read_table_virgo()
+            elif uat:
+                self.read_table_uat()
             else:
                 self.read_table()
                 self.agc2 = fits.getdata(self.prefix+'-agc-matched.fits')
@@ -521,6 +552,8 @@ class create_output_table(output_table_view):
         else:
             if virgo:
                 self.create_table_virgo()
+            elif uat:
+                self.create_table_uat()
             else:
                 self.create_table()
             # call other methods to add columns to the table
@@ -569,6 +602,22 @@ class create_output_table(output_table_view):
         self.galid=self.table['VFID']
         self.NEDname=self.table['NEDname']
         self.gprefix=self.table['prefix']                
+
+    def read_table_uat(self):
+        self.table = Table(fits.getdata(self.output_table))
+        self.gredshift = self.table['vopt']/3.e5
+        self.ngalaxies = len(self.gredshift)
+        self.ra = self.table['RA']
+        self.dec = self.table['DEC']
+        self.gradius = self.table['a']
+        self.gzdist = self.table['vopt']/3.e5
+        self.galid= self.table['AGCnr']
+        self.NEDname= self.table['AGCnr']
+        try:
+            self.gprefix= self.table['prefix']
+        except:
+            print("WARNING: no prefix in gal table")
+            self.gprefix = None
         
     def create_table_virgo(self):
         # updating this part for virgo filament survey 
@@ -605,6 +654,45 @@ class create_output_table(output_table_view):
         c3 = Column(self.gredshift, name='ZDIST', description='redshift')        
         self.table.add_columns([c1,c2,c3])
 
+    def create_table_uat(self):
+        # updating this part for uat Halpha Groups
+
+        self.table = self.defcat.cat['AGCnr','RA','DEC','vopt','a','b','v21','hiflux',]
+        self.table['AGCnr'].description = 'Number in AGC catalog'
+        self.table['RA'].unit = u.deg
+        self.table['RA'].description = 'RA from AGC catalog'        
+        self.table['DEC'].unit = u.deg
+        self.table['DEC'].description = 'DEC from AGC catalog'                
+        self.table['vopt'].unit = u.km/u.s
+        self.table['vopt'].description = 'optical recession velocity from AGC catalog'
+        self.table['v21'].unit = u.km/u.s
+        self.table['v21'].description = 'HI recession velocity from AGC catalog'
+        self.table['a'].unit = u.arcmin
+        self.table['a'].description = 'AGC semi-major axis'
+        self.table['b'].unit = u.arcmin
+        self.table['b'].description = 'AGC semi-minor axis'
+        self.ngalaxies = len(self.table)
+        #print('number of galaxies = ',self.ngalaxies)
+        self.haflag = np.zeros(self.ngalaxies,'bool')
+        self.galid = self.table['AGCnr']
+        self.NEDname = None #self.table['NEDname']                
+        self.gredshift = self.defcat.cat['vopt']/3.e5
+        self.gzdist = self.defcat.cat['vopt']/3.e5
+
+        ##
+        # update this to use the SMA_SB24
+        ##
+        #self.gradius = self.defcat.cat['radius']/self.pixelscale
+        self.gradius = self.radius_arcsec/self.pixelscale
+
+        
+        self.ra = self.defcat.cat['RA']
+        self.dec = self.defcat.cat['DEC']        
+        c1 = Column(self.haflag, name='HAflag', description='Halpha flag')
+        c2 = Column(self.gredshift, name='REDSHIFT', description='redshift')
+        c3 = Column(self.gredshift, name='ZDIST', description='redshift')        
+        self.table.add_columns([c1,c2,c3])
+        
     def create_table(self):
         # updating this part to make use of NSA and AGC catalogs
         # not going to make this backward compatible, meaning you need to enter both catalogs
@@ -1094,7 +1182,14 @@ class create_output_table(output_table_view):
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
         if self.prefix is not None:
             # this is not working when running gui - need to feed in the r-band image name
-            telescope,dateobs,p = get_params_from_name(self.prefix)
+            try:
+                telescope,dateobs,p = get_params_from_name(self.prefix)
+            except UnboundLocalError:
+                if self.uat:
+                    telescope,dateobs,p = get_params_from_name_uat(self.rcoadd_fname)
+                else:
+                    telescope,dateobs,p = get_params_from_name(self.rcoadd_fname)
+                #print(f"telescope={telescope}, dateobs={dateobs}, p={p}")
             for i in range(len(self.table)):
                 self.table['POINTING'][i] = self.prefix
                 self.table['TEL'][i] = telescope
@@ -1140,7 +1235,7 @@ class uco_table():
 
         self.uco_table.write(self.uco_output_table, format='fits',overwrite=True)
 
-class hamodel():
+class hagui_methods():
     """ class to handle Halpha model, in Model-View-Controller design"""
 
     def read_rcoadd(self): # model
@@ -1268,6 +1363,7 @@ class hamodel():
         print('getting galaxies in FOV')
         flag = self.get_gal_list()
         if flag == False:
+            #print("WARNING: could not find galaxies!")
             return
 
 
@@ -1352,7 +1448,9 @@ class hamodel():
         # #print('after comparing with max/min size limits:')
         # #print('\t cutout sizes arcsec = ',self.cutout_sizes_arcsec)        
         # # set up the output table that will store results from various fits
-        self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,nogui=self.auto)
+
+        #print("Value of self.uat = ",self.uat)
+        self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,uat=self.uat,nogui=self.auto)
 
 
         # TODO - this needs to be moved into the view class
@@ -1398,15 +1496,15 @@ class hamodel():
         #except AttributeError:
         try:
             self.defcat
-        except NameError:
-            print('Warning: no catalog defined.')
-            print('Make sure you set the path to the NSA/Virgo parent catalog')
-            return
+        except AttributeError:
+            print(f'Warning: no catalog defined. self.defcat probably not defined')
+            print('Make sure you set the path to the NSA/Virgo parent catalog\n')
+            return False
 
 
         keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
-        print("finished running galaxies_in_fov")
-        print()
+        #print("finished running galaxies_in_fov")
+        #print()
         try:
             print(f'min and max redshift = {self.zmin:.3f}, {self.zmax:.3f}')
             keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
@@ -1477,21 +1575,12 @@ class hamodel():
         # set up a boolean array to track whether Halpha emission is present
 
         if self.agcflag:
-            try:
-                px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
-            except AttributeError:
-                px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)
+            #try:
+            #    px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+            #except AttributeError:
+            #    px,py = self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)
 
             keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
-            #print('number of AGC galaxies in FOV = ',sum(keepagc))
-            if self.rweight_flag and self.haweight_flag:
-                offimage = (weight[np.array(py[keepagc],'i'),np.array(px[keepagc],'i')] == 0)
-                # store another array that has the indices in original keepflag array
-                # where keepflag = True
-                # need to take [0] element because np.where is weird
-                keepindex = np.where(keepagc)[0]
-                # change value of keepagc for galaxies that are off the image
-                keepagc[keepindex[offimage]] = np.zeros(len(keepindex[offimage]),'bool')
 
             print('number of AGC galaxies in FOV = ',sum(keepagc))
             self.agc.cull_catalog(keepagc, self.prefix)
@@ -1499,9 +1588,9 @@ class hamodel():
                 self.agcflag = False
             else:
                 try:
-                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.RA,self.agc.cat.DEC,0)
+                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat['RA'],self.agc.cat['DEC'],0)
                 except AttributeError:
-                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat.radeg,self.agc.cat.decdeg,0)        
+                    self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat['radeg'],self.agc.cat['decdeg'],0)        
             #print(self.agcximage)
             #print(self.agcyimage)
 
@@ -1544,6 +1633,7 @@ class hamodel():
         ##
         # Look for ZP info in headers
         ##
+
         try:
             header = fits.getheader(self.rcoadd_fname)
             #rZP = header['PHOTZP']
@@ -1554,15 +1644,27 @@ class hamodel():
 
             ave = header['FRATIOZP']
             run_se = False
+            print("Getting Filter Ratio from r-band image header")
         except KeyError:
+            print("Getting Filter Ratio: FRATIOZP not found in r-band image; will run SE")
             self.link_files()
             current_dir = os.getcwd()
             image_dir = os.path.dirname(self.rcoadd_fname)
             #os.chdir(image_dir)
 
-            runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
-            ave, std = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir)
-            print(ave,std)
+            ZP1, zp1flag, ZP2, zp2flag = runse.run_sextractor(self.rcoadd_fname, self.hacoadd_fname)
+            if zp1flag and zp2flag:
+                # print("got ZP ratio")
+                zpargs = (ZP1, ZP2)
+            else:
+                zpargs = None
+            t = runse.make_plot(self.rcoadd_fname, self.hacoadd_fname, return_flag = True, plotdir = current_dir,zps = zpargs)
+            if len(t) == 2:
+                ave, std = t
+                fzpratio = None
+            elif len(t) == 3:
+                ave, std, fzpratio = t
+            print(f"filter ratio = {ave:.4f} +/- {std:.4f}")
             run_se = True
             #plt.show()
             #os.chdir(current_dir)
@@ -1585,6 +1687,18 @@ class hamodel():
             for im in images:
                 catfile = os.path.basename(im).split('.fits')[0]+'.cat'
                 os.remove(catfile)
+
+            # add filter ratio to image headers
+            # add ratio to r-band image headers
+            r,header = fits.getdata(self.rcoadd_fname,header=True)
+            header.set('FLTRATIO',ave)
+            header.set('FLTR_ERR',std)
+            header.set('HAIMAGE',os.path.basename(self.hacoadd_fname))
+            if fzpratio is not None:
+                header.set('FRATIOZP',fzpratio)
+            
+            fits.writeto(self.rcoadd_fname,r,header=header,overwrite=True)
+                
     def subtract_images(self,overwrite=False): # MVC - model
         # use the ZP subtracted images
         self.hacoadd_cs_fname = self.hacoadd_fname.split('.fits')[0]+'-CS-ZP.fits'
@@ -1693,7 +1807,7 @@ class hamodel():
                 else:
                     # try to identify format
                     #print(o,len(o))
-                    print(o)
+                    #print(o)
                     if len(o.split()) > 1:
                         split_string=' '
                         pnumber = int(o.split(split_string)[1])
@@ -1706,7 +1820,7 @@ class hamodel():
                         split_string='_'
                         #print('object names contain ',split_string)                     
                         pnumber = int(o.split(split_string)[1])
-                        print('testing')
+                        #print('testing')
                 if (o.find('lm') > -1)| (o.find('LM') > -1):
                     # low-mass pointing
                     prefix = "lmp"
@@ -1820,24 +1934,27 @@ class hamodel():
         
         self.table['HZP'][self.igal] = self.ha_header['PHOTZP']        
         self.table['PIXSCALE'][self.igal] = self.pixelscale
-        
+
+
+        ###################################################
+        # saving R-band Cutout as fits image
+        ###################################################  
         newfile = fits.PrimaryHDU()
         # specify cutout from the region returned with Cutout2D,
         # which is saved with self.cutoutR
-        print("\nCutout region: ",ymin,ymax,xmin,xmax)
+        if self.verbose:
+            print("\nCutout region: ",ymin,ymax,xmin,xmax)
         newfile.data = self.r[ymin:ymax,xmin:xmax]
         # add sky subtraction here
 
         if self.verbose:
             print("\n in write_cutouts, writing header\n")
 
-        
         newfile.header = self.r_header
         newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
         newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
         newfile.header.set('ID',str(self.galid[self.igal]))
-
         newfile.header.set('SERSTH50',float('{:.2f}'.format(self.gradius[self.igal])))
         #print('trying to add exptime now')
         # set the exposure time to 1 sec
@@ -1869,7 +1986,8 @@ class hamodel():
             newfile.header.set('SKYSTD',0)
             
 
-        # need to add a case to handle when sky std is zero.  This happens when object is in wacky region of INT.
+        # need to add a case to handle when sky std is zero.
+        # This happens when object is in wacky region of INT.
         if rstd == 0:
             # return to caller and move to the next galaxy
             self.bad_galaxy = True
@@ -1879,57 +1997,64 @@ class hamodel():
 
         # add coadded image
 
-        
         #print('saving r-band cutout')
 
         if self.verbose:
             print("\n in write_cutouts, saving cutout\n")
 
-        
+        print(f"subtracted {rmed:.3f} ADU from r-band cutout",rstd)            
         fits.writeto(self.cutout_name_r, newfile.data, header = newfile.header, overwrite=True)
 
+        ###################################################
         # saving Ha CS Cutout as fits image
-        newfile1 = fits.PrimaryHDU()
-        newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
-        newfile1.header = self.ha_header
-        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
-        newfile1.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
-        newfile1.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile1.header.set('ID',str(self.galid[self.igal]))
+        ###################################################  
+        try:
+            t = self.halpha_cs
+            newfile1 = fits.PrimaryHDU()
+            newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
+            newfile1.header = self.ha_header
+            newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
+            newfile1.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+            newfile1.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+            newfile1.header.set('ID',str(self.galid[self.igal]))
 
-        newfile1.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
-        newfile1.header['EXPTIME']=1.0
+            newfile1.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+            newfile1.header['EXPTIME']=1.0
 
-        # subtract sky from CS Halpha image
-        skysub_hdata,hmed,hstd = imutils.subtract_median_sky(newfile1.data,getstd=True)
+            # subtract sky from CS Halpha image
+            skysub_hdata,hmed,hstd = imutils.subtract_median_sky(newfile1.data,getstd=True)
 
-        if hmed is not np.nan:
-            newfile1.data -= hmed
+            if hmed is not np.nan:
+                newfile1.data -= hmed
             
 
-        try:
-            newfile1.header.set('SKYMED',hmed)
-        except ValueError:
-            print("error writing SKYMED ",hmed)
-            print("setting header value to zero")            
-            newfile1.header.set('SKYMED',0)
-        try:
-            newfile1.header.set('SKYSTD',hstd)
-        except ValueError:
-            print("error writing SKYSTD ",hstd)
-            print("setting header value to zero")
-            newfile1.header.set('SKYSTD',0)
+            try:
+                newfile1.header.set('SKYMED',hmed)
+            except ValueError:
+                print("error writing SKYMED ",hmed)
+                print("setting header value to zero")            
+                newfile1.header.set('SKYMED',0)
+                try:
+                    newfile1.header.set('SKYSTD',hstd)
+                except ValueError:
+                    print("error writing SKYSTD ",hstd)
+                    print("setting header value to zero")
+                    newfile1.header.set('SKYSTD',0)
         
 
-        # print sky stats
-        print(f"subtracted {rmed:.3f} ADU from r-band cutout",rstd)
-        print(f"subtracted {hmed:.3f} ADU from halpha cutout",hstd)        
+            # print sky stats
+            print(f"subtracted {hmed:.3f} ADU from halpha cutout",hstd)        
 
         
-        fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
-        #print('saving halpha cutout')
+            fits.writeto(self.cutout_name_ha, newfile1.data, header = newfile1.header, overwrite=True)
+            #print('saving halpha cutout')
 
+        except AttributeError:
+            print("WARNING: No continuum subtracted image.  Be sure to run get_filter_ratio")
+
+        ###################################################
         # saving Ha with continuum Cutout as fits image
+        ###################################################        
         newfile2 = fits.PrimaryHDU()
         newfile2.data = self.ha[ymin:ymax,xmin:xmax]
         newfile2.header = self.ha_header
@@ -1970,7 +2095,8 @@ class hamodel():
         psf_image_name_ha = basename.split('.fits')[0]+'-psf.fits'
         psf_image_name = os.path.join(self.psfdirectory,psf_image_name)
         psf_image_name_ha = os.path.join(self.psfdirectory,psf_image_name_ha).replace('-CS','')
-        print('\nPSF NAME = ',psf_image_name,'\n')
+        if self.verbose:
+            print('\nPSF NAME = ',psf_image_name,'\n')
         if os.path.exists(psf_image_name):
             # get fwhm from the image header
             # and oversampling
@@ -2008,7 +2134,8 @@ class hamodel():
 
             
         else:
-            print('oversampling = ',self.oversampling)
+            if self.verbose:
+                print('oversampling = ',self.oversampling)
             print('PSF RESULTS FOR R-BAND COADDED IMAGE')
             self.psf = psf_parent_image(image=self.rcoadd_fname, size=21, nstars=100, oversampling=self.oversampling)
             self.psf.run_all()
@@ -2057,7 +2184,8 @@ class hamodel():
             print('WARNING: psf could not be found')
             print('Please run build_psf')
             return
-        self.add_psf_to_table()
+        if self.psf is not None:
+            self.add_psf_to_table()
         self.ncomp = ncomp
         self.asym=asym
         self.galha = ha
@@ -2153,7 +2281,7 @@ class hamodel():
         #    print("Unexpected error:", sys.exc_info()[0])
         #    raise
     def galfit_save(self,msg): # MVC - model?
-        print('galfit model saved!!!',msg)
+        #print('galfit model saved!!!',msg)
         if self.testing:
             self.ncomp = int(msg)
             print('ncomp = ',self.ncomp)
@@ -2175,6 +2303,7 @@ class hamodel():
                 else:
                     self.table[colname][self.igal]=values[i]
             fields = ['XC','YC','MAG','RE','N','BA','PA']
+            print("testing, galfit_results = ", self.galfit.galfit_results[:-2])
             values = np.array(self.galfit.galfit_results[:-2])[:,1].tolist()
             for i,f in enumerate(fields):
                 colname = prefix+f+'_ERR'
@@ -2204,7 +2333,7 @@ class hamodel():
                 self.galfit_haasym_results = self.galfit.galfit_results
             else:
                 self.galfit_asym_results = self.galfit.galfit_results
-            print('writing results for galfit w/asymmetry')
+            #print('writing results for galfit w/asymmetry')
             self.table[prefix+'SERSASYM'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,0]
             self.table[prefix+'SERSASYM_ERR'][self.igal] = np.array(self.galfit.galfit_results[:-2])[:,1]
             self.table[prefix+'SERSASYM_ERROR'][self.igal] = (self.galfit.galfit_results[-2])
@@ -2256,7 +2385,7 @@ class hamodel():
         # GALFIT DEFINES THETA RELATIVE TO Y AXIS
         # PHOT UTILS DEFINES THETA RELATIVE TO X AXIS
         THETA = pa + 90 # in degrees
-        print('THETA = ',THETA)
+        #print('THETA = ',THETA)
         self.e.run_with_galfit_ellipse(xc,yc,BA=BA,THETA=THETA)
         self.e.plot_profiles()
         #os.chdir(current_dir)
@@ -2489,7 +2618,7 @@ class hamodel():
                 print("\ntable column names: \n",self.table.colnames)
                 sys.exit()
             except AttributeError:
-                print("TypeError: ",colname, values[i])
+                print("AttributeError: ",colname, values[i])
                 print("sorry for the shit show...")
                 self.table[colname][self.igal]=float('%.4e'%(values[i]))                
             #except:
@@ -2726,7 +2855,7 @@ class hamodel():
         if not self.auto:
             self.update_gui_table()
 
-class haview():
+class hagui_interactive():
     """ 
     class to handle all gui setup and visualizations 
 
@@ -2891,7 +3020,7 @@ class haview():
                     x=x, y=self.agcyimage[i], xradius=75,\
                     yradius=75, color='purple', linewidth=markwidth)
                 glabel = self.coadd.dc.Text(x-40,self.agcyimage[i]+40,\
-                                        str(self.agc.cat.AGCnr[i]), color='purple')
+                                        str(self.agc.cat['AGCnr'][i]), color='purple')
                 objlist.append(obj)
                 objlist.append(glabel)
             
@@ -3026,6 +3155,7 @@ class hacontroller():
             self.agc_fname = fname[0]
             self.agc = galaxy_catalog(self.agc_fname,agc=True)
             self.agcflag = True
+            self.defcat = self.agc
     def set_hafilter(self,filterid): # model or controller? I think this is a mix...
         #print('setting ha filter to ',filterid)
 
@@ -3156,6 +3286,14 @@ class hacontroller():
             #print("new galaxy params = ",self.objparams)
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
+        elif self.uat:
+            self.igal = self.igal-1 # why do we need this???
+            self.rcutout_label.setText('r-band '+str(self.defcat.cat['AGCnr'][self.igal]))
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.defcat.cat['b'][self.igal]/self.defcat.cat['a'][self.igal],0]
+            #print("new galaxy params = ",self.objparams)
+            #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
+            print()
+            
         else:
             self.rcutout_label.setText('r-band '+str(self.nsa2['NSAID'][self.igal]))
             self.objparams = None
@@ -3223,13 +3361,14 @@ class hacontroller():
         print()
         #print("initiating mask window")
         #print("\t object params = ",objparams)
-        self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',\
-                                  objparams=objparams)
-        self.mui.mask_saved.connect(self.display_mask)
-        self.mui.setupUi(self.mwindow)
-        self.mwindow.show()
-        #except AttributeError:
-        #    print('Hey - make sure you selected a galaxy!')
+        try:
+            self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',objparams=objparams)
+        
+            self.mui.mask_saved.connect(self.display_mask)
+            self.mui.setupUi(self.mwindow)
+            self.mwindow.show()
+        except AttributeError:
+            print('Hey - make sure you selected a galaxy!')
         #os.chdir(current_dir)
         
     def set_comment(self,comment): # MVC - controller or model??
@@ -3250,7 +3389,7 @@ class hacontroller():
         self.table.write_fits_table()
         #event.accept()
 
-class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview, hacontroller):
+class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, hagui_interactive, hacontroller):
     """ Main class for the halpha image analysis  """
     def __init__(self,MainWindow, logger, sepath=None, args=None):
         #testing=False,nebula=False,virgo=False,laptop=False,pointing=None,prefix=None,auto=False,obsyear=None,psfdir=None,rimage=None,haimage=None,csimage=None,filter=None,tabledir=None):
@@ -3259,8 +3398,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.cscoadd_fname = None
         #if self.auto:
         #    matplotlib.use('TkAgg')
-        self.obsyear = args.obsyear
+        #self.obsyear = args.obsyear
 
+        # initialize psf as None
+        self.psf = None
         if not(self.auto):
             self.setup_gui()
         self.prefix = args.prefix
@@ -3271,6 +3412,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.nebula = args.nebula        
         self.laptop = args.laptop
         self.virgo = args.virgo
+        self.uat = args.uat
         self.verbose = args.verbose
         # this is the oversampling that I use when creating the PSF images
         self.oversampling = 2        
@@ -3294,6 +3436,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             self.cscoadd_fname = args.csimage
         if args.filter is not None:
             self.filter = args.filter
+            self.set_hafilter(args.filter)
         if args.tabledir is not None:
             self.tabledir = args.tabledir
 
@@ -3321,17 +3464,16 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
                 self.setup_testing()
         else:
 
+            if not self.auto:
+                # load rband image
+                self.load_rcoadd()
             
-            # load rband image
-            self.load_rcoadd()
-            
-            if args.haimage is not None:
-                # load Halpha
-                self.load_hacoadd()
+                if args.haimage is not None:
+                    # load Halpha
+                    self.load_hacoadd()
             
             #print('running build_psf')
             #self.build_psf()
-
 
             
         ############################################################
@@ -3359,6 +3501,13 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             self.global_min_cutout_size = 100
             self.global_max_cutout_size = 250
         '''
+
+        if self.uat:
+            self.setup_uat_catalogs()
+            self.defcat = self.agc
+            self.global_min_cutout_size = 60*u.arcsec
+            self.global_max_cutout_size = 360*u.arcsec # 6 arcmin
+            
         self.initialize_uco_arrays()
         if self.auto:
             self.auto_run()
@@ -3587,6 +3736,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
             except:
                 pass
         self.setup_virgo_catalogs()
+
     def setup_virgo_catalogs(self):
         ## UPDATES TO USE VIRGO FILAMENT MASTER TABLE
         #self.vf_fname = self.tabledir+'vf_north_v1_main.fits'
@@ -3643,13 +3793,58 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hamodel, haview
         self.reset_ratio = self.filter_ratio
         self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
         self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
+        
 
+    def setup_uat_catalogs(self):
+        """
+        use the latest AGC as the source catalog
+        """
 
+        # on RF laptop, tabledir is /Users/rfinn/research/
+        self.agc_fname = os.path.join(self.tabledir,'AGC/agc.allsky.210720.fits')
+
+        self.agc = galaxy_catalog(self.agc_fname,virgo=False,agc=True)
+
+        self.nsa_fname = os.path.join(self.tabledir,'NSA/nsa_v1_0_1.fits')
+        self.nsa = galaxy_catalog(self.nsa_fname,virgo=False, agc=False, nsa=True)        
+        #self.agc.check_ra_colname() # should check automatically with agc=True
+        ##
+        # get sizes for galaxies - will use this to unmask central region
+        # need to cut this catalog based on keepflag
+        ##
+
+        #agc['a'] is the blue semi-major diameter in arcmin
+        self.radius_arcsec = self.agc.cat['a']*60
+        
+        noradius_flag = self.radius_arcsec == 0
+        self.radius_arcsec[noradius_flag] = 60 # set size of galaxies with no A value to 60 arcsec
+
+        # also save BA and PA from John's catalog
+        # use the self.radius_arcsec for the sma
+        self.BA = np.ones(len(self.radius_arcsec))
+        self.PA = np.zeros(len(self.radius_arcsec))
+        
+        self.BA[~noradius_flag] = self.agc.cat['b'][~noradius_flag]/self.agc.cat['a'][~noradius_flag]
+
+        
+        self.RA = self.agc.cat['RA']
+        self.DEC = self.agc.cat['DEC']        
+        
+        self.agcflag = True
+        self.nsaflag = True
+
+        
+        # filter ratio for ha4
+        self.filter_ratio = 0.0426
+        self.reset_ratio = self.filter_ratio
+        self.minfilter_ratio = self.filter_ratio - 0.12*self.filter_ratio
+        self.maxfilter_ratio = self.filter_ratio + 0.12*self.filter_ratio
 		
 
         
 class galaxy_catalog():
     agcflag: bool
+    
 
     def __init__(self,catalog,nsa=False,agc=False,virgo=False,sizecat=None):
         self.cat = Table.read(catalog)
@@ -3682,17 +3877,17 @@ class galaxy_catalog():
         try:
             t = self.cat['RA']
         except AttributeError:
-            print('defining new catalogs')
+            print('defining new catalog columns for RA/DEC')
             self.cat.rename_column('radeg','RA')
             self.cat.rename_column('decdeg','DEC')            
 
         except KeyError:
-            print('defining new catalogs')
-            print(self.cat.colnames)
+            print('defining new catalogs columns for RA/DEC')
+            #print(self.cat.colnames)
             self.cat.rename_column('radeg','RA')
             self.cat.rename_column('decdeg','DEC')            
             
-    def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=False,virgoflag=False):
+    def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=None,virgoflag=None):
         """
         GOAL: get galaxies in FOV
 
@@ -3712,7 +3907,10 @@ class galaxy_catalog():
         #print('in galaxies in fov, nrow,ncol = ',nrow,ncol) # debug
         #print(f"self.nsa flag is {self.nsa}")
 
-        
+        if agcflag is None:
+            agcflag = self.agcflag
+        if virgoflag is None:
+            virgoflag = self.virgoflag
         if (nrow is None) | (ncol is None):
             print('need image dimensions')
             return None
@@ -3730,14 +3928,14 @@ class galaxy_catalog():
         # So footprint_contains should be more robust.
         #
         coords = SkyCoord(ra=self.cat['RA'],dec=self.cat['DEC'],unit='deg') 
-        keepflag = wcs.footprint_contains(coords)
-        print(f"number of galaxies based on keepflag  = {np.sum(keepflag)}")       
+        self.keepflag = wcs.footprint_contains(coords)
+        print(f"number of galaxies based on keepflag  = {np.sum(self.keepflag)}")       
 
 
         ###########################################################################
         # old approach using wcs_world2pix and comparing with image dimensions
         ###########################################################################
-        px,py = wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
+        #px,py = wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
 
         # nanflag = np.isnan(px) | np.isnan(py)
         # print("number of nans in transformed coordinates = ",np.sum(nanflag))
@@ -3770,11 +3968,11 @@ class galaxy_catalog():
         #print("number of nans in RA/DEC coordinates = ",np.sum(nanflag))
 
         # check number of galaxies in fov
-        if keepflag is None:
+        if self.keepflag is None:
             print("WARNING: found no galaxies in FOV")
             return
         else:
-            print(f"found {np.sum(keepflag)} after RA/DEC cuts")
+            print(f"found {np.sum(self.keepflag)} after RA/DEC cuts")
             print()
 
 
@@ -3787,47 +3985,69 @@ class galaxy_catalog():
         # should also check the weight image and remove galaxies with weight=0
         # this won't take care of images with partial exposures, but we can deal with that later...
         # TODO - how to handle images with partial exposures, meaning only part of galaxy is in FOV?
+        
+        
         imagename = image_name
         if imagename is not None:
             if imagename.find('shifted.fits') > -1:
                 weightimage = imagename.replace('-r-shifted.fits','-r.weight-shifted.fits')
             else:
                 weightimage = imagename.replace('.fits','.weight.fits')
-            if 'MOS' not in imagename:
+
+            #if os.path.exists(weightimage):
+            if 'MOS' not in imagename: # TODO: not sure why I am skipping MOS.  should just check to see if weightimage exists?
                 if os.path.exists(weightimage):
+                    px,py = wcs.wcs_world2pix(self.cat['RA'][self.keepflag],self.cat['DEC'][self.keepflag],0)
                     print()
                     print("cross checking object locations with weight image")
                     print()
                     whdu = fits.open(weightimage)
                     # just check center position?
-                    int_px = np.array(px[keepflag],'i')
-                    int_py = np.array(py[keepflag],'i')        
-                    centerpixvals = whdu[0].data[int_py[keepflag],int_px[keepflag]]
+                    int_px = np.array(px,'i')
+                    int_py = np.array(py,'i')        
+                    centerpixvals = whdu[0].data[int_py,int_px]
                     # weight image will have value > 0 if there is data there
                     weightflag = centerpixvals > 0
-                    keepflag[keepflag] = keepflag[keepflag] & weightflag
+                    self.keepflag[self.keepflag] = self.keepflag[self.keepflag] & weightflag
 
+        self.keepflag = self.apply_redshift_cut(zmin=zmin,zmax=zmax, agcflag=agcflag,virgoflag=virgoflag)
+        
+        return self.keepflag
+    
+    def apply_redshift_cut(self,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=False,virgoflag=False):
         ###########################################################################
         # get redshift cut
         ###########################################################################
-        try: # should really edit the catalogs to have the same redshift/vel column name
-            if agcflag:
-                zFlag1 = (self.cat.vopt/3.e5 > zmin) & (self.cat.vopt/3.e5 < zmax)
-                zFlag2 = (self.cat.v21/3.e5 > zmin) & (self.cat.v21/3.e5 < zmax)
-                zFlag = zFlag1 | zFlag2
-            elif self.virgoflag:
-                #print('virgo, right?')
-                zFlag = (self.cat['vr']/3.e5 > zmin) & (self.cat['vr']/3.e5 < zmax)
-            elif self.nsaflag:
-                zFlag = (self.cat.Z > zmin) & (self.cat.Z < zmax)
-                
-        except AttributeError:
-            print('AttributeError')
-            print('make sure you selected the halpha filter')
-            return None
+        print(f"\nApplying redshift cut: zmin={zmin:.4f}, zmax={zmax:.4f}\n")
+        # initialize value of zFlag
+        zFlag = np.zeros(len(self.cat), 'bool')
+        print(f"redshift of objects in FOV = ",self.cat['vopt'][self.keepflag].data/3.e5)
+        #try: # should really edit the catalogs to have the same redshift/vel column name
 
-        print('number of galaxies on image, after z cut = ',np.sum(zFlag & keepflag))
-        return (zFlag & keepflag & ~nanflag)
+        print(f"value of agcflag = {agcflag}")
+        if agcflag:
+            print("\t using the AGC velocities")
+            zFlag1 = (self.cat['vopt']/3.e5 > zmin) & (self.cat['vopt']/3.e5 < zmax)
+            zFlag2 = (self.cat['v21']/3.e5 > zmin) & (self.cat['v21']/3.e5 < zmax)
+            zFlag = zFlag1 | zFlag2
+            return (zFlag & self.keepflag)
+        else:
+            try:
+                if self.virgoflag:
+                    #print('virgo, right?')
+                    print("\t using the Virgo velocities")                
+                    zFlag = (self.cat['vr']/3.e5 > zmin) & (self.cat['vr']/3.e5 < zmax)
+                elif self.nsaflag:
+                    print("\t using the NSA velocities")                
+                    zFlag = (self.cat.Z > zmin) & (self.cat.Z < zmax)
+                print('number of galaxies on image, after z cut = ',np.sum(zFlag & self.keepflag))
+                return (zFlag & self.keepflag)
+
+            except AttributeError:
+                print('AttributeError')
+                print('make sure you selected the halpha filter')
+                return self.keepflag
+
 
     def cull_catalog(self, keepflag,prefix):
         self.cat = self.cat[keepflag]
@@ -3839,7 +4059,10 @@ class galaxy_catalog():
             fits.writeto(outfile,self.cat, overwrite=True)
         elif self.agcflag:
             outfile = prefix+'_agc.fits'
-            fits.writeto(outfile,self.cat, overwrite=True)
+            try:
+                fits.writeto(outfile,self.cat, overwrite=True)
+            except:
+                self.cat.write(outfile, overwrite=True)
         elif self.virgoflag:
             #print('virgo, right???')
             outfile = prefix+'_virgo_cat.fits'
@@ -3867,10 +4090,11 @@ if __name__ == "__main__":
     parser.add_argument('--filter',dest = 'filter', default=None,help='filter.  should be ha4, inthalpha, or intha6657.')
     parser.add_argument('--tabledir',dest = 'tabledir', default=None,help='table directory. something like /home/rfinn/research/Virgo/tables-north/v1/')
     parser.add_argument('--psfdir',dest = 'psfdir', default=None,help='set this to the directory containing PSF images')        
-    parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Should be vYYpNN for virgo pointings.  default is v17p03. required when running auto.')
+    parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Default is v17p03. required when running auto.')
     parser.add_argument('--auto',dest = 'auto', action='store_true',default=False,help='set this to process the images automatically, without the gui')
     
-    parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.') 
+    parser.add_argument('--virgo',dest = 'virgo', action='store_true',default=False,help='set this if running on virgo data.  The virgo filaments catalog will be used as input.')
+    parser.add_argument('--uat',dest = 'uat', action='store_true',default=False,help='set this if running on uat halpha groups.  The AGC (210720) will be used as the parent catalog.')     
     parser.add_argument('--draco',dest = 'draco', action='store_true',default=False,help='set this if running on draco.')   
     parser.add_argument('--nebula',dest = 'nebula', action='store_true',default=False,help='set this if running on open nebula virtual machine.  catalog paths will be set accordingly.')
     parser.add_argument('--laptop',dest = 'laptop', action='store_true',default=False,help="custom setting for running on Rose's laptop. catalog paths will be set accordingly.")
