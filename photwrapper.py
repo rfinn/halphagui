@@ -224,7 +224,13 @@ class myStatmorph(statmorph.SourceMorphology):
         segmap = np.array(self._segmap.data== 1,'i')
         return segmap[self._slice_stamp]
     
-
+    def print(self):
+        ''' adding a print method to print out the instance variables '''
+        for k in self.__dict__.keys():
+            if k.startswith('_'):
+                continue
+            print(f"{k}: {self.__dict__[k]}")
+            
 class ellipse():
     '''
     class to run photometry routines on image
@@ -324,6 +330,8 @@ class ellipse():
         else:
             print('not using a mask')
             self.mask_flag = False
+            self.mask_image = None
+            self.mask_header = None
             self.masked_image = self.image
             if self.image2_flag:
                 self.masked_image2 = self.image2
@@ -904,8 +912,9 @@ class ellipse():
         # need segmentation map of object only
         segmap = self.segmentation.data == self.cat.label[self.objectIndex]
         segmap_float = ndi.uniform_filter(np.float64(segmap), size=10)
-        segmap = segmap_float > 0.5
+        segmap = np.array(segmap_float > 0.5, 'i')
         self.segmap = segmap
+        #segmap = np.array(segmap,'i')
 
         if self.mask_image is not None:
             mask = self.mask_image > 0
@@ -918,14 +927,18 @@ class ellipse():
         label = self.image_name[0:9]
         label = 1
         if self.psf is None:
-            
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
+            if mask is None:
+                #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain)
+                source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, cutout_extent=1.5)
+            else:
+                #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
+                source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
             print("ran original statmorph ok")
             #print()
-            #source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
+            
         else:
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
-            #source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
+            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
+            source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs = source_morphs
         self.morph = source_morphs
         fig = make_figure(self.morph)
@@ -941,11 +954,11 @@ class ellipse():
         label = self.image_name[0:9]
         label = 1
         if self.psf_ha is None:
-            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
-            #source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
+            #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain)
+            source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
         else:
-            source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
-            #source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
+            #source_morphs2 = statmorph.source_morphology(self.image2, self.segmap, gain=self.gain, psf=self.hpsf_data,mask=mask)
+            source_morphs2 = myStatmorph(self.image2, self.segmap, label, gain=self.gain, psf=self.hpsf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs2 = source_morphs2            
         self.morph2 = source_morphs2
         fig2 = make_figure(self.morph2)
@@ -1258,7 +1271,7 @@ class ellipse():
         '''
         # rmax is set according to the image dimensions
         # look for where the semi-major axis hits the edge of the image
-        # could by on side (limited by x range) or on top/bottom (limited by y range)
+        # could be on side (limited by x range) or on top/bottom (limited by y range)
         # 
         #print('xcenter, ycenter, theta = ',self.xcenter, self.ycenter,self.theta)
         rmax = np.min([(self.ximage_max - self.xcenter)/abs(np.cos(self.theta)),\
@@ -1273,7 +1286,7 @@ class ellipse():
         '''
 
         # TODO - update apertures to make use of input apertures
-        index = np.arange(80)
+        index = np.arange(80) # why do we need 80 apertures???
         apertures = (index+1)*.5*self.fwhm*(1+(index+1)*.1)
         #apertures = (index+1)*self.fwhm*(1+(index+1)*.1)
         # cut off apertures at edge of image
@@ -1407,6 +1420,10 @@ class ellipse():
             except:
                 # use 25 as default ZP if none is provided in header
                 self.uconversion2 = 3631.*10**(25/-2.5)*1.e-23*bandwidth2
+                print("WARNING: no PHOTZP keyword in image2 header. \nAssuming ZP=22.5")                
+                self.magzp2 = 22.5
+        else:
+            self.uconversion2 = None
         if self.filter_ratio is not None:
             if self.image2_flag:
                 self.uconversion2b = self.filter_ratio*self.uconversion1
@@ -1431,7 +1448,8 @@ class ellipse():
         self.sb1_erg_sqarcsec_err = self.uconversion1*self.sb1_err/self.pixel_scale**2
         self.sb1_mag_sqarcsec = self.magzp - 2.5*np.log10(self.sb1/self.pixel_scale**2)
         self.sb1_mag_sqarcsec_err = self.sb1_mag_sqarcsec - (self.magzp - 2.5*np.log10((self.sb1 + self.sb1_err)/self.pixel_scale**2))
-        if self.image2_flag:
+        
+        if self.image2_flag and (self.uconversion2 is not None):
             self.flux2_erg = self.uconversion2*self.flux2
             self.flux2_err_erg = self.uconversion2*self.flux2_err
             self.source_sum2 = self.cat2.segment_flux[self.objectIndex]

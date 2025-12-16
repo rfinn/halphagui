@@ -13,14 +13,17 @@ pyds9
 import os
 from astropy.io import fits
 
-def parse_galfit_results(galfit_outimage,asymflag=0,ncomp=1):
+import rungalfit
+
+
+def parse_galfit_results(galfit_outimage,asymflag=0,ncomp=1,return_keywords=False):
     numerical_error_flag=0
     if asymflag:
-        header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','1_F1','1_F1PA','CHI2NU']
+        header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','1_F1','1_F1PA','ERROR','CHI2NU']
     else:
-        header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','CHI2NU']
+        header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY']
     if ncomp > 1:
-        # TODO - update to accomodate variable ncomp,
+        # TODO - update to accommodate variable ncomp,
         # do something like:
         # s=['a','b','c']
         # out = []
@@ -28,12 +31,15 @@ def parse_galfit_results(galfit_outimage,asymflag=0,ncomp=1):
         #   out += [f'{x}_{j}' for x in s]
         header_keywords = []
         fields = ['XC','YC','MAG','RE','N','AR','PA']
+    else:
+        fields = None
         
     fit_parameters=[]
     working_dir=os.getcwd()+'/'
     image_header = fits.getheader(galfit_outimage,2)
     for i in range(ncomp):
-        header_keywords=[f'{i}_{f}' for f in fields]
+        if fields is not None:
+            header_keywords=[f'{i+1}_{f}' for f in fields]
         
         for hkey in header_keywords:
             s=str(image_header[hkey])
@@ -60,9 +66,16 @@ def parse_galfit_results(galfit_outimage,asymflag=0,ncomp=1):
             fit_parameters.append(values)
         # need to track numerical error flag for each galaxy
         fit_parameters.append(numerical_error_flag)
-    fit_parameters.append(image_header[f'{ncomp+1}_SKY'])
+        header_keywords.append('NUMERICAL_ERROR_FLAG')
+    #fit_parameters.append(image_header[f'{ncomp+1}_SKY'])
     fit_parameters.append(image_header['CHI2NU'])
-    return fit_parameters
+    header_keywords.append('CHI2NU')
+    print("in rungalfit.parse_galfit_results, header_keywords = ",header_keywords)
+    print("in rungalfit.parse_galfit_results, fit_parameters = ", fit_parameters)
+    if return_keywords:
+        return fit_parameters, header_keywords
+    else:
+        return fit_parameters
 
 
 class galfit:
@@ -371,20 +384,23 @@ class galfit:
     def print_params(self):
         print('CURRENT INPUTS: \n mag = %5.2f %i \n Re = %5.2f %i \n n = %5.2f %i\n B/A = %5.2f %i \n PA = %5.2f %i \n fitall = %i \n fitcenter = %i \n'%(self.mag,self.fitmag,self.rad,self.fitrad,self.nsersic,self.fitn,self.BA,self.fitBA,self.PA,self.fitPA,self.fitallflag,self.fitcenter))
                                 
-    def print_galfit_results(self,image):            
-        if self.asymmetry:
-            header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','1_F1','1_F1PA','ERROR','CHI2NU']
-        else:
-            header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','ERROR','CHI2NU']
-        if self.ncomp == 2:
-            header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_XC','2_YC','2_MAG','2_RE','2_N','2_AR','2_PA','3_SKY','ERROR','CHI2NU']
+    def print_galfit_results(self,image):
+        t, header_keywords = parse_galfit_results(image, ncomp=self.ncomp, asymflag=self.asymmetry, return_keywords=True)
 
-        t=parse_galfit_results(image, ncomp = self.ncomp,asymflag=self.asymmetry)
+        #if self.asymmetry:
+        #    header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','1_F1','1_F1PA','ERROR','CHI2NU']
+        #else:
+        #    header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_SKY','ERROR','CHI2NU']
+        #    #header_keywords = ['1_XC', '1_YC', '1_MAG', '1_RE', '1_N', '1_AR', '1_PA', '2_SKY', 'CHI2NU']
+        #if self.ncomp == 2:
+        #    header_keywords=['1_XC','1_YC','1_MAG','1_RE','1_N','1_AR','1_PA','2_XC','2_YC','2_MAG','2_RE','2_N','2_AR','2_PA','3_SKY','ERROR','CHI2NU']
+
+        print(f"in print_galfit_results, len(t) = {len(t)}, len(header_keywords) = {len(header_keywords)}")
         for i in range(len(header_keywords)):
             try:
                 print('%6s : %5.2f +/- %5.2f'%(header_keywords[i],t[i][0],t[i][1]))
             except:
-                print('%6s : %5.2f'%(header_keywords[i],t[i]))
+                print(f'WARNING: Problem parsing {header_keywords[i]:6s} : {t[i]}')
     def edit_params_menu(self):
         flag=str(input('What is wrong?\n o = nearby object (toggle fitall)  \n c = recenter \n f = hold values fixed \n a = toggle asymmetry parameter \n R = reset to original values \n g = go (run galfit) \n x=quit \n '))
         return flag
