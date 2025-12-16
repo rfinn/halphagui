@@ -145,8 +145,8 @@ def get_params_from_name(image_name):
         telescope = t[3]
         dateobs = t[4]
         pointing = t[5]
-    else:
-        print("ruh roh - trouble with get_params_from_name for image ",image_name, len(t))
+    #else:
+    #    print("ruh roh - trouble with get_params_from_name for image ",image_name, len(t))
         #print(image_name)
         #print(t)
     return telescope,dateobs,pointing
@@ -562,7 +562,7 @@ class create_output_table(output_table_view):
             #self.add_nsa()
             self.add_cutout_info()
             self.add_galfit_r()
-            self.add_galfit_ha()            
+            #self.add_galfit_ha()            
             self.add_ellipse()
             self.add_profile_fit()
             self.add_photutils()
@@ -833,12 +833,15 @@ class create_output_table(output_table_view):
         #c6 = Column(np.zeros(self.ngalaxies,'f'), name='GAL_ASYM2')
         self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
+    def add_galfit_2comp_r(self):
         # galfit sersic parameters from 2 comp fit
         c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC',description='galfit R-band 2comp fit')
         c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_2SERSIC_ERR',description='galfit R-band 2comp fit errors')
         c18 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_ERROR',description='galfit R-band 2comp fit num err flag')
         c19 = Column(np.zeros(self.ngalaxies), name='GAL_2SERSIC_CHISQ',description='galfit R-band 2comp chi sq')
         self.table.add_columns([c16,c17,c18,c19])
+
+    def add_galfit_1comp_with_asymmetry_r(self):
 
         # galfit 1 comp with asymmetry
         c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_SERSASYM',description='galfit R-band 1comp sersic w/asymmetry')
@@ -880,6 +883,7 @@ class create_output_table(output_table_view):
         c2 = Column(np.zeros(self.ngalaxies,'f'),name='GAL_HCHISQ',description='galfit chisq of HA model')
         self.table.add_columns([c1,c2])#,c3,c4,c5,c6])
 
+    def add_galfit_2comp_ha(self):
         # galfit sersic parameters from 2 comp fit
         c16 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_H2SERSIC',description='galfit HA 2-comp fit')
         c17 = Column(np.zeros((self.ngalaxies,15),'f'), name='GAL_H2SERSIC_ERR')
@@ -887,6 +891,7 @@ class create_output_table(output_table_view):
         c19 = Column(np.zeros(self.ngalaxies), name='GAL_H2SERSIC_CHISQ',description='galfit HA 2-comp chisq')
         self.table.add_columns([c16,c17,c18,c19])
 
+    def add_galfit_1comp_with_asymmetry_ha(self):
         # galfit 1 comp with asymmetry
         c16 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_HSERSASYM',description='galfit HA model w/asym')
         c17 = Column(np.zeros((self.ngalaxies,10),'f'), name='GAL_HSERSASYM_ERR')
@@ -1156,7 +1161,7 @@ class create_output_table(output_table_view):
         these are common comments that the user will be able to select
         '''
         names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','PARTIAL_FLAG','EDGEON_FLAG','NUC_HA']
-        descriptions =  ['Cont Sub Prob','merger/tidal','scattered light','asymmetric R-band', 'asymmetric Ha','foreground star', 'foreground gal','galaxy is edge-on','galaxy is only partially covered by mosaic','nuclear ha emission']
+        descriptions =  ['Halpha Emission','Cont Sub Prob','merger/tidal','scattered light','asymmetric R-band', 'asymmetric Ha','foreground star', 'foreground gal','galaxy is edge-on','galaxy is only partially covered by mosaic','nuclear ha emission'] 
         for i,n in enumerate(names):
             #print(n)
             c = Column(np.zeros(self.ngalaxies,'bool'),name=n,description=descriptions[i])
@@ -3173,7 +3178,10 @@ class hacontroller():
         
     def set_halpha_type(self,hatype): # controller
         self.halpha_type = hatype
-        #print(hatype)
+        print(hatype)
+        if int(hatype) == 0:
+            self.haflag[self.igal]=True
+            self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
         try:
             if int(hatype) == 0:
                 self.haflag[self.igal]=True
