@@ -152,20 +152,22 @@ def get_params_from_name(image_name):
     return telescope,dateobs,pointing
 
 def get_params_from_name_uat(image_name):
-    t = os.path.basename(image_name).split('-')
+    t = os.path.basename(image_name).split('_')
     #print(t)
-    if len(t) == 6:
+    if len(t) == 7: # meant to catch negative declinations
         telescope = t[2]
         dateobs = t[3]
-        pointing = t[4]
-    elif len(t) == 7: # meant to catch negative declinations
+        pointing = t[4]+'_'+t[5]
+    elif len(t) == 8:
         telescope = t[3]
         dateobs = t[4]
-        pointing = t[5]
+        pointing = t[4]+'_'+t[5]
+        
     else:
         print("ruh roh - trouble getting info from ",image_name, len(t))
         print(image_name)
         print(t)
+        return
     return telescope,dateobs,pointing
 
 class psfimage():
