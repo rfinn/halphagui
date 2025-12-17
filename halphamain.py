@@ -3812,10 +3812,14 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
 
         # on RF laptop, tabledir is /Users/rfinn/research/
         self.agc_fname = os.path.join(self.tabledir,'AGC/agc.allsky.210720.fits')
+            
 
         self.agc = galaxy_catalog(self.agc_fname,virgo=False,agc=True)
 
         self.nsa_fname = os.path.join(self.tabledir,'NSA/nsa_v1_0_1.fits')
+        if not os.path.exists(self.nsa_fname):
+            self.nsa_fname = os.path.join(self.tabledir,'NSA/nsa_v0_1_2.fits')            
+            
         self.nsa = galaxy_catalog(self.nsa_fname,virgo=False, agc=False, nsa=True)        
         #self.agc.check_ra_colname() # should check automatically with agc=True
         ##
