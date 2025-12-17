@@ -23,9 +23,11 @@ def subtract_median_sky(data,getstd=False,getmedian=True,subtract=True):
 
         bkg_estimator = MedianBackground()
 
-        bkg = Background2D(imdat,(50, 50),filter_size=(3, 3), bkg_estimator=bkg_estimator)
+        bkg = Background2D(data,(50, 50),filter_size=(3, 3), bkg_estimator=bkg_estimator)
         threshold = 3 * bkg.background_rms
-        segment_map = detect_sources(imdat, threshold, npixels=10)
+        segment_map = detect_sources(data, threshold, npixels=10)
+        #print(segment_map) # testing
+        mask = segment_map.data > 0
         masked_data = np.ma.array(data,mask=mask)
     mean,median,std = sigma_clipped_stats(masked_data,sigma=3.0,cenfunc=np.ma.mean)
     if subtract:
