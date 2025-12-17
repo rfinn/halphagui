@@ -1406,7 +1406,7 @@ class ellipse():
                 self.uconversion2 = 3631.*10**(self.magzp2/-2.5)*1.e-23*bandwidth2
             except:
                 print("WARNING: no PHOTZP keyword in image header. \nAssuming ZP=22.5")
-                self.magzp = 22.5
+                self.magzp2 = 22.5
 
                 # use 25 as default ZP if none is provided in header
                 self.uconversion2 = 3631.*10**(25/-2.5)*1.e-23*bandwidth2
