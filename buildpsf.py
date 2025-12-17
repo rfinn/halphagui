@@ -290,9 +290,11 @@ class psf_parent_image():
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description ='create psf image from image that contains stars')
-
-    #parser.add_argument('--table-path', dest = 'tablepath', default = '/Users/rfinn/github/Virgo/tables/', help = 'path to github/Virgo/tables')
+    #parser = argparse.ArgumentParser(description ='create psf image from image that contains stars')
+    parser = argparse.ArgumentParser(
+        description='GOAL:\n- create a psf image from an R-band mosaic \n\nPROCEDURE \n- use sextractor to identify objects (run to estimate FWHM, then input FWHM on second run) \n- use CLASS_STAR and flags to identify stars that are not saturated \n- create a table of x,y coordinates (astropy.table.Table) \n- extract stars - photutils.psf.extract_stars \n- build psf - photutils.EPSFBuilder \n- save psf image (e.g. for input into galfit)\n\nsounds easy enough, right? \n\nINPUT: \n- image \n- saturation level \n\nOUTPUT: \n- psf image \n\nREFERENCES: \n- following instructions found here: \nhttps://photutils.readthedocs.io/en/stable/epsf.html#build-epsf',
+        formatter_class=argparse.RawTextHelpFormatter)
+   
     parser.add_argument('--image',dest = 'image', help='input image')
     parser.add_argument('--saturate',default=None,dest = 'saturate', help='saturation limit')
     parser.add_argument('--int',default=False,dest='int',action = 'store_true', help='set this for INT data')

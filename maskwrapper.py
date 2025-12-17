@@ -180,7 +180,7 @@ class buildmask():
             os.system('unlink '+file)
 
     def read_se_cat(self):
-        print("reading in SE catalog")
+        #print("reading in SE catalog")
         sexout=fits.getdata(self.catname)
         self.se_number = sexout['NUMBER']
         self.xsex = sexout['XWIN_IMAGE']
@@ -276,7 +276,7 @@ class buildmask():
                 pass
             else:
                 # remove central objects within elliptical aperture
-                print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
+                #print("ellipse params in remove_central_object :",self.xpixel,self.ypixel,self.objsma_pixels,self.objBA,self.objPA)
                 self.maskdat,self.ellipseparams = remove_central_objects(self.maskdat, sma=self.objsma_pixels, \
                                                                          BA=self.objBA, PA=self.objPA, \
                                                                          xc=self.xpixel,yc=self.ypixel)
@@ -332,7 +332,13 @@ class buildmask():
         # check to see if gaia stars were already masked
         if self.add_gaia_stars:
             if self.gaia_mask is None :
-                self.get_gaia_stars()
+                try:
+                    self.get_gaia_stars()
+                except:
+                    print("\nWARNING: problem getting gaia stars - do you have an internet connection?\nI will not add gaia stars to mask\n")
+                    self.gaia_mask = None
+                    return
+                
                 self.make_gaia_mask()
             else:
                 self.maskdat += self.gaia_mask
@@ -528,7 +534,8 @@ class buildmask():
         #self.maskdat = np.ceil(self.maskdat)
 
         # we don't want to grow the size of the gaia stars, do we???
-        self.maskdat -= self.gaia_mask
+        if self.gaia_mask is not None:
+            self.maskdat -= self.gaia_mask
         nx,ny = self.maskdat.shape
         masked_pixels = np.where(self.maskdat > 0.)
         for i,j in zip(masked_pixels[0], masked_pixels[1]):
@@ -545,7 +552,8 @@ class buildmask():
             #print(i,j,rowmin, rowmax, colmin, colmax)
             self.maskdat[rowmin:rowmax,colmin:colmax] = self.maskdat[i,j]*np.ones([rowmax-rowmin,colmax-colmin])
         # add back in the gaia star masks
-        self.maskdat += self.gaia_mask
+        if self.gaia_mask is not None:
+            self.maskdat += self.gaia_mask
         if not self.auto:
             self.display_mask()
         # save convolved mask as new mask

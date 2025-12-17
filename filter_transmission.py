@@ -8,6 +8,16 @@ from astropy.io import ascii
 
 wave_halpha = 6563. # angstrom
 
+def read_filter(hafilter,filterpath=None):
+    """
+    PARAMS:
+    * halpha filter to read in
+
+    RETURN:
+    * wavelength (in A)
+    * transmission (from zero to 100)
+    """
+    pass
 class filter_trace():
     def __init__(self,hafilter,filterpath=None,mintrans=10.):
         '''

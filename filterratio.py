@@ -54,10 +54,9 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
     froot2 = os.path.splitext(base)[0]
     
     # check if output catalogs exist - if they do, don't rerun SE
-
     secatalog1 = froot1+'.cat'
     secatalog2 = froot2+'.cat'
-    print(secatalog1,secatalog2)
+    #print(secatalog1,secatalog2)
     if os.path.exists(secatalog1) and os.path.exists(secatalog2):
         print("FOUND SE CATALOGS - NOT RERUNNING")
     else:

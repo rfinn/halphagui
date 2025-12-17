@@ -310,7 +310,10 @@ class galfitwindow(Ui_galfitWindow, QtCore.QObject):
         self.ui.BAFitLineEdit.setText(str(round(self.BA,2)))
         self.ui.skyFitLineEdit.setText(str(round(self.sky,2)))
         self.ui.errorFitLineEdit.setText(str(round(self.error,2)))
-        self.ui.chiFitLineEdit.setText(str(round(self.chi2nu,2)))
+        try:
+            self.ui.chiFitLineEdit.setText(str(round(self.chi2nu,2)))
+        except TypeError:
+            print("WARNING: could not update display for chinu ",self.chi2nu)
         if self.asym:
             self.ui.asymLineEdit.setText(str(round(self.asymmetry,2)))
             self.ui.asymPALineEdit.setText(str(round(self.asymmetry_PA,2)))
