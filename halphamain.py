@@ -613,6 +613,7 @@ class create_output_table(output_table_view):
         self.gzdist = self.table['vopt']/3.e5
         self.galid= self.table['AGCnr']
         self.NEDname= self.table['AGCnr']
+        self.haflag= self.table['AGCnr']        
         try:
             self.gprefix= self.table['prefix']
         except:
@@ -1457,7 +1458,8 @@ class hagui_methods():
         #print("Value of self.uat = ",self.uat)
         self.initialize_results_table(prefix=self.prefix,virgo=self.virgo,uat=self.uat,nogui=self.auto)
 
-
+        # testing
+        
         # TODO - this needs to be moved into the view class
         if not self.auto:
             # plot location of galaxies in the coadd image
