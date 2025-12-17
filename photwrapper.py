@@ -323,10 +323,11 @@ class ellipse():
                 self.masked_image2 = np.ma.array(self.image2, mask = self.boolmask)
         else:
             print('not using a mask')
-            self.mask_image = None
-            self.mask_header = None
             self.mask_flag = False
             self.masked_image = self.image
+            self.mask_image = np.zeros_like(self.image)
+            #self.mask_header = None
+            
             if self.image2_flag:
                 self.masked_image2 = self.image2
         # image frame for plotting inside a gui
@@ -907,27 +908,33 @@ class ellipse():
         segmap = self.segmentation.data == self.cat.label[self.objectIndex]
         segmap_float = ndi.uniform_filter(np.float64(segmap), size=10)
         segmap = segmap_float > 0.5
+        segmap = np.array(segmap_float > 0.5, 'i')
         self.segmap = segmap
+
+        
 
         if self.mask_image is not None:
             mask = self.mask_image > 0
         else:
             mask = None
-        #plt.figure()
-        #plt.imshow(segmap, origin='lower', cmap='gray')
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.imshow(segmap, origin='lower', cmap='gray')
+        plt.subplot(1,2,1)
+        plt.imshow(mask, origin='lower', cmap='gray')
 
         # run statmorph on r-band image
         label = self.image_name[0:9]
         label = 1
         if self.psf is None:
-            
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
-            print("ran original statmorph ok")
+            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain,mask=mask)
+
             #print()
-            #source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
+            source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain,mask=mask, cutout_extent=1.5)
+            print("ran original statmorph ok")            
         else:
-            source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
-            #source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
+            #source_morphs = statmorph.source_morphology(self.image, segmap, gain=self.gain, psf=self.psf_data,mask=mask)
+            source_morphs = myStatmorph(self.image, segmap, label, gain=self.gain, psf=self.psf_data,mask=mask, cutout_extent=1.5)
         self.source_morphs = source_morphs
         self.morph = source_morphs
         fig = make_figure(self.morph)
