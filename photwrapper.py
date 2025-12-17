@@ -323,6 +323,8 @@ class ellipse():
                 self.masked_image2 = np.ma.array(self.image2, mask = self.boolmask)
         else:
             print('not using a mask')
+            self.mask_image = None
+            self.mask_header = None
             self.mask_flag = False
             self.masked_image = self.image
             if self.image2_flag:
