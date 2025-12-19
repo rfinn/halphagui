@@ -1572,11 +1572,12 @@ class hagui_methods():
             return
         self.defcat.cull_catalog(keepflag,self.prefix)
     
-        if self.virgo:
+        if self.virgo: # why don't we do this for uat?
             self.nsa.cull_catalog(keepflag,self.prefix)
             self.radius_arcsec = self.radius_arcsec[keepflag]
             self.BA = self.BA[keepflag]
-            self.PA = self.PA[keepflag]            
+            self.PA = self.PA[keepflag]
+        
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
         #self.gradius=self.nsa.cat.SERSIC_TH50
@@ -1605,6 +1606,11 @@ class hagui_methods():
                     self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat['radeg'],self.agc.cat['decdeg'],0)        
             #print(self.agcximage)
             #print(self.agcyimage)
+        if self.uat: # testing to see if this fixes the large radius problem
+            self.radius_arcsec = self.radius_arcsec[keepagc]
+            self.BA = self.BA[keepagc]
+            self.PA = self.PA[keepagc]
+
 
         return True
     def initialize_output_arrays(self): # MVC - model
@@ -3013,13 +3019,13 @@ class hagui_interactive():
         objlist = []
         markcolor='cyan'
         markwidth=1
-        size = cutout_scale*self.gradius
+        #size = cutout_scale*self.gradius
         size = self.cutout_sizes
         #size[size > self.global_max_cutout_size] = self.global_max_cutout_size
         #size[size < self.global_min_cutout_size] = self.global_min_cutout_size
         print(f"DEBUGGING: in mark_galaxies: len(gximage) = {len(self.gximage)}")
         for i,x in enumerate(self.gximage):
-            print(f"{i}, {self.galid[i]}, cutout_size = {size[i]}") 
+            print(f"{i}, {self.galid[i]}, cutout_size = {size[i]:.2f}, gximage[i]={self.gximage[i]:.1f}, agcximage={self.agcximage[i]:.1f}") 
             obj = self.coadd.dc.Box(
                 x=x, y=self.gyimage[i], \
                 xradius=size[i]/2,yradius=size[i]/2, \
