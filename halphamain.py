@@ -660,7 +660,7 @@ class create_output_table(output_table_view):
     def create_table_uat(self):
         # updating this part for uat Halpha Groups
 
-        self.table = self.defcat.cat['AGCnr','RA','DEC','vopt','a','b','v21','hiflux',]
+        self.table = self.defcat.cat['AGCnr','RA','DEC','vopt','v21','a','b','hiflux',]
         self.table['AGCnr'].description = 'Number in AGC catalog'
         self.table['RA'].unit = u.deg
         self.table['RA'].description = 'RA from AGC catalog'        
@@ -3027,9 +3027,9 @@ class hagui_interactive():
         size = self.cutout_sizes
         #size[size > self.global_max_cutout_size] = self.global_max_cutout_size
         #size[size < self.global_min_cutout_size] = self.global_min_cutout_size
-        print(f"DEBUGGING: in mark_galaxies: len(gximage) = {len(self.gximage)}")
+        #print(f"DEBUGGING: in mark_galaxies: len(gximage) = {len(self.gximage)}")
         for i,x in enumerate(self.gximage):
-            print(f"{i}, {self.galid[i]}, cutout_size = {size[i]:.2f}, gximage[i]={self.gximage[i]:.1f}, agcximage={self.agcximage[i]:.1f}") 
+            #print(f"{i}, {self.galid[i]}, cutout_size = {size[i]:.2f}, gximage[i]={self.gximage[i]:.1f}, agcximage={self.agcximage[i]:.1f}") 
             obj = self.coadd.dc.Box(
                 x=x, y=self.gyimage[i], \
                 xradius=size[i]/2,yradius=size[i]/2, \
@@ -4055,6 +4055,7 @@ class galaxy_catalog():
         print(f"\nApplying redshift cut: zmin={zmin:.4f}, zmax={zmax:.4f}\n")
         # initialize value of zFlag
         zFlag = np.zeros(len(self.cat), 'bool')
+        #print(f"DEBUGGING: len(self.cat)={len(self.cat)}, len(keepflag)={len(self.keepflag)}")
         print(f"redshift of objects in FOV = ",self.cat['vopt'][self.keepflag].data/3.e5)
         #try: # should really edit the catalogs to have the same redshift/vel column name
 
