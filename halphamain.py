@@ -1217,6 +1217,7 @@ class uco_table():
         self.uco_output_table = 'halpha-uco-data-'+user+'-'+str_date_today+'.fits'
         if os.path.exists(self.uco_output_table):
             self.uco_table = Table(fits.getdata(self.uco_output_table))
+            self.uco_prefix = self.uco_table['PREFIX'].tolist()
             self.uco_id = self.uco_table['ID'].tolist()
             self.uco_ra = self.uco_table['RA'].tolist()
             self.uco_dec = self.uco_table['DEC'].tolist()
@@ -1225,19 +1226,20 @@ class uco_table():
 
         ## if not, create table
         else:
-            
+            self.uco_prefix = []
             self.uco_id = []
             self.uco_ra = []
             self.uco_dec = []
             self.uco_x = []
             self.uco_y = []
     def create_uco_table(self):
+        c0 = Column(self.uco_prefix, name='PREFIX', description='Prefix for coadd image')
         c1 = Column(np.array(self.uco_id), name='ID',dtype=np.int32, description='ID')
         c2 = Column(np.array(self.uco_ra), name='RA',dtype='f', unit=u.deg)
         c3 = Column(np.array(self.uco_dec), name='DEC',dtype='f', unit=u.deg)
         c4 = Column(np.array(self.uco_x), name='X',dtype='f', unit=u.pixel)
         c5 = Column(np.array(self.uco_y), name='Y',dtype='f', unit=u.pixel)
-        self.uco_table = Table([c1,c2,c3,c4,c5])
+        self.uco_table = Table([c0,c1,c2,c3,c4,c5])
     def write_uco_table(self):
         self.create_uco_table()
 
@@ -3258,6 +3260,7 @@ class hacontroller():
                 self.uco_id.append(1)
             else:
                 self.uco_id.append(np.max(self.uco_id)+1)
+            self.uco_prefix.append(self.prefix)
             self.write_uco_table()
         elif key == 'down':
             '''
