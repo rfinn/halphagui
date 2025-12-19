@@ -1879,11 +1879,14 @@ class hagui_methods():
         if not os.path.exists(self.cutoutdir):
             os.mkdir(self.cutoutdir)
 
-            
-        self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
-        self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
-        self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
-
+        if self.uat:
+            self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
+            self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
+            self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
+        else:
+            self.cutout_name_r = self.cutoutdir+cprefix+'-R.fits'
+            self.cutout_name_ha =self.cutoutdir+cprefix+'-CS.fits'
+            self.cutout_name_hawc= self.cutoutdir+cprefix+'-Ha.fits'
 
         position = SkyCoord(ra=self.ra[self.igal],dec=self.dec[self.igal],unit='deg')
 
@@ -3299,7 +3302,7 @@ class hacontroller():
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
         elif self.uat:
-            self.igal = self.igal-1 # why do we need this???
+            #self.igal = self.igal-1 # why do we need this???
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['AGCnr'][self.igal]))
             self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.defcat.cat['b'][self.igal]/self.defcat.cat['a'][self.igal],0]
             #print("new galaxy params = ",self.objparams)
