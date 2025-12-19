@@ -1390,6 +1390,9 @@ class hagui_methods():
         # NOW USING SB25, so going to decrease scale factor to 2
         scale = 2*1.9
 
+        if self.uat:
+            scale = 2.5
+
 
 
         
@@ -3014,8 +3017,9 @@ class hagui_interactive():
         size = self.cutout_sizes
         #size[size > self.global_max_cutout_size] = self.global_max_cutout_size
         #size[size < self.global_min_cutout_size] = self.global_min_cutout_size
-        
+        print(f"DEBUGGING: in mark_galaxies: len(gximage) = {len(self.gximage)}")
         for i,x in enumerate(self.gximage):
+            print(f"{i}, {self.galid[i]}, cutout_size = {size[i]}") 
             obj = self.coadd.dc.Box(
                 x=x, y=self.gyimage[i], \
                 xradius=size[i]/2,yradius=size[i]/2, \
@@ -3302,6 +3306,7 @@ class hacontroller():
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
         elif self.uat:
+            # removed this an we resolved the issue where we got the wrong galaxy in the viewer.
             #self.igal = self.igal-1 # why do we need this???
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['AGCnr'][self.igal]))
             self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.defcat.cat['b'][self.igal]/self.defcat.cat['a'][self.igal],0]
