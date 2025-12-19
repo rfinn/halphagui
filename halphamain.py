@@ -1391,7 +1391,7 @@ class hagui_methods():
         scale = 2*1.9
 
         if self.uat:
-            scale = 2.5
+            scale = 3.5
 
 
 
@@ -1514,7 +1514,7 @@ class hagui_methods():
             return False
 
 
-        keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
+        #keepflag = self.defcat.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
         #print("finished running galaxies_in_fov")
         #print()
         try:
@@ -1574,9 +1574,10 @@ class hagui_methods():
     
         if self.virgo: # why don't we do this for uat?
             self.nsa.cull_catalog(keepflag,self.prefix)
-        self.radius_arcsec = self.radius_arcsec[keepflag]
-        self.BA = self.BA[keepflag]
-        self.PA = self.PA[keepflag]
+        if self.virgo | self.uat:
+            self.radius_arcsec = self.radius_arcsec[keepflag]
+            self.BA = self.BA[keepflag]
+            self.PA = self.PA[keepflag]
         
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
