@@ -1574,9 +1574,9 @@ class hagui_methods():
     
         if self.virgo: # why don't we do this for uat?
             self.nsa.cull_catalog(keepflag,self.prefix)
-            self.radius_arcsec = self.radius_arcsec[keepflag]
-            self.BA = self.BA[keepflag]
-            self.PA = self.PA[keepflag]
+        self.radius_arcsec = self.radius_arcsec[keepflag]
+        self.BA = self.BA[keepflag]
+        self.PA = self.PA[keepflag]
         
         #self.gra=self.nsa.cat.RA
         #self.gdec=self.nsa.cat.DEC
@@ -1596,6 +1596,13 @@ class hagui_methods():
             keepagc = self.agc.galaxies_in_fov(self.coadd_wcs, nrow=n2,ncol=n1, agcflag=True,image_name=self.rcoadd_fname,zmin=self.zmin,zmax=self.zmax)
 
             print('number of AGC galaxies in FOV = ',sum(keepagc))
+
+            #if self.uat: # testing to see if this fixes the large radius problem
+            print(f"length of radius_arcsec = {len(self.radius_arcsec)}, len(keepagc)={len(keepagc)}")
+            #    self.radius_arcsec = self.radius_arcsec[keepagc]
+            #    self.BA = self.BA[keepagc]
+            #    self.PA = self.PA[keepagc]
+            
             self.agc.cull_catalog(keepagc, self.prefix)
             if sum(keepagc) == 0:
                 self.agcflag = False
@@ -1606,10 +1613,6 @@ class hagui_methods():
                     self.agcximage,self.agcyimage =self.coadd_wcs.wcs_world2pix(self.agc.cat['radeg'],self.agc.cat['decdeg'],0)        
             #print(self.agcximage)
             #print(self.agcyimage)
-        if self.uat: # testing to see if this fixes the large radius problem
-            self.radius_arcsec = self.radius_arcsec[keepagc]
-            self.BA = self.BA[keepagc]
-            self.PA = self.PA[keepagc]
 
 
         return True
