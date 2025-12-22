@@ -1073,6 +1073,9 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         else:
             self.maskdat[self.maskdat == objID] = 0.
             self.deleted_objects.append(objID)
+
+            # remove object from user mask
+            self.usr_mask[self.usr_mask == objID] = 0.
         self.save_mask()
         self.display_mask()
     def set_threshold(self,t):
