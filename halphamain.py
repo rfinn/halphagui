@@ -152,7 +152,16 @@ def get_params_from_name(image_name):
     return telescope,dateobs,pointing
 
 def get_params_from_name_uat(image_name):
-    t = os.path.basename(image_name).split('_')
+    '''
+    coadd names should be as follows.
+    if float(dec) < 0:
+        outfile = f'UAT-{ra:07.3f}-{dec:06.3f}-{telescope}-{dateobs}-{pointing}-{filterwithsuffix}'        
+    else:
+        outfile = f'UAT-{ra:07.3f}+{dec:06.3f}-{telescope}-{dateobs}-{pointing}-{filterwithsuffix}'    
+
+    each pointing will have an internal '-', like ABELL1367-h01
+    '''
+    t = os.path.basename(image_name).split('-')
     #print(t)
     if len(t) == 7: # meant to catch negative declinations
         telescope = t[2]
@@ -161,7 +170,7 @@ def get_params_from_name_uat(image_name):
     elif len(t) == 8:
         telescope = t[3]
         dateobs = t[4]
-        pointing = t[4]+'_'+t[5]
+        pointing = t[5]+'_'+t[6]
         
     else:
         print("ruh roh - trouble getting info from ",image_name, len(t))
