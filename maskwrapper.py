@@ -288,6 +288,7 @@ class buildmask():
         
     def update_mask(self):
         self.add_user_masks()
+        print("starting add_gaia_masks...")
         self.add_gaia_masks()
         self.write_mask()
     def add_user_masks(self):
@@ -351,13 +352,14 @@ class buildmask():
         # check to see if gaia table already exists
         outfile = self.image_name.replace('.fits','_gaia_stars.csv')
         if os.path.exists(outfile):
- 
+            print(f"reading gaia stars from {outfile}")
             self.brightstar = Table.read(outfile)
             #print(self.brightstar.colnames)
             self.xgaia = self.brightstar['xpixel']
             self.ygaia = self.brightstar['ypixel']
 
         else:
+            print(f"running query to get gaia stars")
             brightstar = gaia_stars_in_rectangle(self.racenter,self.deccenter,self.dydeg+.01,self.dxdeg+.01)
             try:
                 # get gaia stars within FOV
@@ -1050,12 +1052,13 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
         pixel_mask = circle_pixels(float(self.xcursor),float(self.ycursor),float(self.mask_size/2.),self.xmax,self.ymax)
 
         #print('xcursor, ycursor = ',self.xcursor, self.ycursor)
-        mask_value = np.max(self.maskdat) + 1
+        mask_value = int(np.max(self.maskdat)) + 1
+        #print(f"adding circular mask with value {mask_value}"
         #print(xmin,xmax,ymin,ymax,self.mask_size)
         self.usr_mask[pixel_mask] = mask_value*np.ones_like(self.usr_mask)[pixel_mask]
         self.maskdat = self.maskdat + self.usr_mask
         self.save_mask()
-        print('added mask object '+str(mask_value))
+        print(f'added mask object {mask_value}')
         
     def remove_object(self, objID):
         '''
@@ -1075,7 +1078,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
             self.deleted_objects.append(objID)
 
             # remove object from user mask
-            self.usr_mask[self.usr_mask == objID] = 0.
+            self.usr_mask[self.usr_mask == objID] = 0
         self.save_mask()
         self.display_mask()
     def set_threshold(self,t):
