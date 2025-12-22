@@ -4125,7 +4125,7 @@ if __name__ == "__main__":
     parser.add_argument('--rimage',dest = 'rimage', default=None,help='r-band image')
     parser.add_argument('--haimage',dest = 'haimage', default=None,help='Halpha image')
     parser.add_argument('--csimage',dest = 'csimage', default=None,help='Continuum-subtracted Halpha image')    
-    parser.add_argument('--filter',dest = 'filter', default=None,help='filter.  should be ha4, inthalpha, or intha6657.')
+    parser.add_argument('--filter',dest = 'filter', default=None,help='filter. options are 4, 8, 12, 16, inthalpha, or intha6657')
     parser.add_argument('--tabledir',dest = 'tabledir', default=None,help='table directory. something like /home/rfinn/research/Virgo/tables-north/v1/')
     parser.add_argument('--psfdir',dest = 'psfdir', default=None,help='set this to the directory containing PSF images')        
     parser.add_argument('--prefix',dest = 'prefix', default='v17p03',help='prefix associated with the coadded image.  Default is v17p03. required when running auto.')
