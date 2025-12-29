@@ -19,8 +19,16 @@ Testing after MVC semi-implementation.  I created a testing directory on the lin
 
 python ~/github/halphagui/halphamain.py --virgo --tabledir ~/research/Virgo/tables-north/v2/ --rimage VF-145.781+31.887-HDI-20180313-p019-R.fits --haimage VF-145.781+31.887-HDI-20180313-p019-ha4.fits --csimage VF-145.781+31.887-HDI-20180313-p019-ha4-CS-ZP.fits --psfdir ~/research/Virgo-dev/halphagui-test/ --filter ha4 --prefix VF-145.781+31.887-HDI-20180313-p019
 
+2025-December
+
+(virgo) rfinn@s64247 HDI % 
+
+python ~/github/halphagui/halphamain.py --rimage UAT-177.865+21.004-HDI-20150418-NRGb161-h01-R.fits --haimage UAT-177.865+21.004-HDI-20150419-NRGb161-h01-ha12.fits --filter 12 --uat --prefix NRGb161-h01
+
 """
 
+# TODO - cutout directory has a trailing dash when running in uat mode
+# TODO - keep testing maskwrapper - behaving oddly when user adds objects
 
 import sys, os
 sys.path.append(os.getcwd())
@@ -1807,6 +1815,7 @@ class hagui_methods():
             except KeyError:
                 # putting in a place holder b/c older (2017)
                 # HDI coadds don't have epoch in the header.
+                print("WARNING: using a placeholder for date b/c I could not find it in header")
                 t = Time('2017-05-20T00:00:00.0',format='isot')
         dateobs = t.iso.split()[0].replace('-','')
 
@@ -1873,6 +1882,7 @@ class hagui_methods():
         # first pass of mask
         # radial profiles
         # save latest of mask
+        
         if self.virgo:
             if self.verbose:
                 print("\n in get_cutouts, getting NEDname\n")
@@ -1887,11 +1897,19 @@ class hagui_methods():
             
             cprefix = "{}-{}-{}-{}-{}".format(self.galid[self.igal],nedname,instrument,dateobs,pointing)
             
+        elif self.uat:
+            if self.prefix is not None:
+                pointing = self.prefix
+            else:
+                instrument,dateobs,pointing = get_params_from_name_uat(self.rcoadd_fname)
+            cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
+            
         else:
             cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
             
     
-
+        if self.verbose:
+            print(f"in get_cutouts, cprefix={cprefix}")
         
         ## create the output directory to store the cutouts and figures
         if self.verbose:
@@ -4068,10 +4086,11 @@ class galaxy_catalog():
         # initialize value of zFlag
         zFlag = np.zeros(len(self.cat), 'bool')
         #print(f"DEBUGGING: len(self.cat)={len(self.cat)}, len(keepflag)={len(self.keepflag)}")
-        print(f"redshift of objects in FOV = ",self.cat['vopt'][self.keepflag].data/3.e5)
+        if args.verbose:
+            print(f"redshift of objects in FOV = ",self.cat['vopt'][self.keepflag].data/3.e5)
         #try: # should really edit the catalogs to have the same redshift/vel column name
-
-        print(f"value of agcflag = {agcflag}")
+        if args.verbose:
+            print(f"value of agcflag = {agcflag}")
         if agcflag:
             print("\t using the AGC velocities")
             zFlag1 = (self.cat['vopt']/3.e5 > zmin) & (self.cat['vopt']/3.e5 < zmax)
