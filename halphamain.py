@@ -27,7 +27,7 @@ python ~/github/halphagui/halphamain.py --rimage UAT-177.865+21.004-HDI-20150418
 
 """
 
-# TODO - cutout directory has a trailing dash when running in uat mode
+# TODONE - cutout directory has a trailing dash when running in uat mode
 # TODO - keep testing maskwrapper - behaving oddly when user adds objects
 
 import sys, os
@@ -469,7 +469,9 @@ class output_table_view():
                 self.ui.tableWidget.setItem(row,col,QtWidgets.QTableWidgetItem(str(item)))
         #item = self.tableWidget.horizontalHeaderItem(0)
         #item.setText(_translate("MainWindow", "ID"))
-        self.write_fits_table()
+
+        # keep write_fits_table separate from gui table
+        #self.write_fits_table()
 
     def update_gui_table_cell(self,row,col,item):
         # row will be igal, so that's easy
@@ -489,7 +491,9 @@ class output_table_view():
             self.table[row][col]=item
         else:
             print('could not match column name ',col)
-        self.write_fits_table()
+        # right now, write_fits_table calls update_gui_table_cell!!!
+        # this this is recursive :(
+        #self.write_fits_table()
 
         
 class create_output_table(output_table_view):
@@ -579,6 +583,7 @@ class create_output_table(output_table_view):
             self.add_part1()
             # skipping for now b/c this will have to be different for virgo
             #self.add_nsa()
+            self.add_flags()            
             self.add_cutout_info()
             self.add_galfit_r()
             #self.add_galfit_ha()            
@@ -1128,7 +1133,7 @@ class create_output_table(output_table_view):
         self.table.add_columns([c1,c2])
 
 
-        self.add_flags()
+
         
         self.table.add_column(Column(np.zeros(self.ngalaxies,dtype='U50'), name='COMMENT'))
         #print(self.table)
@@ -1203,7 +1208,8 @@ class create_output_table(output_table_view):
             t = str(self.ui.commentLineEdit.text())
             if len(t) > 1:
                 self.table['COMMENT'][self.igal] = t
-                self.update_gui_table_cell(self.igal, 'COMMENT',t)
+                # don't call update_gui_table_cell here - keep the fits and gui table calls separate
+                #self.update_gui_table_cell(self.igal, 'COMMENT',t)
         #fits.writeto('halpha-data-'+user+'-'+str_date_today+'.fits',self.table, overwrite=True)
         if self.prefix is not None:
             # this is not working when running gui - need to feed in the r-band image name
@@ -3127,7 +3133,7 @@ class hagui_interactive():
         # TODO - this should not be called in the model b/c model does not interact with view
         # ###################################################################################
         self.update_gui_table_cell(self.igal,'BBOX',str(bbox))
-        
+        self.write_fits_table()
     def draw_ellipse_results(self, color='cyan'): # MVC - view
         # mark r24
         markcolor=color#, 'yellow', 'cyan']
@@ -3228,16 +3234,21 @@ class hacontroller():
         
     def set_halpha_type(self,hatype): # controller
         self.halpha_type = hatype
-        print(hatype)
-        if int(hatype) == 0:
-            self.haflag[self.igal]=True
-            self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
+        if args.verbose:
+            print(f"in set_halpha_type, hatype={hatype}")
+        #if int(hatype) == 0:
+        #    self.haflag[self.igal]=True
+        #    self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
+        # why am I calling this again?
         try:
             if int(hatype) == 0:
                 self.haflag[self.igal]=True
                 self.update_gui_table_cell(self.igal,'HA_FLAG',str(True))
         except AttributeError:
             print('make sure you selected a galaxy')
+
+        # add command here to write the fits table
+        self.write_fits_table()
     def set_filter_ratio(self,ratio): # controller?
         try:
             self.filter_ratio = float(ratio)
@@ -3376,6 +3387,8 @@ class hacontroller():
         #self.rcutout.canvas.delete_all_objects()
         #self.hacutout.canvas.delete_all_objects()            
         self.clear_comment_field()
+
+        # TODO clear other flags, like no Halpha emission
         #################################################
 
 
@@ -3436,8 +3449,12 @@ class hacontroller():
         col_names = ['CONTSUB_FLAG','MERGER_FLAG','SCATLIGHT_FLAG','ASYMR_FLAG','ASYMHA_FLAG','OVERSTAR_FLAG','OVERGAL_FLAG','EDGEON_FLAG','PARTIAL_FLAG','NUC_HA']
         self.table[col_names[int(comment)]][self.igal] = not(self.table[col_names[int(comment)]][self.igal])
         if not self.auto:
-            self.update_gui_table_cell(self.igal,col_names[int(comment)],str(True))
-
+            if self.table[col_names[int(comment)]][self.igal]:
+                pass_str = str(True)
+            else:
+                pass_str = str(False)
+            self.update_gui_table_cell(self.igal,col_names[int(comment)],pass_str)
+            self.write_fits_table()
         
         
 
