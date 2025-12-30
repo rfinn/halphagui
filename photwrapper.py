@@ -16,10 +16,11 @@ https://photutils.readthedocs.io/en/stable/segmentation.html
 
 '''
 try:
-    from photutils import detect_threshold, detect_sources
+    from photutils import detect_threshold, detect_sources#, make_source_mask
 except ImportError:
-    from photutils.segmentation import detect_threshold, detect_sources
+    from photutils.segmentation import detect_threshold, detect_sources#, make_source_mask
 
+    
 # changing to remove deprecated function source_properties
 #from photutils import source_properties
 from photutils.segmentation import SourceCatalog
@@ -652,6 +653,7 @@ class ellipse():
 
         # make an object mask, expanding the area using a circular footprint
         #mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)
+        #mask = make_source_mask(self.image,1.5,10,dilate_size=11)        
         try:
             from photutils import make_source_mask
             mask = make_source_mask(self.image,1.5,10,dilate_size=11)
