@@ -21,7 +21,7 @@ def read_filter(hafilter,filterpath=None):
 class filter_trace():
     def __init__(self,hafilter,filterpath=None,mintrans=10.):
         '''
-        hafilter can be 4, 8, 12, 16
+        hafilter can be 4, 8, 12, 16, inthalpha, or intha6657
 
         filter path should point to filter_trace subdirectory of github/halphagui
 
