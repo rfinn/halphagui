@@ -1902,7 +1902,7 @@ class hagui_methods():
                 pointing = self.prefix
             else:
                 instrument,dateobs,pointing = get_params_from_name_uat(self.rcoadd_fname)
-            cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
+            cprefix = "AGC{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
             
         else:
             cprefix = "{}-{}-{}-{}".format(self.galid[self.igal],instrument,dateobs,pointing)
