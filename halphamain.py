@@ -700,6 +700,7 @@ class create_output_table(output_table_view):
         #print('number of galaxies = ',self.ngalaxies)
         self.haflag = np.zeros(self.ngalaxies,'bool')
         self.galid = self.table['AGCnr']
+        #self.galid = ['AGC'+str{i} for i in self.galid] # prepend 'AGC' to the AGCnr
         self.NEDname = None #self.table['NEDname']                
         self.gredshift = self.defcat.cat['vopt']/3.e5
         self.gzdist = self.defcat.cat['vopt']/3.e5
@@ -2014,8 +2015,12 @@ class hagui_methods():
         newfile.header.update(w[ymin:ymax,xmin:xmax].to_header())
         newfile.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
         newfile.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
-        newfile.header.set('ID',str(self.galid[self.igal]))
-        newfile.header.set('SERSTH50',float('{:.2f}'.format(self.gradius[self.igal])))
+
+        if self.uat:
+            newfile.header.set('AGC_ID',str(self.galid[self.igal]))
+        else:
+            newfile.header.set('ID',str(self.galid[self.igal]))
+        newfile.header.set('SERSTH50',float('{:.3e}'.format(self.gradius[self.igal])))
         #print('trying to add exptime now')
         # set the exposure time to 1 sec
         # for some reason, in the coadded images produced by swarp, the gain has been corrected
