@@ -199,7 +199,7 @@ def getoneratio(rimage,instrument,plotdir):
 
 def getoneratio_uat(rimage,plotdir):
     # find the corresponding Halpha image
-    f = instrument
+
     t = rimage.split('-')
     if len(t) == 8:
         instrument = t[3]
