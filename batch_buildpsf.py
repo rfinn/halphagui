@@ -36,6 +36,7 @@ parser.add_argument('--int', dest = 'int', default = False,action='store_true', 
 parser.add_argument('--bok', dest = 'bok', default = False,action='store_true', help = 'set this for BOK data')
 parser.add_argument('--hdi', dest = 'hdi', default = False,action='store_true', help = 'set this for HDI data')
 parser.add_argument('--ngc', dest = 'ngc', default = False,action='store_true', help = "set this for Becky's NGC5846 data")
+parser.add_argument('--uat', dest = 'uat', default = False,action='store_true', help = "set this for UAT Halpha groups data")
 
 args = parser.parse_args()
 
@@ -80,7 +81,7 @@ def runone(image,int=False,bok=False):
         print('##########################################')
     
 
-filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4']
+filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4','ha8','ha12','ha16']
 #saturate_level = [100,30,30]
 
 for i,f in enumerate(filters):
@@ -92,6 +93,8 @@ for i,f in enumerate(filters):
         flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
     elif args.ngc:
         flist1 = glob.glob(coadd_image_directory+'nNGC*'+f+'.fits')
+    elif args.uat:
+        flist1 = glob.glob(coadd_image_directory+'UAT*'+f+'.fits')
     else:
         flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'*coadd.fits')
     print(i,f,len(flist1))
