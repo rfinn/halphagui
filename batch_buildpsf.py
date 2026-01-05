@@ -104,18 +104,21 @@ for i,f in enumerate(filters):
     #flist1 = flistp20+flistp26
     flist1.sort()
     #print(flist1[0:3])
-    #for rimage in rimages: # loop through list
-    image_pool = mp.Pool(mp.cpu_count())
-    myresults = [image_pool.apply_async(runone,args=(im,args.int,args.bok),callback=collect_results) for im in flist1]
-    
-    image_pool.close()
-    image_pool.join()
-    image_results = [r.get() for r in myresults]
 
-    '''
+    
+    #for rimage in rimages: # loop through list
+    #image_pool = mp.Pool(mp.cpu_count())
+    #myresults = [image_pool.apply_async(runone,args=(im,args.int,args.bok),callback=collect_results) for im in flist1]
+    
+    #image_pool.close()
+    #image_pool.join()
+    #image_results = [r.get() for r in myresults]
+
+    # going back to serial because it is failing on some when using mp but not when running individually
     for fimage in flist1: # loop through list
 
-        start_time = time.perf_counter()
+        runone(fimage, int=args.int,bok=args.bok)
+        #start_time = time.perf_counter()
         # adding saturation limit for normalized images
         # I estimated this from the r-band image for p001
         # this is in counts/sec
@@ -123,8 +126,8 @@ for i,f in enumerate(filters):
             # check if psf image exists
 
         # clock time to run buildpsf
-        end_time = time.perf_counter()
-        print('\t total time = ',end_time - start_time)
+        #end_time = time.perf_counter()
+        #print('\t total time = ',end_time - start_time)
 
         # just running on one directory for testing purposes
         #break
