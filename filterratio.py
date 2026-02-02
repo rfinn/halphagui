@@ -24,7 +24,11 @@ import argparse
 import numpy as np
 from astropy.stats.sigma_clipping import sigma_clip
 
+catdir = 'SEcats_filterratio'
+if not os.path.exists(catdir):
+    os.mkdir(catdir)
 
+    
 def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagui/astromatic'):
     # get magnitude zeropoint for image 1 and image 2
     header1 = fits.getheader(image1)
@@ -54,24 +58,26 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
     froot2 = os.path.splitext(base)[0]
     
     # check if output catalogs exist - if they do, don't rerun SE
-    secatalog1 = froot1+'.cat'
-    secatalog2 = froot2+'.cat'
+    secatalog1 = f"{catdir}/{froot1}.cat"
+    secatalog2 = f"{catdir}/{froot2}.cat"
     #print(secatalog1,secatalog2)
     if os.path.exists(secatalog1) and os.path.exists(secatalog2):
         print("FOUND SE CATALOGS - NOT RERUNNING")
     else:
         print('RUNNING SOURCE EXTRACTOR')
-
+        #s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {os.path.join(catdir,f'{froot2}.cat}'"
         if zp1flag: # why do I need to run image 1 in two image mode???
-            s ='sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1)
-            print(s)
-            os.system('sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1))
+            #s ='sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1)
+            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"            
         else:
-            os.system('sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat')
+            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat "            
+            
         if zp2flag:
-            os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat -MAG_ZEROPOINT '+str(ZP2))
+            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot2}.cat -MAG_ZEROPOINT {ZP2}"
+            
         else:
-            os.system('sex ' + image1+','+image2 + ' -c default.sex.HDI -CATALOG_NAME ' + froot2 + '.cat')
+            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot2}.cat "
+        os.system(s)
     #print('in run_sextractor, returning for ZP and flags: ',ZP1, zp1flag, ZP2, zp2flag)
     return ZP1, zp1flag, ZP2, zp2flag
 
@@ -81,18 +87,18 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     base = os.path.basename(image1)
     froot1 = os.path.splitext(base)[0]
     #cat1 = fits.getdata(froot1+'.cat')
-    cat1name = froot1+'.cat'
+    cat1name = os.path.join(catdir,froot1+'.cat')
     #print(froot1+'.cat')    
     # updating for draco - not sure what else this will break
     if not os.path.exists(cat1name):
-        cat1name = image1.replace('.fits','.cat')
+        cat1name = os.path.join(catdir,image1.replace('.fits','.cat'))
     cat1 = fits.getdata(cat1name,2)
 
     base = os.path.basename(image2)
     froot2 = os.path.splitext(base)[0]
-    cat2name = froot2+'.cat'
+    cat2name = os.path.join(catdir,froot2+'.cat')
     if not os.path.exists(cat2name):
-        cat2name = image1.replace('.fits','.cat')
+        cat2name = os.path.join(catdir,image1.replace('.fits','.cat'))
     
     try:
         cat2 = fits.getdata(cat2name,2)

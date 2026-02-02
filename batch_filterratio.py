@@ -197,6 +197,60 @@ def getoneratio(rimage,instrument,plotdir):
     end_time = time.perf_counter()
     print('\t total time = ',end_time - start_time)
 
+def getoneratio_vfs(rimage,plotdir):
+    # find the corresponding Halpha image
+    rheader = fits.getheader(rimage)
+    himage = rheader['HAIMAGE']
+
+    print()
+    print('##########################################')        
+    print('GETTING FILTER RATIO FOR: ',rimage,himage)
+    print('##########################################')
+
+    start_time = time.perf_counter()
+
+    # TODO - we should use the himage as a reference b/c it's lower snr
+    # we don't want extra noise
+    #ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage)
+    # this line might do the job, but should check to make sure I'm not missing something
+    #ZP2,zp2flag,ZP1,zp1flag = runse.run_sextractor(himage, rimage)
+    ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage)
+    
+    if zp1flag and zp2flag:
+        #print("got ZP ratio")
+        zpargs = (ZP1,ZP2)
+    else:
+        zpargs = None
+    t = runse.make_plot(rimage, himage, return_flag = True, plotdir = plotdir,zps = zpargs)
+    if t == -1:
+        print("no CS images make for ",rimage,himage)
+        return
+
+    if len(t) == 2:
+        ave, std = t
+        fzpratio = None
+    elif len(t) == 3:
+        ave, std, fzpratio = t
+    #print(ave,std)
+
+    subtract_images(rimage,himage,ave)
+
+    if fzpratio is not None:
+        subtract_images(rimage,himage,fzpratio,zpflag=True)
+
+    # add ratio to r-band image headers
+    r,header = fits.getdata(rimage,header=True)
+    header.set('FLTRATIO',ave)
+    header.set('FLTR_ERR',std)
+    #header.set('HAIMAGE',os.path.basename(himage))
+    if fzpratio is not None:
+        header.set('FRATIOZP',fzpratio)
+        
+    fits.writeto(rimage,r,header=header,overwrite=True)        
+    # clock time to get filter ratio
+    end_time = time.perf_counter()
+    print('\t total time = ',end_time - start_time)
+
 def getoneratio_uat(rimage,plotdir):
     # find the corresponding Halpha image
 
@@ -271,7 +325,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description ='Run filterratio.py for all images in the specified directory')
     parser.add_argument('--plotdir',dest = 'plotdir', default ='plots-filterratio', help = 'directory for to store the plots in')
     parser.add_argument('--prefix', dest = 'prefix', default = 'VF-',help = "prefix for coadds.  the default is VF-")
-    parser.add_argument('--uat', dest = 'uat', default = False, action='store_true',help = "set this for running with UAT data.")    
+    parser.add_argument('--uat', dest = 'uat', default = False, action='store_true',help = "set this for running with UAT data.")
+    #parser.add_argument('--vfs', dest = 'uat', default = False, action='store_true',help = "set this for running with UAT data.")        
     parser.add_argument('--oneimage',dest = 'oneimage',default=None, help='give full path to the r-band image name to run on just one image')    
     args = parser.parse_args()
 
@@ -312,19 +367,8 @@ if __name__ == '__main__':
             getoneratio_uat(args.oneimage,plotdir)
             
         else:
-            inames = ["INT","BOK","HDI","MOS"]            
-            # make sure that the image exists
-            rfiles = [args.oneimage]
-
-            if 'HDI' in args.oneimage:
-                f = 'HDI'
-            elif 'INT' in args.oneimage:
-                f = 'INT'
-            elif 'BOK' in args.oneimage:
-                f = 'BOK'
-            elif 'MOS' in args.oneimage:
-                f = 'MOS'
-            getoneratio(args.oneimage,f,plotdir)
+ 
+            getoneratio_vfs(args.oneimage,plotdir)
 
     else:
         for i,f in enumerate(inames):
