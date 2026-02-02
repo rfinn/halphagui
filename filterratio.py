@@ -85,7 +85,7 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
 def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     from matplotlib import pyplot as plt
     import matplotlib
-    matplotlib.use('TkAgg') # or 'Qt5Agg', 'GTKAgg', etc
+    matplotlib.use('Agg') # or 'Qt5Agg', 'GTKAgg', etc
     from scipy.stats import scoreatpercentile
     base = os.path.basename(image1)
     froot1 = os.path.splitext(base)[0]
