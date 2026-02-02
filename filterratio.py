@@ -33,43 +33,10 @@ if not os.path.exists(catdir):
     os.mkdir(catdir)
 
 
-def fitline_sigma_clipping(x, y, yerr=None, nsigma=3,niter=3):
-    """ 
-    fit a line with slope fixed at 1  
 
-    PARAMS:
-    * x
-    * y
-    * yerr OPTIONAL
-
-    RETURNS:
-    * fit function
-    * mask = with rejected values=True
-    * uncertainty = np array with uncertainty in slope
-
-    """
-    # 2. Initialize the polynomial model and fitter
-    poly_init = models.Linear1D(fixed={'slope': True},slope=1) # Initialize a 2nd degree polynomial model
-
-    fitter = fitting.LinearLSQFitter() # Standard least squares fitter
-    
-    # 3. Initialize the outlier removal fitter
-    # This wraps the standard fitter with sigma clipping logic
-    or_fit = fitting.FittingWithOutlierRemoval(
-        fitter,
-        sigma_clip,
-        niter=niter,        # Number of iterations for sigma clipping
-        sigma=nsigma       # Number of standard deviations to clip beyond
-    )
-    
-    # 4. Fit the data
-    # The fit returns the fitted model and a mask indicating clipped points
-    if yerr is not None:
-        fitted_poly, mask = or_fit(poly_init, x, y, weights=1/yerr)
-    else:
-        fitted_poly, mask = or_fit(poly_init, x, y)
-    
-    return fitted_poly, mask, or_fit.fitter.fit_info['singular_values']
+###############################################
+### FUNCTIONS
+###############################################
 
 def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagui/astromatic'):
     # get magnitude zeropoint for image 1 and image 2
@@ -181,7 +148,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     
     xline = np.linspace(0,xmax,100)
     plt.plot(xline,np.polyval(c[0],xline),ls='--')
-
+    plt.title("med ratio from np.polyfit (no clipping)")
 
     if zps is not None:
         print("adding zp line to filter ratio plot!")
@@ -224,6 +191,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     std = np.ma.std(clipped_data)
     plt.axhline(y=ave,ls='--',label='SE flux ratios')
     plt.ylim(-0.5*ave,3*ave)
+    plt.title("med ratio with sigma clipping")
     #print('%.4f (%.4f)'%(ave,std))
 
     ##
