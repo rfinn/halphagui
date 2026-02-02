@@ -148,7 +148,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     
     xline = np.linspace(0,xmax,100)
     plt.plot(xline,np.polyval(c[0],xline),ls='--')
-    plt.title("med ratio from np.polyfit (no clipping)")
+    #plt.title("med ratio from np.polyfit (no clipping)")
 
     if zps is not None:
         print("adding zp line to filter ratio plot!")
@@ -159,7 +159,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
         fratiozp = 10**(dm/2.5) # f2/f1
         #print('fratiozp = ',fratiozp)
         plt.plot(xline,fratiozp*xline,ls='--',c='r')
-        plt.text(0.05,.8,'$ZP\ fratio = %.4f$'%(fratiozp),transform=plt.gca().transAxes,fontsize=8)
+        plt.text(0.05,.8,'$ZP\ fratio = %.4f \ np.polyfit$'%(fratiozp),transform=plt.gca().transAxes,fontsize=8)
     
     print()
     #plt.xlim(0,xmax)
@@ -189,7 +189,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     ave = np.ma.median(clipped_data)
     # use the MAD instead
     std = np.ma.std(clipped_data)
-    plt.axhline(y=ave,ls='--',label='SE flux ratios')
+    plt.axhline(y=ave,ls='--',label='SE flux ratios',lw=3)
     plt.ylim(-0.5*ave,3*ave)
     plt.title("med ratio with sigma clipping")
     #print('%.4f (%.4f)'%(ave,std))
@@ -198,7 +198,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     # Add line for ratio of zps 
     ##
     if zps is not None:
-        plt.axhline(y = fratiozp,ls='--',c='r',label='ZP ratios')
+        plt.axhline(y = fratiozp,ls=':',c='r',label='ZP ratios')
         plt.text(0.05,.8,'$ZP\ fratio = %.4f$'%(fratiozp),transform=plt.gca().transAxes,fontsize=8)
     plt.ylabel('Flux(Halpha)/Flux(R)')
     plt.xlabel('Flux(Halpha) (ADU)')
