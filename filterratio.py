@@ -158,7 +158,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
         dm = ZP2-ZP1
         fratiozp = 10**(dm/2.5) # f2/f1
         #print('fratiozp = ',fratiozp)
-        plt.plot(xline,fratiozp*xline,ls='--',c='r')
+        plt.plot(xline,fratiozp*xline,ls=':',c='r')
         plt.text(0.05,.8,'$ZP\ fratio = %.4f \ np.polyfit$'%(fratiozp),transform=plt.gca().transAxes,fontsize=8)
     
     print()
@@ -189,7 +189,7 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     ave = np.ma.median(clipped_data)
     # use the MAD instead
     std = np.ma.std(clipped_data)
-    plt.axhline(y=ave,ls='--',label='SE flux ratios',lw=3)
+    plt.axhline(y=ave,ls='--',label='SE flux ratios',lw=2)
     plt.ylim(-0.5*ave,3*ave)
     plt.title("med ratio with sigma clipping")
     #print('%.4f (%.4f)'%(ave,std))
