@@ -90,14 +90,20 @@ if __name__ == '__main__':
         # get list of current directory
         # this will grab the coadds but not the weight images
         if args.bok:
-            flist1 = glob.glob(coadd_image_directory+'VF-*BOK*-'+f+'.fits')
+            print("running bok")
+            flist1 = glob.glob(coadd_image_directory+'VF-*BOK*-'+f+'.fits') 
+           
         elif args.int or args.hdi:
+            print("running int/hdi")                       
             flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
-        elif args.ngc:
+        elif args.ngc: 
+            print("running ngc")                      
             flist1 = glob.glob(coadd_image_directory+'nNGC*'+f+'.fits')
-        elif args.uat:
+        elif args.uat: 
+            print("running uat")           
             flist1 = glob.glob(coadd_image_directory+'UAT*'+f+'.fits')
         else:
+            print("running default search")
             searchstring = coadd_image_directory+'VF-*'+f+'.fits'
             print('looking for files: ',searchstring)
             flist1 = glob.glob(searchstring)
