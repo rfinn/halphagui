@@ -113,7 +113,11 @@ if __name__ == '__main__':
         #flistp20 = glob.glob(coadd_image_directory+'VF-*p017*-'+f+'.fits')
         #flistp26 = glob.glob(coadd_image_directory+'VF-*p072*-'+f+'.fits')
         #flist1 = flistp20+flistp26
+
+        # checking commit
         flist1.sort()
+
+        
         #print(flist1[0:3])
 
 
