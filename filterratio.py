@@ -68,16 +68,17 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
         #s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {os.path.join(catdir,f'{froot2}.cat}'"
         if zp1flag: # why do I need to run image 1 in two image mode???
             #s ='sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1)
-            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"            
+            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"
+            os.system(s)
         else:
             s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat "            
-            
+            os.system(s)
         if zp2flag:
             s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot2}.cat -MAG_ZEROPOINT {ZP2}"
-            
+            os.system(s)
         else:
             s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot2}.cat "
-        os.system(s)
+            os.system(s)
     #print('in run_sextractor, returning for ZP and flags: ',ZP1, zp1flag, ZP2, zp2flag)
     return ZP1, zp1flag, ZP2, zp2flag
 
