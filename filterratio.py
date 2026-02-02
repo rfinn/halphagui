@@ -24,11 +24,53 @@ import argparse
 import numpy as np
 from astropy.stats.sigma_clipping import sigma_clip
 
+from astropy.stats import sigma_clip
+from astropy.modeling import models, fitting
+
+
 catdir = 'SEcats_filterratio'
 if not os.path.exists(catdir):
     os.mkdir(catdir)
 
+
+def fitline_sigma_clipping(x, y, yerr=None, nsigma=3,niter=3):
+    """ 
+    fit a line with slope fixed at 1  
+
+    PARAMS:
+    * x
+    * y
+    * yerr OPTIONAL
+
+    RETURNS:
+    * fit function
+    * mask = with rejected values=True
+    * uncertainty = np array with uncertainty in slope
+
+    """
+    # 2. Initialize the polynomial model and fitter
+    poly_init = models.Linear1D(fixed={'slope': True},slope=1) # Initialize a 2nd degree polynomial model
+
+    fitter = fitting.LinearLSQFitter() # Standard least squares fitter
     
+    # 3. Initialize the outlier removal fitter
+    # This wraps the standard fitter with sigma clipping logic
+    or_fit = fitting.FittingWithOutlierRemoval(
+        fitter,
+        sigma_clip,
+        niter=niter,        # Number of iterations for sigma clipping
+        sigma=nsigma       # Number of standard deviations to clip beyond
+    )
+    
+    # 4. Fit the data
+    # The fit returns the fitted model and a mask indicating clipped points
+    if yerr is not None:
+        fitted_poly, mask = or_fit(poly_init, x, y, weights=1/yerr)
+    else:
+        fitted_poly, mask = or_fit(poly_init, x, y)
+    
+    return fitted_poly, mask, or_fit.fitter.fit_info['singular_values']
+
 def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagui/astromatic'):
     # get magnitude zeropoint for image 1 and image 2
     header1 = fits.getheader(image1)
@@ -68,10 +110,10 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
         #s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {os.path.join(catdir,f'{froot2}.cat}'"
         if zp1flag: # why do I need to run image 1 in two image mode???
             #s ='sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1)
-            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"
+            s = f"sex {image1},{image1} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"
             os.system(s)
         else:
-            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat "            
+            s = f"sex {image1},{image1} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat "            
             os.system(s)
         if zp2flag:
             s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot2}.cat -MAG_ZEROPOINT {ZP2}"
@@ -124,12 +166,15 @@ def make_plot(image1, image2, return_flag = False, plotdir = './', zps=None):
     ymax = scoreatpercentile(cat2.FLUX_AUTO,95)
 
     keepflag = (cat1.FLUX_AUTO < xmax) & (cat1.FLUX_AUTO > 0) & (cat2.FLUX_AUTO < ymax) & (cat2.FLUX_AUTO > 0)
-
-    # TODO - need to use SE flags to avoid things that are contaminated by nearby neighbors
+    
+    # TODONE - need to use SE flags to avoid things that are contaminated by nearby neighbors
     # also, use bright unsaturated sources to fit the filter ratio
     # also, compare measured ratio to diff in ZP
+    keepflag = keepflag & (cat1.FLAGS < 1) & (cat2.FLAGS < 1)
     
     plt.plot(cat1.FLUX_AUTO[keepflag],cat2.FLUX_AUTO[keepflag],'k.',alpha=.4)
+
+    # TODO - implement sigma clipping in fit, like in getzp.py
     c = np.polyfit(cat1.FLUX_AUTO[keepflag],cat2.FLUX_AUTO[keepflag],1,cov=True)
     print("results from polyfit = ",c)
 
