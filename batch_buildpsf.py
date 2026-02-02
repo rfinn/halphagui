@@ -96,7 +96,7 @@ for i,f in enumerate(filters):
     elif args.uat:
         flist1 = glob.glob(coadd_image_directory+'UAT*'+f+'.fits')
     else:
-        flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'*coadd.fits')
+        flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'*.fits')
     print(i,f,len(flist1))
     # changing this to just do pointing 022 and 026
     #flistp20 = glob.glob(coadd_image_directory+'VF-*p017*-'+f+'.fits')
