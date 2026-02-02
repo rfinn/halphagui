@@ -30,17 +30,6 @@ overwrite = False
 
 import argparse
 
-parser = argparse.ArgumentParser(description ='Run buildpsf.py for all images in the specified directory')
-parser.add_argument('--coaddir',dest = 'coaddir', default ='/home/rfinn/data/reduced/virgo-coadds-feb2019-int/', help = 'directory for coadds. Default is /home/rfinn/data/reduced/virgo-coadds/feb2019-int/')
-parser.add_argument('--int', dest = 'int', default = False,action='store_true', help = 'set this for INT data')
-parser.add_argument('--bok', dest = 'bok', default = False,action='store_true', help = 'set this for BOK data')
-parser.add_argument('--hdi', dest = 'hdi', default = False,action='store_true', help = 'set this for HDI data')
-parser.add_argument('--ngc', dest = 'ngc', default = False,action='store_true', help = "set this for Becky's NGC5846 data")
-parser.add_argument('--uat', dest = 'uat', default = False,action='store_true', help = "set this for UAT Halpha groups data")
-
-args = parser.parse_args()
-
-coadd_image_directory = args.coaddir
 
 image_results = []
 def collect_results(result):
@@ -79,66 +68,81 @@ def runone(image,int=False,bok=False):
         print('##########################################')
         print('WARNING: problem running buildpsf.py for ',image)
         print('##########################################')
-    
 
-filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4','ha8','ha12','ha16']
-#saturate_level = [100,30,30]
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description ='Run buildpsf.py for all images in the specified directory')
+    parser.add_argument('--coaddir',dest = 'coaddir', default ='/home/rfinn/data/reduced/virgo-coadds-feb2019-int/', help = 'directory for coadds. Default is /home/rfinn/data/reduced/virgo-coadds/feb2019-int/')
+    parser.add_argument('--int', dest = 'int', default = False,action='store_true', help = 'set this for INT data')
+    parser.add_argument('--bok', dest = 'bok', default = False,action='store_true', help = 'set this for BOK data')
+    parser.add_argument('--hdi', dest = 'hdi', default = False,action='store_true', help = 'set this for HDI data')
+    parser.add_argument('--ngc', dest = 'ngc', default = False,action='store_true', help = "set this for Becky's NGC5846 data")
+    parser.add_argument('--uat', dest = 'uat', default = False,action='store_true', help = "set this for UAT Halpha groups data")
 
-for i,f in enumerate(filters):
-    # get list of current directory
-    # this will grab the coadds but not the weight images
-    if args.bok:
-        flist1 = glob.glob(coadd_image_directory+'VF-*BOK*-'+f+'.fits')
-    elif args.int or args.hdi:
-        flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
-    elif args.ngc:
-        flist1 = glob.glob(coadd_image_directory+'nNGC*'+f+'.fits')
-    elif args.uat:
-        flist1 = glob.glob(coadd_image_directory+'UAT*'+f+'.fits')
-    else:
-        flist1 = glob.glob(coadd_image_directory+'VF-*'+f+'.fits')
-    
-    print(i,f,len(flist1))
-    # changing this to just do pointing 022 and 026
-    #flistp20 = glob.glob(coadd_image_directory+'VF-*p017*-'+f+'.fits')
-    #flistp26 = glob.glob(coadd_image_directory+'VF-*p072*-'+f+'.fits')
-    #flist1 = flistp20+flistp26
-    flist1.sort()
-    #print(flist1[0:3])
+    args = parser.parse_args()
 
-    
-    #for rimage in rimages: # loop through list
-    #image_pool = mp.Pool(mp.cpu_count())
-    #myresults = [image_pool.apply_async(runone,args=(im,args.int,args.bok),callback=collect_results) for im in flist1]
-    
-    #image_pool.close()
-    #image_pool.join()
-    #image_results = [r.get() for r in myresults]
+    coadd_image_directory = args.coaddir
 
-    # going back to serial because it is failing on some when using mp but not when running individually
-    for fimage in flist1: # loop through list
-        if 'weight.fits' in fimage:
-            continue
-        if 'INT' in fimage:
-            runone(fimage, int=True,bok=False)
-        elif 'BOK' in fimage:
-            runone(fimage, int=False,bok=True)
+
+    filters = ['r','Halpha','Ha6657','ha4','R','Ha','Ha+4nm','Ha4','ha8','ha12','ha16']
+    #saturate_level = [100,30,30]
+
+    for i,f in enumerate(filters):
+        # get list of current directory
+        # this will grab the coadds but not the weight images
+        if args.bok:
+            flist1 = glob.glob(coadd_image_directory+'VF-*BOK*-'+f+'.fits')
+        elif args.int or args.hdi:
+            flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'.fits')
+        elif args.ngc:
+            flist1 = glob.glob(coadd_image_directory+'nNGC*'+f+'.fits')
+        elif args.uat:
+            flist1 = glob.glob(coadd_image_directory+'UAT*'+f+'.fits')
         else:
-            runone(fimage, int=False,bok=False)
-        #start_time = time.perf_counter()
-        # adding saturation limit for normalized images
-        # I estimated this from the r-band image for p001
-        # this is in counts/sec
-        #if not overwrite:
-            # check if psf image exists
+            searchstring = coadd_image_directory+'VF-*'+f+'.fits'
+            print('looking for files: ',searchstring)
+            flist1 = glob.glob(searchstring)
 
-        # clock time to run buildpsf
-        #end_time = time.perf_counter()
-        #print('\t total time = ',end_time - start_time)
+        print(i,f,len(flist1))
+        # changing this to just do pointing 022 and 026
+        #flistp20 = glob.glob(coadd_image_directory+'VF-*p017*-'+f+'.fits')
+        #flistp26 = glob.glob(coadd_image_directory+'VF-*p072*-'+f+'.fits')
+        #flist1 = flistp20+flistp26
+        flist1.sort()
+        #print(flist1[0:3])
 
-        # just running on one directory for testing purposes
+
+        #for rimage in rimages: # loop through list
+        #image_pool = mp.Pool(mp.cpu_count())
+        #myresults = [image_pool.apply_async(runone,args=(im,args.int,args.bok),callback=collect_results) for im in flist1]
+
+        #image_pool.close()
+        #image_pool.join()
+        #image_results = [r.get() for r in myresults]
+
+        # going back to serial because it is failing on some when using mp but not when running individually
+        for fimage in flist1: # loop through list
+            if 'weight.fits' in fimage:
+                continue
+            if 'INT' in fimage:
+                runone(fimage, int=True,bok=False)
+            elif 'BOK' in fimage:
+                runone(fimage, int=False,bok=True)
+            else:
+                runone(fimage, int=False,bok=False)
+            #start_time = time.perf_counter()
+            # adding saturation limit for normalized images
+            # I estimated this from the r-band image for p001
+            # this is in counts/sec
+            #if not overwrite:
+                # check if psf image exists
+
+            # clock time to run buildpsf
+            #end_time = time.perf_counter()
+            #print('\t total time = ',end_time - start_time)
+
+            # just running on one directory for testing purposes
+            #break
         #break
-    #break
 
-    #'''
+        #'''
 
