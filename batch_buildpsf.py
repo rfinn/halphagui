@@ -96,7 +96,8 @@ for i,f in enumerate(filters):
     elif args.uat:
         flist1 = glob.glob(coadd_image_directory+'UAT*'+f+'.fits')
     else:
-        flist1 = glob.glob(coadd_image_directory+'VF-*-'+f+'*.fits')
+        flist1 = glob.glob(coadd_image_directory+'VF-*'+f+'.fits')
+    
     print(i,f,len(flist1))
     # changing this to just do pointing 022 and 026
     #flistp20 = glob.glob(coadd_image_directory+'VF-*p017*-'+f+'.fits')
@@ -116,8 +117,14 @@ for i,f in enumerate(filters):
 
     # going back to serial because it is failing on some when using mp but not when running individually
     for fimage in flist1: # loop through list
-
-        runone(fimage, int=args.int,bok=args.bok)
+        if 'weight.fits' in fimage:
+            continue
+        if 'INT' in fimage:
+            runone(fimage, int=True,bok=False)
+        elif 'BOK' in fimage:
+            runone(fimage, int=False,bok=True)
+        else:
+            runone(fimage, int=False,bok=False)
         #start_time = time.perf_counter()
         # adding saturation limit for normalized images
         # I estimated this from the r-band image for p001
