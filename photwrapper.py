@@ -809,7 +809,7 @@ class ellipse():
                 sky_noise_erg2 = self.sky_noise2*self.uconversion2/self.pixel_scale**2
                 self.header2.set('PHOT_SKY','{:.3e}'.format(self.sky2),'sky in ADU')
                 self.header2.set('SKYNOISE','{:.3e}'.format(self.sky_noise2),'sky noise in ADU')        
-                self.header2.set('SKYERR','{:.ee}'.format(sky_noise_erg2),'sky noise in erg/s/cm^2/arcsec^2')
+                self.header2.set('SKYERR','{:.3e}'.format(sky_noise_erg2),'sky noise in erg/s/cm^2/arcsec^2')
                 fits.writeto(self.image2_name,self.image2,header=self.header2,overwrite=True)
             
             except AttributeError:
