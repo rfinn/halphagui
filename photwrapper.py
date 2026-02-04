@@ -14,6 +14,8 @@ https://photutils.readthedocs.io/en/stable/segmentation.html
 - getting source properties (including total flux, Gini coefficient!!!)
 - defining elliptical apertures for sources
 
+NOTES:
+
 '''
 try:
     from photutils import detect_threshold, detect_sources#, make_source_mask
