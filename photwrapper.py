@@ -1715,7 +1715,7 @@ class ellipse():
         plt.show()
     def plot_profiles(self):
         ''' enclosed flux and surface brightness profiles, save figure '''
-        plt.close("all")        
+        #plt.close("all")        
         plt.figure(figsize=(10,4))
         plt.subplots_adjust(wspace=.3)
         plt.subplot(2,2,1)
