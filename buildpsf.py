@@ -106,9 +106,13 @@ class psf_parent_image():
     def run_all(self):
         self.runse()
         self.read_se_table()
-        self.find_stars()
-        self.extract_stars()
+        print("running find_stars...")
+        self.find_stars() 
+        print("running extract_stars...")       
+        self.extract_stars() 
+        print("running show_stars...")
         self.show_stars()
+        print("running build_psf...")       
         self.build_psf()
         self.show_psf()
         self.measure_fwhm()
@@ -203,9 +207,12 @@ class psf_parent_image():
         # check to make sure stars don't have zeros
         # Virgo 2017 pointing-4_R.coadd.fits is giving me trouble b/c a lot of stars have zeros
         keepflag = np.ones(len(self.stars),'bool')
+        
         for i,s in enumerate(self.stars):
             if len(np.where(s.data == 0)[0]) > 1:
                 keepflag[i] = False
+
+        print(f"number of stars to keep after ==0 cut = {np.sum(keepflag)}/{len(keepflag)}")
         self.keepflag2 = keepflag
         self.stars = extract_stars(nddata, self.stars_tbl[keepflag], size=self.size)  
         #self.stars = self.stars[keepflag]
