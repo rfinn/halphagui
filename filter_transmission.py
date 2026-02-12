@@ -5,6 +5,7 @@ import numpy as np
 from scipy import interpolate
 from matplotlib import pyplot as plt
 from astropy.io import ascii
+from astropy.table import Table
 
 wave_halpha = 6563. # angstrom
 
