@@ -216,6 +216,7 @@ class psf_parent_image():
         nrows = int(np.ceil(np.sqrt(len(self.stars))))
         ncols = int(np.ceil(np.sqrt(len(self.stars))))
         fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10), squeeze=True)
+        print(f"\nMaking figure with {nrows} rows and {ncols} cols with {len(self.stars)} stars...\n")
         ax = ax.ravel()
         for i in range(self.nstars):
             norm = simple_norm(self.stars[i], 'log', percent=99.)
