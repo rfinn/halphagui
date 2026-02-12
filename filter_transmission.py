@@ -54,7 +54,7 @@ class filter_trace():
     def read_filter(self):
         """ updating to use the new filter curves """
 
-        if hafilter == 'sienaha':
+        if self.hafilter == 'sienaha':
             # wavelength in nm, transmission in percent
             filterfile = self.filterpath+'/chroma-halpha-transmission-ascii.txt'
             wavescale=10
