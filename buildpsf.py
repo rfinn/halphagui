@@ -204,7 +204,9 @@ class psf_parent_image():
 
         # working on #118
         # checking to see if more stars are retained if I don't subtract median
-        #self.data -= median_val
+        # RESULT: subtracting median didn't impact result
+        
+        self.data -= median_val
         nddata = NDData(data=self.data)  
         self.stars = extract_stars(nddata, self.stars_tbl, size=self.size)  
         # check to make sure stars don't have zeros
@@ -212,7 +214,9 @@ class psf_parent_image():
         keepflag = np.ones(len(self.stars),'bool')
         
         for i,s in enumerate(self.stars):
-            if len(np.where(s.data == 0)[0]) > 1:
+            # some pixels have values == 0 but they don't appear to be bad?  or are they masked?
+            # increasing cut from 1 to 10 to compensate for the case where maybe 1-2 pixels are bad
+            if len(np.where(s.data == 0)[0]) > 10:
                 keepflag[i] = False
 
         print(f"number of stars to keep after ==0 cut = {np.sum(keepflag)}/{len(keepflag)}")
