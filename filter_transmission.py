@@ -147,6 +147,9 @@ class filter_trace():
 
 
         plt.hist(wave, bins=mybins)
+
+        # adding grid lines so we can better see how transmission varies with wavelength
+        plt.grid(visible=True)
         plt.xlim((self.minz_trans10+1)*wave_halpha-50,(self.maxz_trans10+1)*wave_halpha+50)
         plt.xlabel('Wavelength (Angstrom)')
         plt.ylabel('Transmission %/10')
