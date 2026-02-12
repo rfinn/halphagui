@@ -44,7 +44,7 @@ class filter_trace():
     def get_halpha_filtername(self):
         instrument_to_prefix = {'INT':'WFC','BOK':'90prime','HDI':'HDI','MOS':'MOS'}
 
-        filter_to_suffix = {'ha4':'Ha+4nm','ha8':'Ha+8nm','ha12':'Ha+12nm','ha16':'Ha+16nm','ha':'Ha',\
+        filter_to_suffix = {'ha4':'Ha+4nm','ha8':'Ha+8nm','ha12':'Ha+12nm','ha16':'Ha+16nm','ha':'Ha-197',\
                                   'Ha+4nm':'Ha+4nm','Ha4nm':'Ha+4nm',\
                                   'Halpha':'Ha-197','Ha6657':'Ha-227'}
         print("testing, self.hafilter = ",self.hafilter, self.instrument)

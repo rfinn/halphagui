@@ -204,7 +204,7 @@ class psf_parent_image():
 
         # working on #118
         # checking to see if more stars are retained if I don't subtract median
-        self.data -= median_val
+        #self.data -= median_val
         nddata = NDData(data=self.data)  
         self.stars = extract_stars(nddata, self.stars_tbl, size=self.size)  
         # check to make sure stars don't have zeros
