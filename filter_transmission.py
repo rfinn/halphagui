@@ -47,8 +47,8 @@ class filter_trace():
         filter_to_suffix = {'ha4':'Ha+4nm','ha8':'Ha+8nm','ha12':'Ha+12nm','ha16':'Ha+16nm','ha':'Ha',\
                                   'Ha+4nm':'Ha+4nm','Ha4nm':'Ha+4nm',\
                                   'Halpha':'Ha-197','Ha6657':'Ha-227'}
-
-        self.halpha_filtername = f"{instrument_to_prefix[self.instrument]}-{filter_to_suffix[self.hafilter]}.fits"
+        print("testing, self.hafilter = ",self.hafilter, self.instrument)
+        self.halpha_filtername = f"{self.filterpath}/{instrument_to_prefix[self.instrument]}-{filter_to_suffix[self.hafilter]}.fits"
                                 
                                   
 
