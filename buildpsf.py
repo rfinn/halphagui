@@ -200,7 +200,10 @@ class psf_parent_image():
 
     def extract_stars(self):
         # just in case sky was not properly subtracted
-        mean_val, median_val, std_val = sigma_clipped_stats(self.data, sigma=2.)  
+        mean_val, median_val, std_val = sigma_clipped_stats(self.data, sigma=2.)
+
+        # working on #118
+        # checking to see if more stars are retained if I don't subtract median
         self.data -= median_val
         nddata = NDData(data=self.data)  
         self.stars = extract_stars(nddata, self.stars_tbl, size=self.size)  
