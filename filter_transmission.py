@@ -19,7 +19,7 @@ def read_filter(hafilter,filterpath=None):
     """
     pass
 class filter_trace():
-    def __init__(self,hafilter,filterpath=None,mintrans=10.):
+    def __init__(self,hafilter,filterpath=None,instrument=None,mintrans=10.):
         '''
         hafilter can be 4, 8, 12, 16, inthalpha, or intha6657
 
@@ -34,7 +34,45 @@ class filter_trace():
             self.filterpath = os.getenv('HOME')+'/github/halphagui/filter_traces/'
         else:
             self.filterpath = filterpath
+        self.instrument = instrument
 
+        self.read_filter()
+        self.get_filter_properties()
+
+        
+    def get_halpha_filtername(self):
+        instrument_to_prefix = {'INT':'WFC','BOK':'90prime','HDI':'HDI','MOS':'MOS'}
+
+        filter_to_suffix = {'ha4':'Ha+4nm','ha8':'Ha+8nm','ha12':'Ha+12nm','ha16':'Ha+16nm','ha':'Ha',\
+                                  'Ha+4nm':'Ha+4nm','Ha4nm':'Ha+4nm',\
+                                  'Halpha':'Ha-197','Ha6657':'Ha-227'}
+
+        self.halpha_filtername = f"{instrument_to_prefix[self.instrument]}-{filter_to_suffix[self.hafilter]}.fits"
+                                
+                                  
+
+    def read_filter(self):
+        """ updating to use the new filter curves """
+
+        if hafilter == 'sienaha':
+            # wavelength in nm, transmission in percent
+            filterfile = self.filterpath+'/chroma-halpha-transmission-ascii.txt'
+            wavescale=10
+            
+            tab = ascii.read(filterfile)
+            self.wave = tab['col1']*wavescale # wavelength in angstrom
+            self.trans = tab['col2'] # transmission percent
+            self.trans = 100*self.trans
+            
+
+        else:
+            self.get_halpha_filtername()
+            ftab = Table.read(self.halpha_filtername)
+            self.wave = ftab['wavelength']
+            self.trans = ftab['transmission']
+        
+            
+    def read_filter_old(self):
         wavescale = 1
         if hafilter == 'inthalpha':
             filterfile = self.filterpath+'/wfc-int-197-halpha.txt'
@@ -57,6 +95,8 @@ class filter_trace():
         self.trans = tab['col2'] # transmission percent
         if hafilter == 'sienaha':
             self.trans = 100*self.trans
+            
+    def get_filter_properties(self):
         self.maxtrans = np.max(self.trans)
         # get wavelengths where transmission crosses 10 percent level
         ids = np.where(self.trans > 10.)
