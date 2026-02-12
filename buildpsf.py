@@ -181,7 +181,7 @@ class psf_parent_image():
         x = x[star_flag]
         y = y[star_flag]
         sorted_indices = fm.argsort()
-        print('number of potential stars', sum(flag1), sum(flag2))
+        print('number of potential stars', sum(flag1), sum(flag2), np.sum(star_flag))
         # select stars within +/- nstar/2 from a threshold
         # where threshold is the percentile ranking according to peak flux
         threshold = .65
