@@ -184,7 +184,7 @@ class psf_parent_image():
         print('number of potential stars', sum(flag1), sum(flag2), np.sum(star_flag))
         # select stars within +/- nstar/2 from a threshold
         # where threshold is the percentile ranking according to peak flux
-        threshold = .25
+        threshold = .65
         lower = int(threshold*len(sorted_indices)) - int((self.nstars)/2)
         upper = int(threshold*len(sorted_indices)) + int((self.nstars)/2)
         #lower = int(.25*len(sorted_indices)) 
@@ -192,7 +192,7 @@ class psf_parent_image():
         print('number of psf stars = ',upper-lower+1)
         self.xstar = x[lower:upper]
         self.ystar = y[lower:upper]
-        print(self.xstar.shape)
+        #print(self.xstar.shape)
 
         self.stars_tbl = Table()
         self.stars_tbl['x'] = self.xstar
@@ -216,7 +216,8 @@ class psf_parent_image():
         for i,s in enumerate(self.stars):
             # some pixels have values == 0 but they don't appear to be bad?  or are they masked?
             # increasing cut from 1 to 10 to compensate for the case where maybe 1-2 pixels are bad
-            if len(np.where(s.data == 0)[0]) > 10:
+            # still loosing a lot of stars so bumping up cut to 100
+            if len(np.where(s.data == 0)[0]) > 100:
                 keepflag[i] = False
 
         print(f"number of stars to keep after ==0 cut = {np.sum(keepflag)}/{len(keepflag)}")
