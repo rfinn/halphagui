@@ -72,6 +72,8 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
     #print(secatalog1,secatalog2)
     if 'BOK' in image1:
         defaultcat = "default.sex.BOK"
+    elif 'INT' in image1:
+        defaultcat = "default.sex.INT"
     else:
         defaultcat = "default.sex.HDI"
     if os.path.exists(secatalog1) and os.path.exists(secatalog2):
