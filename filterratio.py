@@ -70,6 +70,10 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
     secatalog1 = f"{catdir}/{froot1}.cat"
     secatalog2 = f"{catdir}/{froot2}.cat"
     #print(secatalog1,secatalog2)
+    if 'BOK' in image1:
+        defaultcat = "default.sex.BOK"
+    else:
+        defaultcat = "default.sex.HDI"
     if os.path.exists(secatalog1) and os.path.exists(secatalog2):
         print("FOUND SE CATALOGS - NOT RERUNNING")
     else:
@@ -77,16 +81,16 @@ def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagu
         #s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {os.path.join(catdir,f'{froot2}.cat}'"
         if zp1flag: # why do I need to run image 1 in two image mode???
             #s ='sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1)
-            s = f"sex {image1},{image1} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"
+            s = f"sex {image1},{image1} -c {defaultcat} -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"
             os.system(s)
         else:
-            s = f"sex {image1},{image1} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot1}.cat "            
+            s = f"sex {image1},{image1} -c {defaultcat} -CATALOG_NAME {catdir}/{froot1}.cat "            
             os.system(s)
         if zp2flag:
-            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot2}.cat -MAG_ZEROPOINT {ZP2}"
+            s = f"sex {image1},{image2} -c {defaultcat} -CATALOG_NAME {catdir}/{froot2}.cat -MAG_ZEROPOINT {ZP2}"
             os.system(s)
         else:
-            s = f"sex {image1},{image2} -c default.sex.HDI -CATALOG_NAME {catdir}/{froot2}.cat "
+            s = f"sex {image1},{image2} -c {defaultcat} -CATALOG_NAME {catdir}/{froot2}.cat "
             os.system(s)
     #print('in run_sextractor, returning for ZP and flags: ',ZP1, zp1flag, ZP2, zp2flag)
     return ZP1, zp1flag, ZP2, zp2flag
