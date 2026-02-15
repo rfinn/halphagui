@@ -213,12 +213,12 @@ class psf_parent_image():
         # Virgo 2017 pointing-4_R.coadd.fits is giving me trouble b/c a lot of stars have zeros
         keepflag = np.ones(len(self.stars),'bool')
         
-        for i,s in enumerate(self.stars):
-            # some pixels have values == 0 but they don't appear to be bad?  or are they masked?
-            # increasing cut from 1 to 10 to compensate for the case where maybe 1-2 pixels are bad
-            # still loosing a lot of stars so bumping up cut to 100
-            if len(np.where(s.data == 0)[0]) > 100:
-                keepflag[i] = False
+        #for i,s in enumerate(self.stars):
+        #    # some pixels have values == 0 but they don't appear to be bad?  or are they masked?
+        #    # increasing cut from 1 to 10 to compensate for the case where maybe 1-2 pixels are bad
+        #    # still loosing a lot of stars so bumping up cut to 100
+        #    if len(np.where(s.data == 0)[0]) > 100:
+        #        keepflag[i] = False
 
         print(f"number of stars to keep after ==0 cut = {np.sum(keepflag)}/{len(keepflag)}")
         self.keepflag2 = keepflag
@@ -333,8 +333,9 @@ if __name__ == '__main__':
     
     if args.int:
         p = psf_parent_image(image=args.image, size=39, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.INT')
-    elif args.bok:
-        p = psf_parent_image(image=args.image, size=39, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.BOK')
+    #elif args.bok:
+    #    p = psf_parent_image(image=args.image, size=39, nstars=100, oversampling=2,saturate=args.saturate,se_config='default.sex.BOK')
+    # bok config file is causing trouble for some images - but why???
     else:
         p = psf_parent_image(image=args.image, size=25, nstars=100, oversampling=2,saturate=args.saturate)
     p.runse()
