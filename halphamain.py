@@ -3222,9 +3222,17 @@ class hacontroller():
             self.agc = galaxy_catalog(self.agc_fname,agc=True)
             self.agcflag = True
             self.defcat = self.agc
+    def get_instrument(self):
+        instruments = ['INT','BOK','HDI','MOS']
+        for ii in instruments:
+            if ii in self.rcoadd_fname:
+                self.instrument = ii
+                break
     def set_hafilter(self,filterid): # model or controller? I think this is a mix...
         #print('setting ha filter to ',filterid)
 
+        self.get_instrument()
+        
         # this is in controller
         self.hafilter = filterid
         print('halpha filter = ',self.hafilter)
@@ -3232,7 +3240,7 @@ class hacontroller():
         # this part should be in the model, so this should be a method in model
         # and then call model.set_filter() which would execute the following lines
 
-        self.filter_trace = filter_trace(self.hafilter)
+        self.filter_trace = filter_trace(self.hafilter,instrument=self.instrument)
         self.zmin = self.filter_trace.minz_trans10
         self.zmax = self.filter_trace.maxz_trans10
         #self.get_zcut()
