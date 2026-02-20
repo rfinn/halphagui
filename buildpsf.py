@@ -188,7 +188,13 @@ class psf_parent_image():
         lower = int(threshold*len(sorted_indices)) - int((self.nstars)/2)
         upper = int(threshold*len(sorted_indices)) + int((self.nstars)/2)
         #lower = int(.25*len(sorted_indices)) 
-        #upper = int(.85*len(sorted_indices)) 
+        #upper = int(.85*len(sorted_indices))
+        if lower < 0: # try increasing threshold
+            threshold = .50
+            lower = int(threshold*len(sorted_indices)) - int((self.nstars)/2)
+            upper = int(threshold*len(sorted_indices)) + int((self.nstars)/2)
+            if lower < 0:
+                lower = 0
         print('number of psf stars = ',upper-lower+1)
         self.xstar = x[lower:upper]
         self.ystar = y[lower:upper]
