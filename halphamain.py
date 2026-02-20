@@ -3445,8 +3445,8 @@ class hacontroller():
         #try:
         self.mwindow = QtWidgets.QWidget()
         print()
-        #print("initiating mask window")
-        #print("\t object params = ",objparams)
+        print("initiating mask window")
+        print("\t object params = ",objparams)
         try:
             self.mui = maskwindow(self.mwindow, self.logger, image = self.cutout_name_r, haimage=self.cutout_name_ha, sepath='~/github/halphagui/astromatic/',objparams=objparams)
         
@@ -3667,7 +3667,10 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
             print()
             return
         # create mask
-        self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+        if args.uat:
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
+        else:
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
 
         if self.verbose:
             print("initiating maskwindow\n")
