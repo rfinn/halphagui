@@ -7,6 +7,70 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io.fits import Header
 import numpy as np
 
+
+try:
+    from photutils import detect_threshold, detect_sources#, make_source_mask
+except ImportError:
+    from photutils.segmentation import detect_threshold, detect_sources#, make_source_mask
+
+from astropy.io.fits import Header
+import numpy as np
+
+def subtract_median_sky(data,getstd=False,getmedian=True,subtract=True,weightimage=None):
+    ''' 
+    subtract median sky from image data 
+
+    data: 2d array to estimate median for
+    weightimage = 2d array with zero values indicating pixels to ignore
+
+
+    '''
+    # check to see if data is all zeros
+    if np.all(data == 0):
+        median = 0
+        std = 0
+        return data,median,std
+    elif np.all(np.isnan(data)): # check to see if data is all nans
+        # return NAN values for median        
+        median = np.nan
+        std = 0
+        return data,median,std
+
+    if weightimage is not None:
+        image_mask = weightimage == 0 # like for mosaic
+        data = np.ma.array(data, mask=image_mask)
+
+    try:
+        from photutils import make_source_mask
+        mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)
+    except ImportError:
+        # check to see if all values in the data is zeros
+        threshold = detect_threshold(data, nsigma=3)
+        segmentation = detect_sources(data, threshold, npixels=5)        
+        #mask = segmentation.make_source_mask(data)
+        mask = segmentation.make_source_mask(size=5) # adds a dilation factor
+
+    #mask = make_source_mask(data,nsigma=3,npixels=5,dilate_size=5)
+    masked_data = np.ma.array(data,mask=mask)
+    #clipped_array = sigma_clip(masked_data,cenfunc=np.ma.mean)
+
+    # filled masked values with nans
+    nan_filled_data = masked_data.filled(np.nan)
+    
+    mean,median,std = sigma_clipped_stats(nan_filled_data,sigma=3.0)# removing this ,cenfunc=np.ma.mean)
+    if subtract:
+        data -= median
+    if getstd:
+        return data,median,std
+    
+    elif getmedian:
+        return data,median
+    
+    else:
+        return data
+    
+
+"""
 def subtract_median_sky(data,getstd=False,getmedian=True,subtract=True):
     ''' subtract median sky from image data '''
     try:
@@ -26,10 +90,8 @@ def subtract_median_sky(data,getstd=False,getmedian=True,subtract=True):
         bkg = Background2D(data,(50, 50),filter_size=(3, 3), bkg_estimator=bkg_estimator)
         threshold = 3 * bkg.background_rms
         segmentation_image = detect_sources(data, threshold, npixels=10)
-        try:
-            mask = segmentation_image.data > 0
-        except AttributeError:
-            mask = segmentation.make_source_mask(size=5) # adds a dilation factor        
+        mask = segmentation_image.data > 0
+        mask = segmentation.make_source_mask(size=5) # adds a dilation factor        
         masked_data = np.ma.array(data,mask=mask)
     mean,median,std = sigma_clipped_stats(masked_data,sigma=3.0,cenfunc=np.ma.mean)
     if subtract:
@@ -45,7 +107,7 @@ def subtract_median_sky(data,getstd=False,getmedian=True,subtract=True):
     else:
         return data
 
-
+"""
 def get_pixel_scale(imheader):
     ''' takes in image header and returns the pixel scale in arcsec  '''
     from astropy.wcs import WCS
