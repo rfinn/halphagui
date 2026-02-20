@@ -245,11 +245,12 @@ class psf_parent_image():
         #plt.show()
         plt.savefig('plots/'+self.basename+'-allstars.png')
     def build_psf(self):
+        mysigclip = SigmaClip(sigma=3, cenfunc='median')
         self.oversampling=2
         if self.oversampling == None:
             epsf_builder = EPSFBuilder(maxiters=12, progress_bar=False, smoothing_kernel='quadratic', recentering_func = centroid_com)#,flux_residual_sigclip=SigmaClip)  
         else:
-            epsf_builder = EPSFBuilder(oversampling=self.oversampling, maxiters=20, progress_bar=False,  recentering_func = centroid_com, smoothing_kernel='quadratic',flux_residual_sigclip=SigmaClip)  
+            epsf_builder = EPSFBuilder(oversampling=self.oversampling, maxiters=20, progress_bar=False,  recentering_func = centroid_com, smoothing_kernel='quadratic',sigma_clip=mysigclip)  
         self.epsf, self.fitted_stars = epsf_builder(self.stars)
     def show_psf(self):
         norm = simple_norm(self.epsf.data, 'log', percent=99.)
