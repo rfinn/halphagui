@@ -1,15 +1,91 @@
+#!/usr/bin/env python
+"""
+catalog.py
+
+Core catalog-handling utilities for the halphagui project.
+
+This module provides functionality for:
+
+- Loading galaxy catalogs (NSA, AGC, Virgo, etc.)
+- Standardizing coordinate column names (RA/DEC)
+- Identifying galaxies within an image field of view using WCS
+- Applying redshift cuts (e.g., matching Hα filter transmission windows)
+- Writing culled catalogs to disk
+
+This module is backend-only and contains no GUI dependencies.
+
+Intended Usage
+--------------
+The galaxy_catalog class is designed to be used by:
+
+- Standalone processing scripts
+- Continuum subtraction pipelines
+- The halphagui interface
+
+Example
+-------
+>>> from halphagui.core.catalog import galaxy_catalog
+>>> cat = galaxy_catalog("nsa_catalog.fits", nsa=True)
+>>> keep = cat.galaxies_in_fov(wcs, nrow=2048, ncol=4096,
+...                            zmin=0.015, zmax=0.025)
+>>> cat.cull_catalog(keep, prefix="field1")
+
+Author
+------
+Rose Finn
+2026 Feb 20
+
+"""
+
+from astropy.table import Table
+
+
+
+from astropy.io import fits
+#from astropy.wcs import WCS
+#from astropy.nddata.utils import Cutout2D
+from astropy.coordinates import SkyCoord
+#from astropy.coordinates import ICRS, FK5
+#import astropy.units as u
 
 class galaxy_catalog():
+    """
+    A container for galaxy catalog operations.
+
+    Parameters
+    ----------
+    catalog : str
+        Path to FITS table containing galaxy catalog.
+    nsa : bool, optional
+        Set True if catalog is an NSA catalog.
+    agc : bool, optional
+        Set True if catalog is an AGC catalog.
+    virgo : bool, optional
+        Set True if catalog is a Virgo catalog.
+    sizecat : optional
+        Optional associated size catalog.
+    verbose : bool, optional
+        Enable diagnostic output.
+
+    Notes
+    -----
+    This class assumes that the catalog contains RA and DEC columns.
+    If AGC-style column names (radeg/decdeg) are present, they will be
+    renamed automatically.
+    """
+    
     agcflag: bool
     
 
-    def __init__(self,catalog,nsa=False,agc=False,virgo=False,sizecat=None):
+    def __init__(self,catalog,nsa=False,agc=False,virgo=False,sizecat=None, verbose=False):
         self.cat = Table.read(catalog)
         #self.cat = Table(self.cat)
         self.catalog_name = catalog
         self.agcflag = agc
         self.nsaflag = nsa
         self.virgoflag = virgo
+
+        self.verbose = verbose
         if self.agcflag:
             self.check_ra_colname()
         if sizecat is not None:
@@ -89,40 +165,7 @@ class galaxy_catalog():
         print(f"number of galaxies based on keepflag  = {np.sum(self.keepflag)}")       
 
 
-        ###########################################################################
-        # old approach using wcs_world2pix and comparing with image dimensions
-        ###########################################################################
-        #px,py = wcs.wcs_world2pix(self.cat['RA'],self.cat['DEC'],0)
-
-        # nanflag = np.isnan(px) | np.isnan(py)
-        # print("number of nans in transformed coordinates = ",np.sum(nanflag))
-
-        # print(f"min/max px of catalog galaxies = {np.min(px)} - {np.max(px)}")
-        # print(f"min/max py of catalog galaxies = {np.min(py)} - {np.max(py)}")
-        # print()
-        # print("resulting coords from world2pix = ",px[0:10],py[0:10])
-        # print("")
-        # #print('in galaxies_in_fov: px={},py={}'.format(px,py))
-        # colflag = (px < ncol) & (px >0)
-
-        # rowflag = (py < nrow) & (py > 0)
-        # print(f"number of galaxies within range of columns = {np.sum(colflag)}")
-        # print(f"number of galaxies within range of rows = {np.sum(rowflag)}")        
-
-        # print(f"number of galaxies within range of rows/columns  = {np.sum(rowflag & colflag)}")
-        
-        #keepflag=(px < ncol) & (px >0) & (py < nrow) & (py > 0)
-
-        #keepflag = rowflag & colflag 
-        
-
-        # WCS returns nans for objects that are too far from the central coordinate
-        # so these are also objects that will NOT be within the image FOV
-
-        
-        # replace keepflag of 
-        #nanflag = np.isnan(self.cat['RA']) | np.isnan(self.cat['DEC'])
-        #print("number of nans in RA/DEC coordinates = ",np.sum(nanflag))
+ 
 
         # check number of galaxies in fov
         if self.keepflag is None:
@@ -179,7 +222,7 @@ class galaxy_catalog():
         # initialize value of zFlag
         zFlag = np.zeros(len(self.cat), 'bool')
         #print(f"DEBUGGING: len(self.cat)={len(self.cat)}, len(keepflag)={len(self.keepflag)}")
-        if args.verbose:
+        if self.verbose:
             print(f"redshift of objects in FOV = ",self.cat['vopt'][self.keepflag].data/3.e5)
         #try: # should really edit the catalogs to have the same redshift/vel column name
         if args.verbose:
