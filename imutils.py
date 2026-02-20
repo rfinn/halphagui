@@ -26,7 +26,10 @@ def subtract_median_sky(data,getstd=False,getmedian=True,subtract=True):
         bkg = Background2D(data,(50, 50),filter_size=(3, 3), bkg_estimator=bkg_estimator)
         threshold = 3 * bkg.background_rms
         segmentation_image = detect_sources(data, threshold, npixels=10)
-        mask = segmentation_image.data > 0
+        try:
+            mask = segmentation_image.data > 0
+        except AttributeError:
+            mask = segmentation.make_source_mask(size=5) # adds a dilation factor        
         masked_data = np.ma.array(data,mask=mask)
     mean,median,std = sigma_clipped_stats(masked_data,sigma=3.0,cenfunc=np.ma.mean)
     if subtract:
