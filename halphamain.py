@@ -3373,7 +3373,7 @@ class hacontroller():
             # removed this an we resolved the issue where we got the wrong galaxy in the viewer.
             #self.igal = self.igal-1 # why do we need this???
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['AGCnr'][self.igal]))
-            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]]
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
             print("new galaxy params = ",self.objparams)
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
@@ -3668,7 +3668,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
             return
         # create mask
         if args.uat:
-            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]]
+            self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
         else:
             self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
 
