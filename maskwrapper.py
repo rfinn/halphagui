@@ -737,7 +737,7 @@ class maskwindow(Ui_maskWindow, QtCore.QObject,buildmask):
 
 
             self.logger = logger
-
+            print("in maskwindow, I get objparams = ",objparams)
         # define the position of the target galaxy, as well as the shape and size of elliptical region to unmask around galaxy.
         #print("inside maskwrapper.init, objparams = ",objparams)
         if objparams is not None:
