@@ -3894,7 +3894,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
 
         # on RF laptop, tabledir is /Users/rfinn/research/
         #self.agc_fname = os.path.join(self.tabledir,'AGC/agc.allsky.210720.fits')
-        self.agc_fname = os.path.join(self.tabledir,'AGC/agc.agcnorthminus1.full200617.fits')
+        self.agc_fname = os.path.join(self.tabledir,'AGC/agcnorthminus1.full200617.fits')
             
 
         self.agc = galaxy_catalog(self.agc_fname,virgo=False,agc=True)
