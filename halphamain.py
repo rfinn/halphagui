@@ -3366,7 +3366,7 @@ class hacontroller():
         if self.virgo:
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['VFID'][self.igal]))
             self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.BA[self.igal],self.PA[self.igal]+90]
-            #print("new galaxy params = ",self.objparams)
+            
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
         elif self.uat:
@@ -3374,7 +3374,7 @@ class hacontroller():
             #self.igal = self.igal-1 # why do we need this???
             self.rcutout_label.setText('r-band '+str(self.defcat.cat['AGCnr'][self.igal]))
             self.objparams = [self.defcat.cat['RA'][self.igal],self.defcat.cat['DEC'][self.igal],mask_scalefactor*self.radius_arcsec[self.igal],self.defcat.cat['b'][self.igal]/self.defcat.cat['a'][self.igal],0]
-            #print("new galaxy params = ",self.objparams)
+            print("new galaxy params = ",self.objparams)
             #print("compare lengths of catalogs ",len(self.defcat.cat),len(self.BA))
             print()
             
@@ -3926,6 +3926,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
         
         self.BA[~noradius_flag] = self.agc.cat['b'][~noradius_flag]/self.agc.cat['a'][~noradius_flag]
 
+        print("setting PA to posang from AGC")
         self.PA[~noradius_flag] = self.agc.cat['posang'][~noradius_flag]
         
         self.RA = self.agc.cat['RA']
