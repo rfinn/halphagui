@@ -1762,7 +1762,7 @@ class hagui_methods():
 
                 print('WARNING: no filter ratio')
 
-        # TODO - needs to be moved to view and then called from controller
+
         if not self.auto:
             # display continuum subtracted Halpha image in the large frame
             self.coadd.fitsimage.set_autocut_params('zscale')
@@ -2291,7 +2291,7 @@ class hagui_methods():
                 #self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=self.nsa.rmag[self.igal], BA = self.nsa.cat.SERSIC_BA[self.igal], PA=self.nsa.cat.SERSIC_PHI[self.igal],nsersic=self.nsa.cat.SERSIC_N[self.igal], convolution_size=80)
                 print('GALFIT psf image = ',psf)
                 if self.auto:
-                    self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=self.gradius[self.igal],mag=10, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
+                    self.galfit = galfitwindow(None, None, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, rad=self.gradius[self.igal],mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)
                 else:
                     self.galfit = galfitwindow(self.gwindow, self.logger, image = self.galimage, mask_image = self.mask_image_name, psf=psf, psf_oversampling = psf_oversampling, ncomp=ncomp, mag=14, BA = .8, PA=0,nsersic=2, convolution_size=80,auto=self.auto)                
             elif (ncomp == 1) & (asym == 1):
@@ -3675,7 +3675,9 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
         self.mui = maskwindow(None, None, image = self.cutout_name_r, haimage=self.cutout_name_ha, \
                               sepath='~/github/halphagui/astromatic/',auto=self.auto,\
                               objparams=self.objparams,unmaskellipse=True)
-                                  
+
+
+        # get SE parameters back from 
         # subtract the sky, using the mask image, and resave cutouts
         
         # run galfit
@@ -3891,7 +3893,8 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
         """
 
         # on RF laptop, tabledir is /Users/rfinn/research/
-        self.agc_fname = os.path.join(self.tabledir,'AGC/agc.allsky.210720.fits')
+        #self.agc_fname = os.path.join(self.tabledir,'AGC/agc.allsky.210720.fits')
+        self.agc_fname = os.path.join(self.tabledir,'AGC/agc.agcnorthminus1.full200617.fits')
             
 
         self.agc = galaxy_catalog(self.agc_fname,virgo=False,agc=True)
@@ -3920,6 +3923,7 @@ class hafunctions(Ui_MainWindow, create_output_table, uco_table, hagui_methods, 
         
         self.BA[~noradius_flag] = self.agc.cat['b'][~noradius_flag]/self.agc.cat['a'][~noradius_flag]
 
+        self.PA[~noradius_flag] = self.agc.cat['posang'][~noradius_flag]
         
         self.RA = self.agc.cat['RA']
         self.DEC = self.agc.cat['DEC']        
@@ -4199,6 +4203,7 @@ if __name__ == "__main__":
     parser.add_argument('--pointing',dest = 'pointing', default=None,help='Pointing number that you want to load.  ONLY FOR VIRGO DATA, and only if you are buildling the image name in pieces.')
     
     parser.add_argument('--testing',dest = 'testing', action='store_true',default=False,help='set this if running on open nebula virtual machine')
+    parser.add_argument('--onegal',dest = 'onegal', default=None, help='provide galaxy name to run halpha gui just on one galaxy')    
     parser.add_argument('--verbose',dest = 'verbose', action='store_true',default=False,help='set this for extra print statements')    
         
     args = parser.parse_args()
