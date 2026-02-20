@@ -173,7 +173,7 @@ class psf_parent_image():
         # and 3d sep (not sure what this means if I don't provide redshift
         idx, sep2d, dist3d = c.match_to_catalog_sky(c,nthneighbor=2)
         # make sure stars don't have a neighbor within 15" (picked that fairly randomly...)
-        flag3 = sep2d > 15./3600.*u.deg
+        flag3 = sep2d > 20./3600.*u.deg
         star_flag = flag1 & flag2 & flag3
         # select 25 objects with FLUX_MAX closest to median value
         # in other words, select 25 most central objects
@@ -184,7 +184,7 @@ class psf_parent_image():
         print('number of potential stars', sum(flag1), sum(flag2), np.sum(star_flag))
         # select stars within +/- nstar/2 from a threshold
         # where threshold is the percentile ranking according to peak flux
-        threshold = .65
+        threshold = .30
         lower = int(threshold*len(sorted_indices)) - int((self.nstars)/2)
         upper = int(threshold*len(sorted_indices)) + int((self.nstars)/2)
         #lower = int(.25*len(sorted_indices)) 
@@ -213,12 +213,12 @@ class psf_parent_image():
         # Virgo 2017 pointing-4_R.coadd.fits is giving me trouble b/c a lot of stars have zeros
         keepflag = np.ones(len(self.stars),'bool')
         
-        #for i,s in enumerate(self.stars):
-        #    # some pixels have values == 0 but they don't appear to be bad?  or are they masked?
-        #    # increasing cut from 1 to 10 to compensate for the case where maybe 1-2 pixels are bad
-        #    # still loosing a lot of stars so bumping up cut to 100
-        #    if len(np.where(s.data == 0)[0]) > 100:
-        #        keepflag[i] = False
+        for i,s in enumerate(self.stars):
+            # some pixels have values == 0 but they don't appear to be bad?  or are they masked?
+            # increasing cut from 1 to 10 to compensate for the case where maybe 1-2 pixels are bad
+            # still loosing a lot of stars so bumping up cut to 100
+            if len(np.where(s.data == 0)[0]) > 100:
+                keepflag[i] = False
 
         print(f"number of stars to keep after ==0 cut = {np.sum(keepflag)}/{len(keepflag)}")
         self.keepflag2 = keepflag
