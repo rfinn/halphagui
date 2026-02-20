@@ -223,7 +223,7 @@ class psf_parent_image():
             # some pixels have values == 0 but they don't appear to be bad?  or are they masked?
             # increasing cut from 1 to 10 to compensate for the case where maybe 1-2 pixels are bad
             # still loosing a lot of stars so bumping up cut to 100
-            if len(np.where(s.data == 0)[0]) > 100:
+            if len(np.where(s.data == 0)[0]) > 10:
                 keepflag[i] = False
 
         print(f"number of stars to keep after ==0 cut = {np.sum(keepflag)}/{len(keepflag)}")

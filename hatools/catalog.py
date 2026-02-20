@@ -38,7 +38,8 @@ Rose Finn
 """
 
 from astropy.table import Table
-
+import numpy as np
+import os
 
 
 from astropy.io import fits
@@ -48,7 +49,7 @@ from astropy.coordinates import SkyCoord
 #from astropy.coordinates import ICRS, FK5
 #import astropy.units as u
 
-class galaxy_catalog():
+class GalaxyCatalog():
     """
     A container for galaxy catalog operations.
 
@@ -88,6 +89,9 @@ class galaxy_catalog():
         self.verbose = verbose
         if self.agcflag:
             self.check_ra_colname()
+            self.get_shape_agc()
+        if self.virgoflag:
+            self.get_shape_virgo()
         if sizecat is not None:
             self.sizecat = sizecat
         else:
@@ -120,7 +124,7 @@ class galaxy_catalog():
             self.cat.rename_column('radeg','RA')
             self.cat.rename_column('decdeg','DEC')            
             
-    def galaxies_in_fov(self,wcs,nrow=None,ncol=None,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=None,virgoflag=None):
+    def galaxies_in_fov(self,wcs,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=None,virgoflag=None):
         """
         GOAL: get galaxies in FOV
 
@@ -140,16 +144,7 @@ class galaxy_catalog():
         #print('in galaxies in fov, nrow,ncol = ',nrow,ncol) # debug
         #print(f"self.nsa flag is {self.nsa}")
 
-        if agcflag is None:
-            agcflag = self.agcflag
-        if virgoflag is None:
-            virgoflag = self.virgoflag
-        if (nrow is None) | (ncol is None):
-            print('need image dimensions')
-            return None
-        else:
-            print("")
-            print(f"size of input image = ({nrow},{ncol})")
+
 
         ###########################################################################
         # use astropy.WCS.wcs.footprint_contains to get galaxies w/in FOV of image
@@ -173,7 +168,7 @@ class galaxy_catalog():
             return
         else:
             print(f"found {np.sum(self.keepflag)} after RA/DEC cuts")
-            print()
+            #print()
 
 
                      
@@ -210,11 +205,12 @@ class galaxy_catalog():
                     weightflag = centerpixvals > 0
                     self.keepflag[self.keepflag] = self.keepflag[self.keepflag] & weightflag
 
-        self.keepflag = self.apply_redshift_cut(zmin=zmin,zmax=zmax, agcflag=agcflag,virgoflag=virgoflag)
+        if (zmin is not None) & (zmax is not None):
+            self.keepflag = self.apply_redshift_cut(zmin=zmin,zmax=zmax, agcflag=agcflag,virgoflag=virgoflag)
         
         return self.keepflag
     
-    def apply_redshift_cut(self,zmin=None,zmax=None,image_name = None,weight_image=None, agcflag=False,virgoflag=False):
+    def apply_redshift_cut(self,zmin=None,zmax=None,agcflag=False,virgoflag=False):
         ###########################################################################
         # get redshift cut
         ###########################################################################
@@ -222,11 +218,6 @@ class galaxy_catalog():
         # initialize value of zFlag
         zFlag = np.zeros(len(self.cat), 'bool')
         #print(f"DEBUGGING: len(self.cat)={len(self.cat)}, len(keepflag)={len(self.keepflag)}")
-        if self.verbose:
-            print(f"redshift of objects in FOV = ",self.cat['vopt'][self.keepflag].data/3.e5)
-        #try: # should really edit the catalogs to have the same redshift/vel column name
-        if args.verbose:
-            print(f"value of agcflag = {agcflag}")
         if agcflag:
             print("\t using the AGC velocities")
             zFlag1 = (self.cat['vopt']/3.e5 > zmin) & (self.cat['vopt']/3.e5 < zmax)
@@ -271,3 +262,54 @@ class galaxy_catalog():
             #print('culled catalog = ',outfile)
             self.cat.write(outfile,format='fits',overwrite=True)
             # cull ephot
+    def get_shape_virgo(self):
+
+        ephot = Table.read(self.catalog_name.replace('main.fits','legacy_ephot.fits'))
+
+        
+        bad_sb25 = ephot['SMA_SB25'] == 0
+
+        self.radius_arcsec = ephot['SMA_SB25']*(~bad_sb25) + 1.35*ephot['SMA_SB24']*bad_sb25
+        # OK, I know what you are thinking, I can't possibly be changing this again...
+
+        # use SMA_SB25 instead of SB24 - this should work better for both high and low SB galaxies
+        # if SMA_SB25 is not available use 1.35*SMA_SB24
+
+        # for galaxies with SMA_SB24=0, set radius to value in main table 
+        noradius_flag = self.radius_arcsec == 0
+        self.radius_arcsec[noradius_flag] = self.cat['radius'][noradius_flag]
+
+        # also save BA and PA from John's catalog
+        # use the self.radius_arcsec for the sma
+        self.BA = np.ones(len(self.radius_arcsec))
+        self.PA = np.zeros(len(self.radius_arcsec))
+        
+        self.BA[~noradius_flag] = ephot['BA_MOMENT'][~noradius_flag]
+        self.PA[~noradius_flag] = ephot['PA_MOMENT'][~noradius_flag]
+        
+        self.RA = self.cat['RA']
+        self.DEC = self.cat['DEC']        
+        
+    def get_shape_agc(self):
+        """
+        use the latest AGC as the source catalog
+        """
+
+
+        self.radius_arcsec = self.cat['a']*60
+        
+        noradius_flag = self.radius_arcsec == 0
+        self.radius_arcsec[noradius_flag] = 60 # set size of galaxies with no A value to 60 arcsec
+
+        # also save BA and PA from John's catalog
+        # use the self.radius_arcsec for the sma
+        self.BA = np.ones(len(self.radius_arcsec))
+        self.PA = np.zeros(len(self.radius_arcsec))
+        
+        self.BA[~noradius_flag] = self.agc.cat['b'][~noradius_flag]/self.agc.cat['a'][~noradius_flag]
+
+        self.PA[~noradius_flag] = self.agc.cat['posang'][~noradius_flag]
+        
+        self.RA = self.cat['RA']
+        self.DEC = self.cat['DEC']        
+        

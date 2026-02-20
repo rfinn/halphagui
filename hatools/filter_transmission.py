@@ -8,18 +8,11 @@ from astropy.io import ascii
 from astropy.table import Table
 
 wave_halpha = 6563. # angstrom
+from . import utils
 
-def read_filter(hafilter,filterpath=None):
-    """
-    PARAMS:
-    * halpha filter to read in
 
-    RETURN:
-    * wavelength (in A)
-    * transmission (from zero to 100)
-    """
-    pass
-class filter_trace():
+
+class FilterTrace():
     def __init__(self,hafilter,filterpath=None,instrument=None,mintrans=10.):
         '''
         hafilter can be 4, 8, 12, 16, inthalpha, or intha6657
@@ -50,9 +43,7 @@ class filter_trace():
                                 'Ha+4nm':'Ha+4nm','Ha4nm':'Ha+4nm',\
                                 'Halpha':'Ha-197','Ha6657':'Ha-227'}
         print("testing, self.hafilter = ",self.hafilter, self.instrument)
-        self.halpha_filtername = f"{self.filterpath}/{instrument_to_prefix[self.instrument]}-{filter_to_suffix[self.hafilter]}.fits"
-                                
-                                  
+        self.halpha_filtername = utils.get_filter_file(f"{instrument_to_prefix[self.instrument]}-{filter_to_suffix[self.hafilter]}.fits")
 
     def read_filter(self):
         """ updating to use the new filter curves """
@@ -178,31 +169,31 @@ class filter_trace():
         #self.test = transmission
         correction = np.zeros(len(transmission),'f')
         correction = self.maxtrans/transmission
-        plt.figure()
-        plt.plot(self.wave, self.trans/10,'k-')
-        ##
-        # set bin size to some constant range of min/max wavelength
-        # this now fixes the odd behavior of the redshift histogram
-        ##
-        minwave = (self.minz_trans10max +1)*wave_halpha
-        maxwave = (self.maxz_trans10max +1)*wave_halpha
-        mybins = np.linspace(minwave,maxwave,20)
-
-
-        plt.hist(wave, bins=mybins)
-
-        # adding grid lines so we can better see how transmission varies with wavelength
-        plt.grid(visible=True)
-        plt.xlim((self.minz_trans10+1)*wave_halpha-50,(self.maxz_trans10+1)*wave_halpha+50)
-        plt.xlabel('Wavelength (Angstrom)')
-        plt.ylabel('Transmission %/10')
-        titlestring = 'Halpha Filter = {}'.format(self.hafilter)
-        plt.title(titlestring)
         #plt.show()
         if outfile is not None:
+            plt.figure()
+            plt.plot(self.wave, self.trans/10,'k-')
+            ##
+            # set bin size to some constant range of min/max wavelength
+            # this now fixes the odd behavior of the redshift histogram
+            ##
+            minwave = (self.minz_trans10max +1)*wave_halpha
+            maxwave = (self.maxz_trans10max +1)*wave_halpha
+            mybins = np.linspace(minwave,maxwave,20)
+
+
+            plt.hist(wave, bins=mybins)
+
+            # adding grid lines so we can better see how transmission varies with wavelength
+            plt.grid(visible=True)
+            plt.xlim((self.minz_trans10+1)*wave_halpha-50,(self.maxz_trans10+1)*wave_halpha+50)
+            plt.xlabel('Wavelength (Angstrom)')
+            plt.ylabel('Transmission %/10')
+            titlestring = 'Halpha Filter = {}'.format(self.hafilter)
+            plt.title(titlestring)
+            
             plt.savefig(outfile)
-        else:
-            plt.savefig('galaxies_in_filter.png')
+
         return correction
 
     def get_response(self):
