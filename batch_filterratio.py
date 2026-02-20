@@ -16,6 +16,7 @@ python ~/github/halphagui/batch_filterratio.py
 '''
 
 import os
+import sys
 import glob
 from astropy.io import fits
 import matplotlib

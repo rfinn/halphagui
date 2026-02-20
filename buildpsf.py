@@ -243,7 +243,7 @@ class psf_parent_image():
         if self.oversampling == None:
             epsf_builder = EPSFBuilder(maxiters=12, progress_bar=False, smoothing_kernel='quadratic', recentering_func = centroid_com)#,flux_residual_sigclip=SigmaClip)  
         else:
-            epsf_builder = EPSFBuilder(oversampling=self.oversampling, maxiters=13, progress_bar=False,  recentering_func = centroid_com, smoothing_kernel='quadratic')#,flux_residual_sigclip=SigmaClip)  
+            epsf_builder = EPSFBuilder(oversampling=self.oversampling, maxiters=20, progress_bar=False,  recentering_func = centroid_com, smoothing_kernel='quadratic',flux_residual_sigclip=SigmaClip)  
         self.epsf, self.fitted_stars = epsf_builder(self.stars)
     def show_psf(self):
         norm = simple_norm(self.epsf.data, 'log', percent=99.)
@@ -300,6 +300,7 @@ class psf_parent_image():
         self.header.append(card=('FWHM', float('{:.2f}'.format(self.fwhm)), 'PSF fwhm in pixels'))
         self.header.append(card=('SEFWHM', float('{:.2f}'.format(self.se_fwhm_arcsec)), 'PSF fwhm in arcsec from SE'))                
         self.header.append(card=('STD', float('{:.2f}'.format(self.std)), 'PSF STD in pixels'))
+        self.header.append(card=('PSFSTD', float('{:.2f}'.format(self.std)), 'PSF STD in pixels'))        
         self.header.append(card=('OVERSAMP', self.oversampling, 'PSF oversampling'))
         fits.writeto(self.image_name, self.data, header=self.header, overwrite=True)
         
