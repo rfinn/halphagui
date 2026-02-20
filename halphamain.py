@@ -2072,7 +2072,42 @@ class hagui_methods():
 
         ###################################################
         # saving Ha CS Cutout as fits image
-        ###################################################  
+        ###################################################
+
+        ###  START OF TEST BLOCK        
+        t = self.halpha_cs
+        newfile1 = fits.PrimaryHDU()
+        newfile1.data = self.halpha_cs[ymin:ymax,xmin:xmax]
+        newfile1.header = self.ha_header
+        newfile1.header.update(w[ymin:ymax,xmin:xmax].to_header())
+        newfile1.header.set('REDSHIFT',float('{:.6f}'.format(self.gredshift[self.igal])))
+        newfile1.header.set('ZDIST',float('{:.6f}'.format(self.gzdist[self.igal])))
+        newfile1.header.set('ID',str(self.galid[self.igal]))
+
+        newfile1.header.set('SERSIC_TH50',float('{:.2f}'.format(self.gradius[self.igal])))
+        newfile1.header['EXPTIME']=1.0
+
+        # subtract sky from CS Halpha image
+        skysub_hdata,hmed,hstd = imutils.subtract_median_sky(newfile1.data,getstd=True)
+
+        if hmed is not np.nan:
+            newfile1.data -= hmed
+
+
+        try:
+            newfile1.header.set('SKYMED',hmed)
+        except ValueError:
+            print("error writing SKYMED ",hmed)
+            print("setting header value to zero")            
+            newfile1.header.set('SKYMED',0)
+            try:
+                newfile1.header.set('SKYSTD',hstd)
+            except ValueError:
+                print("error writing SKYSTD ",hstd)
+                print("setting header value to zero")
+                newfile1.header.set('SKYSTD',0)
+
+        ###  END OF TEST BLOCK
         try:
             t = self.halpha_cs
             newfile1 = fits.PrimaryHDU()
