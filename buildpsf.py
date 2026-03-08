@@ -72,7 +72,7 @@ class psf_parent_image():
             self.sepath=os.getenv('HOME')+'/github/halphagui/astromatic/'
         else:
             self.sepath = sepath
-        # number of stars touse to determine the psf
+        # number of stars to use to determine the psf
         self.nstars = nstars
         # default pixelscale is set for HDI camera
 
