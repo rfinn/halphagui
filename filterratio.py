@@ -72,8 +72,9 @@ def run_sextractor(image1,image2, default_se_dir = 'halphagui/astromatic'):
     secatalog2 = f"{catdir}/{froot2}.cat"
     #print(secatalog1,secatalog2)
     if 'BOK' in image1:
-        defaultcat = "default.sex.BOK"
-        #defaultcat = "default.sex.HDI"
+
+        #defaultcat = "default.sex.BOK"
+        defaultcat = "default.sex.HDI"
     elif 'INT' in image1:
         defaultcat = "default.sex.INT"
     else:
