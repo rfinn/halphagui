@@ -38,7 +38,8 @@ if not os.path.exists(catdir):
 ### FUNCTIONS
 ###############################################
 
-def run_sextractor(image1,image2, default_se_dir = '/Users/rfinn/github/halphagui/astromatic'):
+def run_sextractor(image1,image2, default_se_dir = 'halphagui/astromatic'):
+    default_se_dir = os.path.join(os.getenv("HOME"), default_se_dir)
     # get magnitude zeropoint for image 1 and image 2
     header1 = fits.getheader(image1)
     header2 = fits.getheader(image2)
