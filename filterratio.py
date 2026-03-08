@@ -72,8 +72,8 @@ def run_sextractor(image1,image2, default_se_dir = 'halphagui/astromatic'):
     secatalog2 = f"{catdir}/{froot2}.cat"
     #print(secatalog1,secatalog2)
     if 'BOK' in image1:
-        #defaultcat = "default.sex.BOK"
-        defaultcat = "default.sex.HDI"
+        defaultcat = "default.sex.BOK"
+        #defaultcat = "default.sex.HDI"
     elif 'INT' in image1:
         defaultcat = "default.sex.INT"
     else:
@@ -86,15 +86,19 @@ def run_sextractor(image1,image2, default_se_dir = 'halphagui/astromatic'):
         if zp1flag: # why do I need to run image 1 in two image mode???
             #s ='sex ' + image1+','+image1 + ' -c default.sex.HDI -CATALOG_NAME ' + froot1 + '.cat -MAG_ZEROPOINT '+str(ZP1)
             s = f"sex {image1},{image1} -c {defaultcat} -CATALOG_NAME {catdir}/{froot1}.cat  -MAG_ZEROPOINT {ZP1}"
+            print(s)
             os.system(s)
         else:
-            s = f"sex {image1},{image1} -c {defaultcat} -CATALOG_NAME {catdir}/{froot1}.cat "            
+            s = f"sex {image1},{image1} -c {defaultcat} -CATALOG_NAME {catdir}/{froot1}.cat "
+            print(s)            
             os.system(s)
         if zp2flag:
             s = f"sex {image1},{image2} -c {defaultcat} -CATALOG_NAME {catdir}/{froot2}.cat -MAG_ZEROPOINT {ZP2}"
+            print(s)            
             os.system(s)
         else:
             s = f"sex {image1},{image2} -c {defaultcat} -CATALOG_NAME {catdir}/{froot2}.cat "
+            print(s)            
             os.system(s)
     #print('in run_sextractor, returning for ZP and flags: ',ZP1, zp1flag, ZP2, zp2flag)
     return ZP1, zp1flag, ZP2, zp2flag
