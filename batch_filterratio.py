@@ -161,7 +161,7 @@ def getoneratio(rimage,instrument,plotdir):
     #ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage)
     # this line might do the job, but should check to make sure I'm not missing something
     #ZP2,zp2flag,ZP1,zp1flag = runse.run_sextractor(himage, rimage)
-    ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage)
+    ZP1,zp1flag,ZP2,zp2flag = runse.run_sextractor(rimage, himage, default_se_dir = 'github/halphagui/astromatic')
     
     if zp1flag and zp2flag:
         #print("got ZP ratio")
